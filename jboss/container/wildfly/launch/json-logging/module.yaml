@@ -1,0 +1,9 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.json-logging
+version: '1.0'
+description: Installs the $JBOSS_HOME/bin/launch/json_logging.sh file
+
+
+execute:
+- script: configure.sh
+  user: '185'
