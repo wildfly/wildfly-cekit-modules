@@ -1,0 +1,9 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.datasources
+version: '1.0'
+description: Installs the $JBOSS_HOME/bin/launch files to adjust the datasource config
+
+
+execute:
+- script: configure.sh
+  user: '185'
