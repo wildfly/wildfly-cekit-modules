@@ -3,6 +3,9 @@ name: jboss.container.wildfly.launch.datasources
 version: '1.0'
 description: Installs the $JBOSS_HOME/bin/launch files to adjust the datasource config
 
+modules:
+  install:
+  - name: jboss.container.wildfly.launch.os.node-name
 
 execute:
 - script: configure.sh

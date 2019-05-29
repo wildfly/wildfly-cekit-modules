@@ -3,6 +3,10 @@ name: jboss.container.wildfly.launch.jgroups
 version: '1.0'
 description: Installs the $JBOSS_HOME/bin/launch/ files to configure JGroups
 
+modules:
+  install:
+  - name: jboss.container.wildfly.launch.os.node-name
+
 
 execute:
 - script: configure.sh

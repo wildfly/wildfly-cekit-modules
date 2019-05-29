@@ -14,7 +14,7 @@ configure() {
 configure_microprofile_config_source() {
 
   local dirConfigSource=$(generate_microprofile_config_source "${MICROPROFILE_CONFIG_DIR}" "${MICROPROFILE_CONFIG_DIR_ORDINAL}")
-
+echo "dirConfigSource ${dirConfigSource}"
   if [ -n "$dirConfigSource" ]; then
     if grep -qF "<!-- ##MICROPROFILE_CONFIG_SOURCE## -->" $CONFIG_FILE; then
       sed -i "s|<!-- ##MICROPROFILE_CONFIG_SOURCE## -->|${dirConfigSource}|" $CONFIG_FILE
@@ -31,7 +31,7 @@ EOF
     log_error "Exiting..."
     exit 1
   fi
-  
+
 }
 
 generate_microprofile_config_source() {
