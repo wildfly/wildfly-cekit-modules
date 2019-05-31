@@ -6,10 +6,13 @@ source $JBOSS_HOME/bin/launch/openshift-common.sh
 CONFIGURE_ENV_SCRIPTS=(
 )
 
-if [ -f /opt/run-java/proxy-options ]; then
-    CONFIGURE_ENV_SCRIPTS+=(/opt/run-java/proxy-options)
-fi
-
-if [ -f $JBOSS_HOME/bin/launch/jboss_modules_system_pkgs.sh ]; then
-    CONFIGURE_ENV_SCRIPTS+=($JBOSS_HOME/bin/launch/jboss_modules_system_pkgs.sh)
+if [ -n "${ENV_SCRIPT_CANDIDATES}" ]; then
+    for script in "${ENV_SCRIPT_CANDIDATES[@]}"
+    do
+        if [ -f "${script}" ]; then
+            CONFIGURE_ENV_SCRIPTS+=(${script})
+        fi
+    done
+else
+    echo "No ENV_SCRIPT_CANDIDATES were set!"
 fi
