@@ -1,28 +1,29 @@
 #!/bin/sh
 
-# The mode used to do the environment variable replacement. The values are:
+# CONFIG_ADJUSTMENT_MODE is the mode used to do the environment variable replacement.
+# The values are:
 # -none     - no adjustment should be done. This cam be forced if $CONFIG_IS_FINAL = true
 #               is passed in when starting the container
 # -xml      - adjustment will happen via the legacy xml marker replacement
 # -cli      - adjustment will happen via cli commands
 # -xml_cli  - adjustment will happen via xml marker replacement if the marker is found. If not,
-#               it will happen via cli commands
+#               it will happen via cli commands. This is the default if not set by a consumer.
 #
-# Handling of the meanings of this are done by the launch scripts doing the config adjustment
-CONFIG_ADJUSTMENT_MODE="xml_cli"
+# Handling of the meanings of this is done by the launch scripts doing the config adjustment.
+# Consumers of this script are expected to set this value.
+if [ -z "${CONFIG_ADJUSTMENT_MODE}" ]; then
+  CONFIG_ADJUSTMENT_MODE="xml_cli"
+fi
 if [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
     CONFIG_ADJUSTMENT_MODE="none"
 fi
 
-# Whether or not we should ignore xml markers
-CLI_SCRIPT_ONLY_IGNORE_MARKERS=false
-
-
 # Takes the following parameters:
 # - $1      - the xml marker to test for
-#
-# Returns one of the following three values
-# - ""      - no configuration should be done via the variables
+# - $2      - the variable which will hold the result
+# The result holding variable, $2, will be populated with one of the following
+# three values:
+# - ""      - no configuration should be done
 # - "xml"   - configuration should happen via marker replacement
 # - "cli"   - configuration should happen via cli commands
 #
