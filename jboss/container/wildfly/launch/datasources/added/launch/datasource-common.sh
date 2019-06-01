@@ -18,7 +18,7 @@ else
 fi
 
 function getDataSourceConfigureMode() {
-  if [ -z ${DS_CONFIGURE_MODE+x} ]; then 
+  if [ -z ${DS_CONFIGURE_MODE+x} ]; then
     getConfigurationMode "<!-- ##DATASOURCES## -->" "DS_CONFIGURE_MODE"
   fi
 
@@ -225,7 +225,11 @@ function generate_datasource_common() {
       pool_name="$DB_POOL"
     fi
 
-    ds=$(generate_default_datasource)
+    # Scripts that want to disable addition of the default data source should set
+    # DISABLE_GENERATE_DEFAULT_DATASOURCE=true
+    if [ -z "${DISABLE_GENERATE_DEFAULT_DATASOURCE}" ] || [ "${DISABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "FALSE" ]; then
+      ds=$(generate_default_datasource)
+    fi
   fi
 
   if [ -z "$service_name" ]; then
@@ -387,7 +391,7 @@ function generate_external_datasource_cli() {
 
     ds_tmp_key_values["jta"]="${jta}"
     ds_tmp_key_values['connection-url']="${url}"
-    
+
   else
     ds_resource="$ds_resource/xa-data-source=${pool_name}"
 
@@ -445,15 +449,15 @@ function generate_external_datasource_cli() {
   # Create the add operation
   local ds_tmp_add="$ds_resource:add("
   local tmp_separator=""
-  for key in "${!ds_tmp_key_values[@]}"; do 
+  for key in "${!ds_tmp_key_values[@]}"; do
     ds_tmp_add="${ds_tmp_add}${tmp_separator}${key}=\"${ds_tmp_key_values[$key]}\""
     tmp_separator=", "
   done
   ds_tmp_add="${ds_tmp_add})"
-  
+
   # Add the xa-ds properties
   local ds_tmp_xa_properties
-  for key in "${!ds_tmp_xa_connection_properties[@]}"; do 
+  for key in "${!ds_tmp_xa_connection_properties[@]}"; do
     ds_tmp_xa_properties="${ds_tmp_xa_properties}
         $ds_resource/xa-datasource-properties=${key}:add(value=\"${ds_tmp_xa_connection_properties[$key]}\")
     "
@@ -735,7 +739,7 @@ function inject_datasource() {
         echo "${datasource}" >> ${CLI_SCRIPT_FILE}
       fi
     fi
-    
+
   fi
 }
 
