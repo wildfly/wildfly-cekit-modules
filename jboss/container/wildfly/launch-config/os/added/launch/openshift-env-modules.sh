@@ -1,7 +1,9 @@
 #!/bin/sh
 # Common Openshift WildFly scripts
-
-source $JBOSS_HOME/bin/launch/openshift-common.sh
+if [ -z "${CONFIG_FILE}" ]; then
+    echo "Make sure that launch/openshift-common.sh has been sourced before using launch/openshift-env-modules.sh"
+    exit 1
+fi
 
 CONFIGURE_ENV_SCRIPTS=(
 )
