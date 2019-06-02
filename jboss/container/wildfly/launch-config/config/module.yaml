@@ -1,0 +1,9 @@
+schema_version: 1
+name: jboss.container.wildfly.launch-config.config
+version: '1.0'
+description: Scripts to adjust the configuration via xml markers or CLI
+
+
+execute:
+- script: configure.sh
+  user: '185'

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Openshift WildFly runtime configuration update
 
-source ${JBOSS_HOME}/bin/launch/openshift-cli-modules.sh
+source ${JBOSS_HOME}/bin/launch/openshift-config-modules.sh
 source $JBOSS_HOME/bin/launch/logging.sh
 
 function exec_cli_scripts() {
@@ -55,7 +55,7 @@ echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > ${CLI_SCRIPT_PROPERTY_FILE}
 
 source $JBOSS_HOME/bin/launch/configure-modules.sh
 
-configureCliModules
+configureConfigModules
 
 exec_cli_scripts
 

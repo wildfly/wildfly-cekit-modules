@@ -6,16 +6,16 @@ if [ -z "${CONFIG_FILE}" ]; then
     exit 1
 fi
 
-CONFIGURE_CLI_SCRIPTS=(
+CONFIGURE_CONFIG_SCRIPTS=(
 )
 
-if [ -n "${CLI_SCRIPT_CANDIDATES}" ]; then
-    for script in "${CLI_SCRIPT_CANDIDATES[@]}"
+if [ -n "${CONFIG_SCRIPT_CANDIDATES}" ]; then
+    for script in "${CONFIG_SCRIPT_CANDIDATES[@]}"
     do
         if [ -f "${script}" ]; then
-            CONFIGURE_CLI_SCRIPTS+=(${script})
+            CONFIGURE_CONFIG_SCRIPTS+=(${script})
         fi
     done
 else
-    echo "No CLI_SCRIPT_CANDIDATES were set!"
+    echo "No CONFIG_SCRIPT_CANDIDATES were set!"
 fi

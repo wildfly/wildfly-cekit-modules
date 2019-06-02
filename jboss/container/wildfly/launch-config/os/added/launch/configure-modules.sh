@@ -73,8 +73,8 @@ function executeModule() {
 
 # Run through the list of scripts, executing the specified function for each.
 # $1 - function name
-function executeCliModules() {
-  for module in ${CONFIGURE_CLI_SCRIPTS[@]}; do
+function executeConfigModules() {
+  for module in ${CONFIGURE_CONFIG_SCRIPTS[@]}; do
     prepareModule
     executeModule $module $1
   done
@@ -117,10 +117,10 @@ function processEnvFiles() {
   fi
 }
 
-function configureCliModules() {
-  executeCliModules preConfigure
-  executeCliModules configure
-  executeCliModules postConfigure
+function configureConfigModules() {
+  executeConfigModules preConfigure
+  executeConfigModules configure
+  executeConfigModules postConfigure
 }
 
 function configureEnvModules() {
