@@ -96,17 +96,18 @@ function executeEnvModules() {
 # file processing, and keeps the base environment the same from file to file
 # (i.e. we don't have to run prepareEnv for each file).
 function processEnvFiles() {
+  local method=$1
   if [ -n "$ENV_FILES" ]; then
     (
-      executeModules prepareEnv
+      eval ${method} prepareEnv
       for prop_file_arg in $(echo $ENV_FILES | sed "s/,/ /g"); do
         for prop_file in $(find $prop_file_arg -maxdepth 0 2>/dev/null); do
           (
             if [ -f $prop_file ]; then
               source $prop_file
-              executeModules preConfigureEnv
-              executeModules configureEnv
-              executeModules postConfigureEnv
+              eval ${method} preConfigureEnv
+              eval ${method} configureEnv
+              eval ${method} postConfigureEnv
             else
               log_warning "Could not process environment for $prop_file.  File does not exist."
             fi
@@ -120,12 +121,13 @@ function processEnvFiles() {
 function configureConfigModules() {
   executeConfigModules preConfigure
   executeConfigModules configure
+  processEnvFiles executeConfigModules
   executeConfigModules postConfigure
 }
 
 function configureEnvModules() {
   executeEnvModules preConfigure
   executeEnvModules configure
-  processEnvFiles
+  processEnvFiles executeEnvModules
   executeEnvModules postConfigure
 }
