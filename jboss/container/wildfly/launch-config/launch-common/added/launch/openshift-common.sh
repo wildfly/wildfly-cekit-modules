@@ -8,6 +8,7 @@ fi
 SERVER_CONFIG=${WILDFLY_SERVER_CONFIGURATION:-standalone.xml}
 CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
 LOGGING_FILE=$JBOSS_HOME/standalone/configuration/logging.properties
+CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
 
 # Test an XpathExpression against server config file and returns
 # the xmllint exit code

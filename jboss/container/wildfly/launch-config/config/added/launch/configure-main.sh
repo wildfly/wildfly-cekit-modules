@@ -5,7 +5,7 @@ source ${JBOSS_HOME}/bin/launch/openshift-config-modules.sh
 source $JBOSS_HOME/bin/launch/logging.sh
 
 function exec_cli_scripts() {
-  if [ -s "${CLI_SCRIPT_FILE}" ]; then
+  if [ -s "${CLI_SCRIPT_FILE}" ] || [ -s "${CLI_DRIVERS_FILE}" ]; then
 
     # Dump the cli script file for debugging
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
@@ -39,6 +39,9 @@ function exec_cli_scripts() {
     systime=$(date +%s)
     CLI_SCRIPT_FILE_FOR_EMBEDDED=/tmp/cli-configuration-script-${systime}.cli
     echo "embed-server --timeout=30 --server-config=${SERVER_CONFIG} --std-out=discard" > ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
+    if [ -s "${CLI_DRIVERS_FILE}" ]; then
+      cat ${CLI_DRIVERS_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
+    fi
     cat ${CLI_SCRIPT_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
     echo "" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
     echo "stop-embedded-server" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
@@ -63,6 +66,7 @@ function exec_cli_scripts() {
       rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
       rm ${CLI_SCRIPT_ERROR_FILE} 2> /dev/null
       rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
+      rm ${CLI_DRIVERS_FILE} 2> /dev/null
     fi
   else
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then

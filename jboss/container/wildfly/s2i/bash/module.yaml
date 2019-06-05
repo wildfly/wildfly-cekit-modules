@@ -1,0 +1,7 @@
+schema_version: 1
+name: jboss.container.wildfly.s2i.install-common
+version: '1.0'
+description: Common scripts for S2I.
+
+execute:
+- script: configure.sh
