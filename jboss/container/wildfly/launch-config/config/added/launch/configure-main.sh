@@ -7,7 +7,7 @@ source $JBOSS_HOME/bin/launch/configure-modules.sh
 
 configureConfigModules
 
-exec_cli_scripts
+exec_cli_scripts "${CLI_SCRIPT_FILE}"
 
 if [ "${SCRIPT_DEBUG}" = "true" ] ; then
   echo "CLI Script used to configure the server: ${CLI_SCRIPT_FILE_FOR_EMBEDDED}"

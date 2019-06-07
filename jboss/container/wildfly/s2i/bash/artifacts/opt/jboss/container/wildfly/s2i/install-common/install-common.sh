@@ -106,7 +106,10 @@ function configure_drivers(){
         if [ "${configMode}" = "xml" ]; then
           sed -i "s|<!-- ##DRIVERS## -->|${drivers}<!-- ##DRIVERS## -->|" $CONFIG_FILE
         elif [ "${configMode}" = "cli" ]; then
-          echo "${drivers}" > ${CLI_DRIVERS_FILE}
+          echo "${drivers}" > ${S2I_CLI_DRIVERS_FILE}
+          if [ "${CONFIG_ADJUSTMENT_MODE,,}" = "cli" ]; then
+            exec_cli_scripts "${S2I_CLI_DRIVERS_FILE}"
+          fi
         fi
       fi
     fi

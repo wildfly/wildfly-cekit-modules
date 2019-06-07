@@ -8,37 +8,6 @@ fi
 SERVER_CONFIG=${WILDFLY_SERVER_CONFIGURATION:-standalone.xml}
 CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
 LOGGING_FILE=$JBOSS_HOME/standalone/configuration/logging.properties
-CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
-
-systime=$(date +%s)
-#This is the cli file generated
-CLI_SCRIPT_FILE=/tmp/cli-script-${systime}.cli
-#This is the file used to log errors by the CLI execution
-CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error-${systime}.cli
-#The property file used to pass variables to jboss-cli.sh
-CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property-${systime}.cli
-
-echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > ${CLI_SCRIPT_PROPERTY_FILE}
-
-# Test an XpathExpression against server config file and returns
-# the xmllint exit code
-#
-# Parameters:
-# - $1      - the xpath expression to use
-# - $2      - the variable which will hold the result
-#
-function testXpathExpression() {
-  local xpath="$1"
-  unset -v "$2" || echo "Invalid identifier: $2" >&2
-
-  if [ "${SCRIPT_DEBUG}" == "true" ]; then
-    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}"
-  else
-    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null
-  fi
-
-  printf -v "$2" '%s' "$?"
-}
 
 # CONFIG_ADJUSTMENT_MODE is the mode used to do the environment variable replacement.
 # The values are:
@@ -57,6 +26,35 @@ fi
 if [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
     CONFIG_ADJUSTMENT_MODE="none"
 fi
+
+# This is the cli file generated
+CLI_SCRIPT_FILE=/tmp/cli-script.cli
+# This is the file used to log errors by the CLI execution
+CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
+# The property file used to pass variables to jboss-cli.sh
+CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
+# The CLI file that could have been used in S2I phase to define dirvers
+S2I_CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
+
+# Ensure we start wit clean files
+if [ -s "${CLI_SCRIPT_FILE}" ]; then
+  echo -n "" > "${CLI_SCRIPT_FILE}"
+fi
+if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
+  echo -n "" > "${CLI_SCRIPT_ERROR_FILE}"
+fi
+if [ -s "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
+  echo -n "" > "${CLI_SCRIPT_PROPERTY_FILE}"
+fi
+if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" ]; then
+# If we have content in S2I_CLI_DRIVERS_FILE and we are not in pure CLI mode, then
+# the CLI operations generated in S2I will be processed at runtime
+ cat "${S2I_CLI_DRIVERS_FILE}" > "${CLI_SCRIPT_FILE}"
+else
+  echo -n "" > "${S2I_CLI_DRIVERS_FILE}"
+fi
+
+echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > "${CLI_SCRIPT_PROPERTY_FILE}"
 
 # Takes the following parameters:
 # - $1      - the xml marker to test for
@@ -101,23 +99,39 @@ function getConfigurationMode() {
   printf -v "$2" '%s' "${configVia}"
 }
 
+# Test an XpathExpression against server config file and returns
+# the xmllint exit code
+#
+# Parameters:
+# - $1      - the xpath expression to use
+# - $2      - the variable which will hold the result
+#
+function testXpathExpression() {
+  local xpath="$1"
+  unset -v "$2" || echo "Invalid identifier: $2" >&2
+
+  if [ "${SCRIPT_DEBUG}" == "true" ]; then
+    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}"
+  else
+    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null
+  fi
+
+  printf -v "$2" '%s' "$?"
+}
+
 function exec_cli_scripts() {
-  if [ -s "${CLI_SCRIPT_FILE}" ] || [ -s "${CLI_DRIVERS_FILE}" ]; then
+  local script="$1"
+
+  if [ -s "${script}" ]; then
 
     # Dump the cli script file for debugging
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
       echo "================= CLI files debug ================="
-      if [ -f "${CLI_DRIVERS_FILE}" ]; then
-        echo "=========== CLI Drivers ${CLI_DRIVERS_FILE} contents:"
-        cat "${CLI_DRIVERS_FILE}"
+      if [ -f "${script}" ]; then
+        echo "=========== CLI Script ${script} contents:"
+        cat "${script}"
       else
-        echo "No CLI_DRIVERS_FILE file found ${CLI_DRIVERS_FILE}"
-      fi
-      if [ -f "${CLI_SCRIPT_FILE}" ]; then
-        echo "=========== CLI Script ${CLI_SCRIPT_FILE} contents:"
-        cat "${CLI_SCRIPT_FILE}"
-      else
-        echo "No CLI_SCRIPT_FILE file found ${CLI_SCRIPT_FILE}"
+        echo "No CLI_SCRIPT_FILE file found ${script}"
       fi
       if [ -f "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
         echo "=========== ${CLI_SCRIPT_PROPERTY_FILE} contents:"
@@ -136,10 +150,7 @@ function exec_cli_scripts() {
     systime=$(date +%s)
     CLI_SCRIPT_FILE_FOR_EMBEDDED=/tmp/cli-configuration-script-${systime}.cli
     echo "embed-server --timeout=30 --server-config=${SERVER_CONFIG} --std-out=discard" > ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    if [ -s "${CLI_DRIVERS_FILE}" ]; then
-      cat ${CLI_DRIVERS_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    fi
-    cat ${CLI_SCRIPT_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
+    cat ${script} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
     echo "" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
     echo "stop-embedded-server" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
 
@@ -159,16 +170,15 @@ function exec_cli_scripts() {
       echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
       exit 1
     elif [ "${SCRIPT_DEBUG}" != "true" ] ; then
-      rm ${CLI_SCRIPT_FILE} 2> /dev/null
+      rm ${script} 2> /dev/null
       rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
       rm ${CLI_SCRIPT_ERROR_FILE} 2> /dev/null
       rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
-      rm ${CLI_DRIVERS_FILE} 2> /dev/null
     fi
   else
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
       echo "================= CLI files debug ================="
-      echo "No CLI commands were found in ${CLI_SCRIPT_FILE}"
+      echo "No CLI commands were found in ${script}"
     fi
   fi
 }
