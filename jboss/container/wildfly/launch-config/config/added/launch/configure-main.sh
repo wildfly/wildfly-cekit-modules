@@ -3,94 +3,11 @@
 
 source ${JBOSS_HOME}/bin/launch/openshift-config-modules.sh
 source $JBOSS_HOME/bin/launch/logging.sh
-
-function exec_cli_scripts() {
-  if [ -s "${CLI_SCRIPT_FILE}" ] || [ -s "${CLI_DRIVERS_FILE}" ]; then
-
-    # Dump the cli script file for debugging
-    if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
-      echo "================= CLI files debug ================="
-      if [ -f "${CLI_DRIVERS_FILE}" ]; then
-        echo "=========== CLI Drivers ${CLI_DRIVERS_FILE} contents:"
-        cat "${CLI_DRIVERS_FILE}"
-      else
-        echo "No CLI_DRIVERS_FILE file found ${CLI_DRIVERS_FILE}"
-      fi
-      if [ -f "${CLI_SCRIPT_FILE}" ]; then
-        echo "=========== CLI Script ${CLI_SCRIPT_FILE} contents:"
-        cat "${CLI_SCRIPT_FILE}"
-      else
-        echo "No CLI_SCRIPT_FILE file found ${CLI_SCRIPT_FILE}"
-      fi
-      if [ -f "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
-        echo "=========== ${CLI_SCRIPT_PROPERTY_FILE} contents:"
-        cat "${CLI_SCRIPT_PROPERTY_FILE}"
-      else
-        echo "No CLI_SCRIPT_PROPERTY_FILE file found ${CLI_SCRIPT_PROPERTY_FILE}"
-      fi
-    fi
-
-    #Check we are able to use the jboss-cli.sh
-    if ! [ -f "${JBOSS_HOME}/bin/jboss-cli.sh" ]; then
-      echo "Cannot find ${JBOSS_HOME}/bin/jboss-cli.sh. Scripts cannot be applied"
-      exit 1
-    fi
-
-    systime=$(date +%s)
-    CLI_SCRIPT_FILE_FOR_EMBEDDED=/tmp/cli-configuration-script-${systime}.cli
-    echo "embed-server --timeout=30 --server-config=${SERVER_CONFIG} --std-out=discard" > ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    if [ -s "${CLI_DRIVERS_FILE}" ]; then
-      cat ${CLI_DRIVERS_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    fi
-    cat ${CLI_SCRIPT_FILE} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    echo "" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    echo "stop-embedded-server" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-
-    echo "Configuring the server using embedded server"
-    start=$(date +%s%3N)
-    ${JBOSS_HOME}/bin/jboss-cli.sh --file=${CLI_SCRIPT_FILE_FOR_EMBEDDED} --properties=${CLI_SCRIPT_PROPERTY_FILE}
-    cli_result=$?
-    end=$(date +%s%3N)
-
-    echo "Duration: " $((end-start)) " milliseconds"
-
-
-    if [ $cli_result -ne 0 ]; then
-      echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server cannot start or the operations to configure the server failed."
-      exit 1
-    elif [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
-      echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
-      exit 1
-    elif [ "${SCRIPT_DEBUG}" != "true" ] ; then
-      rm ${CLI_SCRIPT_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_ERROR_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
-      rm ${CLI_DRIVERS_FILE} 2> /dev/null
-    fi
-  else
-    if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
-      echo "================= CLI files debug ================="
-      echo "No CLI commands were found in ${CLI_SCRIPT_FILE}"
-    fi
-  fi
-}
-
-systime=$(date +%s)
-#This is the cli file generated
-CLI_SCRIPT_FILE=/tmp/cli-script-${systime}.cli
-#This is the file used to log errors by the CLI execution
-CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error-${systime}.cli
-#The property file used to pass variables to jboss-cli.sh
-CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property-${systime}.cli
-
-echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > ${CLI_SCRIPT_PROPERTY_FILE}
-
 source $JBOSS_HOME/bin/launch/configure-modules.sh
 
 configureConfigModules
 
-exec_cli_scripts
+exec_cli_scripts "${CLI_SCRIPT_FILE}"
 
 if [ "${SCRIPT_DEBUG}" = "true" ] ; then
   echo "CLI Script used to configure the server: ${CLI_SCRIPT_FILE_FOR_EMBEDDED}"
