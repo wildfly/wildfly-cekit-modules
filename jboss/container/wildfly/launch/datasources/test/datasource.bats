@@ -5,7 +5,7 @@ export BATS_TEST_SKIPPED=
 export JBOSS_HOME=$BATS_TEST_DIRNAME/../../../../../../test-common/
 
 source $JBOSS_HOME/launch-common.sh
-source ${JBOSS_HOME}/openshift-node-name.sh
+source ${BATS_TEST_DIRNAME}/../../os/node-name/added/launch/openshift-node-name.sh
 source $JBOSS_HOME/logging.sh
 
 # fake the logger so we don't have to deal with colors
