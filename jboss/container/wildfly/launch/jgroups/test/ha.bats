@@ -5,7 +5,7 @@ export BATS_TEST_SKIPPED=
 export JBOSS_HOME=$BATS_TEST_DIRNAME
 # fake the logger so we don't have to deal with colors
 export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
-export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../elytron/added/launch/elytron.sh
+export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../elytron/1.0/added/launch/elytron.sh
 export NODE_NAME_INCLUDE=$BATS_TEST_DIRNAME/../../os/node-name/added/launch/openshift-node-name.sh
 
 load $BATS_TEST_DIRNAME/../added/launch/jgroups.sh
