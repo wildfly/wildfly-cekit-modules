@@ -7,3 +7,7 @@ description: Installs the $JBOSS_HOME/bin/launch/json_logging.sh file
 execute:
 - script: configure.sh
   user: '185'
+envs:
+  - name: "ENABLE_JSON_LOGGING"
+    example: "true"
+    description: Enable JSON-formatted logging
