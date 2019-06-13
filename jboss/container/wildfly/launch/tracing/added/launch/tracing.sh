@@ -36,14 +36,15 @@ function configureByCLI() {
         /subsystem=microprofile-opentracing-smallrye:add()
       end-if
 EOF
-    else
+    elif [ "x${WILDFLY_TRACING_ENABLED}" == "xfalse" ]; then
       cat << 'EOF' >> ${CLI_SCRIPT_FILE}
       if (outcome == success) of /subsystem=microprofile-opentracing-smallrye:read-resource
         /subsystem=microprofile-opentracing-smallrye:remove()
       end-if
       if (outcome == success) of /extension=org.wildfly.extension.microprofile.opentracing-smallrye:read-resource
-        /extension=org.wildfly.extension.microprofile.config-smallrye:remove()
+        /extension=org.wildfly.extension.microprofile.opentracing-smallrye:remove()
       end-if
 EOF
     fi
 }
+ 
