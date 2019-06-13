@@ -47,8 +47,6 @@
 # type entries, which should only be processed once.
 #
 
-source $JBOSS_HOME/bin/launch/logging.sh
-
 # clear functions from any previous module
 function prepareModule() {
   unset -f preConfigure
@@ -73,17 +71,8 @@ function executeModule() {
 
 # Run through the list of scripts, executing the specified function for each.
 # $1 - function name
-function executeConfigModules() {
-  for module in ${CONFIGURE_CONFIG_SCRIPTS[@]}; do
-    prepareModule
-    executeModule $module $1
-  done
-}
-
-# Run through the list of scripts, executing the specified function for each.
-# $1 - function name
-function executeEnvModules() {
-  for module in ${CONFIGURE_ENV_SCRIPTS[@]}; do
+function executeModules() {
+  for module in ${CONFIGURE_SCRIPTS[@]}; do
     prepareModule
     executeModule $module $1
   done
@@ -96,18 +85,17 @@ function executeEnvModules() {
 # file processing, and keeps the base environment the same from file to file
 # (i.e. we don't have to run prepareEnv for each file).
 function processEnvFiles() {
-  local method=$1
   if [ -n "$ENV_FILES" ]; then
     (
-      eval ${method} prepareEnv
+      executeModules prepareEnv
       for prop_file_arg in $(echo $ENV_FILES | sed "s/,/ /g"); do
         for prop_file in $(find $prop_file_arg -maxdepth 0 2>/dev/null); do
           (
             if [ -f $prop_file ]; then
               source $prop_file
-              eval ${method} preConfigureEnv
-              eval ${method} configureEnv
-              eval ${method} postConfigureEnv
+              executeModules preConfigureEnv
+              executeModules configureEnv
+              executeModules postConfigureEnv
             else
               log_warning "Could not process environment for $prop_file.  File does not exist."
             fi
@@ -118,16 +106,7 @@ function processEnvFiles() {
   fi
 }
 
-function configureConfigModules() {
-  executeConfigModules preConfigure
-  executeConfigModules configure
-  processEnvFiles executeConfigModules
-  executeConfigModules postConfigure
-}
-
-function configureEnvModules() {
-  executeEnvModules preConfigure
-  executeEnvModules configure
-  processEnvFiles executeEnvModules
-  executeEnvModules postConfigure
-}
+executeModules preConfigure
+executeModules configure
+processEnvFiles
+executeModules postConfigure
