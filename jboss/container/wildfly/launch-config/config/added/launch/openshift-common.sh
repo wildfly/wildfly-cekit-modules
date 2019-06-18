@@ -124,6 +124,10 @@ function exec_cli_scripts() {
   local stdOut="discard"
   local redirectStdOut="1>/dev/null"
 
+  if [ "${SCRIPT_DEBUG}" = "true" ]; then
+    CLI_DEBUG="TRUE";
+  fi
+
   if [ -s "${script}" ]; then
 
     # Dump the cli script file for debugging

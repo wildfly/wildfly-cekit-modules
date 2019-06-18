@@ -116,7 +116,9 @@ generate_jgroups_auth_config() {
 
   if [ -z "${cluster_password}" ]; then
       log_warning "No password defined for JGroups cluster. AUTH protocol will be disabled. Please define JGROUPS_CLUSTER_PASSWORD."
-      config="<!--WARNING: No password defined for JGroups cluster. AUTH protocol has been disabled. Please define JGROUPS_CLUSTER_PASSWORD. -->"
+      if [ "${CONF_AUTH_MODE}" = "xml" ]; then
+        config="<!--WARNING: No password defined for JGroups cluster. AUTH protocol has been disabled. Please define JGROUPS_CLUSTER_PASSWORD. -->"
+      fi
   elif [ "${CONF_AUTH_MODE}" = "xml" ]; then
       config="\n <auth-protocol type=\"AUTH\">\n\
                     <digest-token algorithm=\"${digest_algorithm:-SHA-512}\">\n\
@@ -125,13 +127,12 @@ generate_jgroups_auth_config() {
                 </auth-protocol>\n"
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
     #TODO: :add-protocol is a deprecated operation, should be replace by a non-deprecated version
-    config=$(cat <<EOF
-        batch
+    read -r -d '' config << EOM
+      batch
          /subsystem=jgroups/stack=tcp:add-protocol(type=AUTH)
          /subsystem=jgroups/stack=tcp/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})
-        run-batch
-EOF
-   )
+      run-batch
+EOM
   fi
   echo "${config}"
 }
@@ -155,7 +156,7 @@ generate_generic_ping_config() {
       config="<protocol type=\"${ping_protocol}\" ${socket_binding}/>"
     elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
       local op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol})"
-      if [ "${socket_binding}x" == "x" ]; then
+      if [ "${socket_binding}x" != "x" ]; then
         op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol}, socket-binding=${socket_binding})"
       fi
     read -d '' config << EOF
@@ -201,14 +202,14 @@ generate_dns_ping_config() {
       #TODO: :add-protocol is a deprecated operation, should be replace by a non-deprecated version
 
       local op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol})"
-      if [ "${socket_binding}x" == "x" ]; then
+      if [ "${socket_binding}x" != "x" ]; then
         op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol}, socket-binding=${socket_binding})"
       fi
 
       local op_prop1=""
       local op_prop2=""
       if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
-        op_prop1="/subsystem=jgroups/stack=tcp/protocol=${ping_protocol}/property=dns_query:add(value=${ping_service_name})"
+        op_prop1="/subsystem=jgroups/stack=tcp/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
         op_prop2="/subsystem=jgroups/stack=tcp/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
       fi
 
@@ -259,7 +260,7 @@ configure_ha() {
   if [ "${CONF_AUTH_MODE}" = "xml" ]; then
     sed -i "s|<!-- ##JGROUPS_AUTH## -->|${JGROUPS_AUTH}|g" $CONFIG_FILE
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
-    echo ${JGROUPS_AUTH} >> $CONFIG_FILE;
+    echo "${JGROUPS_AUTH}" >> ${CLI_SCRIPT_FILE};
   fi
 
   log_info "Configuring JGroups discovery protocol to ${ping_protocol}"
@@ -267,7 +268,7 @@ configure_ha() {
   if [ "${CONF_PING_MODE}" = "xml" ]; then
     sed -i "s|<!-- ##JGROUPS_PING_PROTOCOL## -->|${ping_protocol_element}|g" $CONFIG_FILE
   elif [ "${CONF_PING_MODE}" = "cli" ]; then
-    echo ${ping_protocol_element} >> $CONFIG_FILE;
+    echo "${ping_protocol_element}" >> ${CLI_SCRIPT_FILE};
   fi
 }
 
