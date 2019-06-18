@@ -1,7 +1,22 @@
 schema_version: 1
-name: jboss.container.wildfly.s2i.install-common
+name: jboss.container.wildfly.s2i.bash
 version: '1.0'
 description: Common scripts for S2I.
 
+envs:
+- name: JBOSS_CONTAINER_WILDFLY_S2I_MODULE
+  value: /opt/jboss/container/wildfly/s2i
+- name: GALLEON_DEFINITIONS
+  description: "Mandatory. Absolute path to directory that contains galleon server provisioning maven projects."
+- name: S2I_SOURCE_DEPLOYMENTS_FILTER
+  value: "*.war *.ear *.rar *.jar"
+- name: WILDFLY_S2I_OUTPUT_DIR
+  value: "/s2i-output"
+  
 execute:
 - script: configure.sh
+
+modules:
+  install:
+  - name: jboss.container.maven.s2i.bash
+  - name: jboss.container.util.logging.bash
