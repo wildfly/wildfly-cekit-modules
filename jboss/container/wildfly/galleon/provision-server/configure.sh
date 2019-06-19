@@ -8,8 +8,10 @@ if [ ! -d "$GALLEON_DEFAULT_SERVER" ]; then
   exit 1
 fi
 
-# required to have maven enabled.
-source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
+  # required to have maven enabled.
+  source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+fi
 
 # Provision the default server
 # The active profiles are jboss-community-repository and securecentral
