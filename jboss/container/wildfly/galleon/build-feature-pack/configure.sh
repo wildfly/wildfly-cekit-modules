@@ -38,8 +38,10 @@ java -jar /tmp/offliner.jar $OFFLINER_URLS \
 
 rm /tmp/offliner.jar && rm /tmp/offliner.txt
 
-# required to have maven enabled.
-source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
+  # required to have maven enabled.
+  source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+fi
 
 # Copy JBOSS_HOME content (custom os content) to common package dir
 CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
