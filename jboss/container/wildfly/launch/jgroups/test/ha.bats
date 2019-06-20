@@ -2,19 +2,28 @@
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
-export JBOSS_HOME=$BATS_TEST_DIRNAME
+export JBOSS_HOME=$BATS_TMPDIR/jboss_home
+mkdir -p $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../added/launch/jgroups.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../added/launch/ha.sh $JBOSS_HOME/bin/launch
+mkdir -p $JBOSS_HOME/standalone/configuration
+
 # fake the logger so we don't have to deal with colors
 export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
 export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../elytron/1.0/added/launch/elytron.sh
 export NODE_NAME_INCLUDE=$BATS_TEST_DIRNAME/../../os/node-name/added/launch/openshift-node-name.sh
-
-load $BATS_TEST_DIRNAME/../added/launch/jgroups.sh
-load $BATS_TEST_DIRNAME/../added/launch/ha.sh
-
+# Set up the environment variables and load dependencies
+WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
+source $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh
+load $JBOSS_HOME/bin/launch/jgroups.sh
+load $JBOSS_HOME/bin/launch/ha.sh
 export OPENSHIFT_DNS_PING_SERVICE_NAMESPACE="testnamespace"
+export CONF_AUTH_MODE="xml"
+export CONF_PING_MODE="xml"
 
 setup() {
-  export CONFIG_FILE=${BATS_TMPDIR}/standalone-openshift.xml
+  echo setup
+  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
 }
 
 teardown() {
@@ -33,7 +42,7 @@ teardown() {
   run get_socket_binding_for_ping "kubernetes.KUBE_PING"
   echo "${output}"
   [ "${output}" = "" ]
-  run get_socket_binding_for_ping "dns.DNS_PING"
+  # run get_socket_binding_for_ping "dns.DNS_PING"
   echo "${output}"
   [ "${output}" = "" ]
   run get_socket_binding_for_ping "openshift.KUBE_PING"
@@ -45,14 +54,17 @@ teardown() {
   run get_socket_binding_for_ping "some.new.PING"
   echo "${output}"
   [ "${output}" = 'socket-binding="jgroups-mping"' ]
+
 }
 
 @test "Generate JGroups Auth config" {
 expected=$(cat <<EOF
-\n <auth-protocol type="AUTH">\n <digest-token algorithm="digest_algo">\n <shared-secret-reference clear-text="cluster_password"/>\n </digest-token>\n </auth-protocol>\n
+\n <auth-protocol type="AUTH">\n<digest-token algorithm="digest_algo">\n <shared-secret-reference clear-text="cluster_password"/>\n </digest-token>\n </auth-protocol>\n
 EOF
 )
   run generate_jgroups_auth_config "cluster_password" "digest_algo"
+  output="$(echo "${output}" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected="$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${output}"
   echo "Expected: ${expected}"
   [ "${expected}" = "${output}" ]
@@ -64,6 +76,8 @@ expected=$(cat <<EOF
 EOF
 )
   run generate_jgroups_auth_config "cluster_password" ""
+  output="$(echo "${output}" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected="$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${output}"
   echo "Expected: ${expected}"
   [ "${expected}" = "${output}" ]
@@ -165,6 +179,8 @@ EOF
   export JGROUPS_PING_PROTOCOL="kubernetes.KUBE_PING"
   run configure_ha
   result=$(<${CONFIG_FILE})
+  result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
   echo "Expected: ${expected}"
   [ "${result}" = "${expected}" ]
@@ -190,6 +206,8 @@ EOF
   export OPENSHIFT_DNS_PING_SERVICE_NAME="service_name"
   run configure_ha
   result=$(<${CONFIG_FILE})
+  result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
   echo "Expected: ${expected}"
   [ "${result}" = "${expected}" ]
@@ -215,7 +233,10 @@ EOF
   export JGROUPS_PING_PROTOCOL="openshift.DNS_PING"
   run configure_ha
   result=$(<${CONFIG_FILE})
+  result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
   echo "Expected: ${expected}"
   [ "${result}" = "${expected}" ]
 }
+
