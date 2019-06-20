@@ -170,14 +170,6 @@ function inject_external_datasources() {
   # Add extensions from envs
   if [ -n "$DATASOURCES" ]; then
     for datasource_prefix in $(echo $DATASOURCES | sed "s/,/ /g"); do
-      driver=$(find_env "${datasource_prefix}_DRIVER" )
-      if [ "$driver" == "postgresql" ]; then
-        db="POSTGRESQL"
-      elif [ "$driver" == "mysql" ]; then
-        db="MYSQL"
-      else
-        db="EXTERNAL"
-      fi
       inject_datasource $datasource_prefix $datasource_prefix $datasource_prefix
     done
   fi
@@ -214,6 +206,15 @@ function generate_datasource_common() {
   local validate="${13}"
   local url="${14}"
 
+  local dsConfMode
+  getDataSourceConfigureMode "dsConfMode"
+  if [ "${dsConfMode}" = "xml" ]; then
+    # CLOUD-3198 Since Sed replaces '&' with a full match, we need to escape it.
+    local url="${14//&/\\&}"
+    # CLOUD-3198 In addition to that, we also need to escape ';'
+    url="${url//;/\\;}"
+  fi
+
   if [ -n "$driver" ]; then
     ds=$(generate_external_datasource)
   else
@@ -244,8 +245,6 @@ function generate_datasource_common() {
     inject_datastore $pool_name $jndi_name $driver $refresh_interval
   fi
 
-  local dsConfMode
-  getDataSourceConfigureMode "dsConfMode"
   if [ "${dsConfMode}" = "xml" ]; then
     # Only do this replacement if we are replacing an xml marker
     echo "$ds" | sed ':a;N;$!ba;s|\n|\\n|g'
@@ -692,41 +691,17 @@ function inject_datasource() {
   NON_XA_DATASOURCE=$(find_env "${prefix}_NONXA" false)
 
   url=$(find_env "${prefix}_URL")
+  driver=$(find_env "${prefix}_DRIVER" )
+  checker=$(find_env "${prefix}_CONNECTION_CHECKER" )
+  sorter=$(find_env "${prefix}_EXCEPTION_SORTER" )
+  url=$(find_env "${prefix}_URL" )
+  if [ -n "$checker" ] && [ -n "$sorter" ]; then
+    validate=true
+  else
+    validate="false"
+  fi
 
-  case "$db" in
-    "MYSQL")
-      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
-
-      driver="mysql"
-      validate="true"
-      checker="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
-      sorter="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
-      ;;
-    "POSTGRESQL")
-      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
-
-      driver="postgresql"
-      validate="true"
-      checker="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-      sorter="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-      ;;
-    "MONGODB")
-      continue
-      ;;
-    *)
-      driver=$(find_env "${prefix}_DRIVER" )
-      checker=$(find_env "${prefix}_CONNECTION_CHECKER" )
-      sorter=$(find_env "${prefix}_EXCEPTION_SORTER" )
-      url=$(find_env "${prefix}_URL" )
-      if [ -n "$checker" ] && [ -n "$sorter" ]; then
-        validate=true
-      else
-        validate="false"
-      fi
-
-      service_name=$prefix
-      ;;
-  esac
+  service_name=$prefix
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"
