@@ -4,17 +4,20 @@
 export BATS_TEST_SKIPPED=
 
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-export CONFIG_FILE=$JBOSS_HOME/standalone/configuration/standalone-openshift.xml
 
 mkdir -p $JBOSS_HOME/bin/launch
 echo $BATS_TEST_DIRNAME
 cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/configure_logger_category.sh $JBOSS_HOME/bin/launch
+
+# Set up the environment variables and load dependencies
+WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
+source $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh
 source $BATS_TEST_DIRNAME/../added/launch/configure_logger_category.sh
 
 setup() {
   mkdir -p $JBOSS_HOME/standalone/configuration
-  cp $BATS_TEST_DIRNAME/../../../../os-eap71-openshift/added/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
 }
 
 teardown() {
