@@ -26,6 +26,29 @@ if [ -n "${BATS_STANDALONE_XML_URL}" ]; then
     fi
 fi
 
-# Run all the tests
-for testName in `find ./ -name *.bats`; do echo ${testName}; bats ${testName}; done
+rc=0
+failed=()
+tap=""
+# passing --tap will enable TAP output for CI
+if [ "${1}" = "--tap" ]; then
+    echo "TAP version 13"
+    tap="--tap"
+fi
 
+for testName in `find ./ -name *.bats`;
+do
+    echo ${testName};
+    bats ${tap} ${testName}
+    if [ "$?" -ne 0 ]; then
+	rc=1
+	failed+=(${testName})
+    fi
+
+done
+
+if [ "${rc}" -ne 0 ]; then
+    echo "There are test failures! "
+    printf '[FAILED]: %s\n' "${failed[@]}"
+fi
+
+exit ${rc}
