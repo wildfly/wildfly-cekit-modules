@@ -168,9 +168,9 @@ generate_generic_ping_config() {
       if [ $ret -eq 0 ]; then
         local stacks=(tcp udp)
         for stack in "${stacks[@]}"; do
-          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add()"
+          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
           if [ "${socket_binding}x" != "x" ]; then
-            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(socket-binding=${socket_binding})"
+            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
           fi
           config="${config} $(configureProtocolCliHelper "$stack" "${ping_protocol}" "${op}")"
         done
@@ -216,9 +216,9 @@ generate_dns_ping_config() {
       if [ $ret -eq 0 ]; then
         local stacks=(tcp udp)
         for stack in "${stacks[@]}"; do
-          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add()"
+          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
           if [ "${socket_binding}x" != "x" ]; then
-            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(socket-binding=${socket_binding})"
+            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
           fi
 
           local op_prop1=""
