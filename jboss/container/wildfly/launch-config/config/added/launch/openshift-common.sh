@@ -23,7 +23,7 @@ LOGGING_FILE=$JBOSS_HOME/standalone/configuration/logging.properties
 if [ -z "${CONFIG_ADJUSTMENT_MODE}" ]; then
   CONFIG_ADJUSTMENT_MODE="xml_cli"
 fi
-if [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
+if [ -n "${CONFIG_IS_FINAL}" ] && [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
     CONFIG_ADJUSTMENT_MODE="none"
 fi
 
