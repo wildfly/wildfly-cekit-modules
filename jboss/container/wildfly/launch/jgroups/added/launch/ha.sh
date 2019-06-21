@@ -1,4 +1,3 @@
-
 if [ -n "${NODE_NAME_INCLUDE}" ]; then
     source "${NODE_NAME_INCLUDE}"
 else
@@ -126,14 +125,21 @@ generate_jgroups_auth_config() {
                     </digest-token>\n\
                 </auth-protocol>\n"
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
-    #TODO: :add-protocol is a deprecated operation, should be replace by a non-deprecated version
-    read -r -d '' config << EOM
-      batch
-         /subsystem=jgroups/stack=tcp:add-protocol(type=AUTH)
-         /subsystem=jgroups/stack=tcp/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})
-      run-batch
-EOM
+    config="
+      if (outcome != success) of /subsystem=jgroups:read-resource
+            echo \"Cannot configure the jgroups authentication. The jgroups subsystem is not present in the server configuration file.\" >> \${error_file}
+            quit
+      end-if
+"
+    local stacks=(tcp udp)
+    for stack in "${stacks[@]}"; do
+      op=("/subsystem=jgroups/stack=$stack/protocol=AUTH:add()"
+        "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
+      )
+      config="${config} $(configureProtocolCliHelper "$stack" "AUTH" "${op[@]}")"
+    done
   fi
+
   echo "${config}"
 }
 
@@ -155,15 +161,20 @@ generate_generic_ping_config() {
     if [ "${CONF_AUTH_MODE}" = "xml" ]; then
       config="<protocol type=\"${ping_protocol}\" ${socket_binding}/>"
     elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
-      local op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol})"
-      if [ "${socket_binding}x" != "x" ]; then
-        op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol}, socket-binding=${socket_binding})"
+      local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]\""
+      local ret
+      testXpathExpression "${xpath}" "ret"
+
+      if [ $ret -eq 0 ]; then
+        local stacks=(tcp udp)
+        for stack in "${stacks[@]}"; do
+          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add()"
+          if [ "${socket_binding}x" != "x" ]; then
+            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(socket-binding=${socket_binding})"
+          fi
+          config="${config} $(configureProtocolCliHelper "$stack" "${ping_protocol}" "${op}")"
+        done
       fi
-    read -d '' config << EOF
-        batch
-          ${op}
-        run-batch
-EOF
     fi
 
     echo "${config}"
@@ -198,28 +209,28 @@ generate_dns_ping_config() {
       fi
       config="${config}</protocol>"
     elif [ "${CONF_PING_MODE}" = "cli" ]; then
-      #CLI operation is expected to fail if there is already a protocol configured with the same name
-      #TODO: :add-protocol is a deprecated operation, should be replace by a non-deprecated version
+      local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]\""
+      local ret
+      testXpathExpression "${xpath}" "ret"
 
-      local op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol})"
-      if [ "${socket_binding}x" != "x" ]; then
-        op="/subsystem=jgroups/stack=tcp:add-protocol(type=${ping_protocol}, socket-binding=${socket_binding})"
+      if [ $ret -eq 0 ]; then
+        local stacks=(tcp udp)
+        for stack in "${stacks[@]}"; do
+          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add()"
+          if [ "${socket_binding}x" != "x" ]; then
+            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(socket-binding=${socket_binding})"
+          fi
+
+          local op_prop1=""
+          local op_prop2=""
+          if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
+            op_prop1="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
+            op_prop2="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
+          fi
+
+          config="${config} $(configureProtocolCliHelper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
+        done
       fi
-
-      local op_prop1=""
-      local op_prop2=""
-      if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
-        op_prop1="/subsystem=jgroups/stack=tcp/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
-        op_prop2="/subsystem=jgroups/stack=tcp/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
-      fi
-
-      read -d '' config << EOF
-        batch
-          ${op}
-          ${op_prop1}
-          ${op_prop2}
-        run-batch
-EOF
     fi
 
     echo "${config}"
@@ -272,3 +283,35 @@ configure_ha() {
   fi
 }
 
+
+configureProtocolCliHelper() {
+  local params=("${@}")
+  local stack=${params[0]}
+  local protocol=${params[1]}
+  local result
+
+  result="
+      if (outcome != success) of /subsystem=jgroups/stack=${stack}:read-resource
+          /subsystem=jgroups/stack=${stack}:add()
+      end-if
+
+      if (outcome == success) of /subsystem=jgroups/stack="${stack}"/protocol="${protocol}":read-resource
+          echo \"Cannot configure jgroups '${protocol}' protocol under ${stack} stack. This protocol is already configured.\" >> \${error_file}
+          quit
+      end-if
+
+      if (outcome != success) of /subsystem=jgroups/stack="${stack}"/protocol="${protocol}":read-resource
+          batch"
+
+  # starts in 2, since 0 and 1 are arguments
+  for ((j=2; j<${#params[@]}; ++j)); do
+    result="${result}
+             ${params[j]}"
+  done
+
+  result="${result}
+          run-batch
+      end-if
+"
+  echo "${result}"
+}
