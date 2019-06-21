@@ -1,0 +1,9 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.logger-category
+version: '1.0'
+description: Adjusts the logger category
+
+
+execute:
+- script: configure.sh
+  user: '185'

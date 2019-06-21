@@ -9,7 +9,7 @@ export BATS_TEST_SKIPPED=
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TEST_DIRNAME
 # fake the logger so we don't have to deal with colors
-export BATS_LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../test-common/logging.sh
+export BATS_LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
 
 load $BATS_TEST_DIRNAME/../added/launch/mp-config.sh
 
@@ -95,7 +95,6 @@ teardown() {
 }
 
 @test "Configure MICROPROFILE_CONFIG_DIR=/bogus/beyond/belief MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
-
   run generate_microprofile_config_source "/bogus/beyond/belief" "150"
   echo ${output}
   [ "$status" -eq 0 ]
@@ -121,8 +120,8 @@ teardown() {
 }
 
 @test "Configure MICROPROFILE_CONFIG_DIR=BATS_LOGGING_INCLUDE MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
-
   run generate_microprofile_config_source "${BATS_LOGGING_INCLUDE}" "150"
+echo "CONFIG_FILE $CONFIG_FILE"
   echo ${output}
   [ "$status" -eq 0 ]
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '${BATS_LOGGING_INCLUDE}' is not a directory"

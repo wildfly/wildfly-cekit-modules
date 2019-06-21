@@ -1,0 +1,8 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.os.node-name
+version: '1.0'
+description: Server common node name functionality
+
+execute:
+- script: configure.sh
+  user: '185'

@@ -1,0 +1,3 @@
+standalone-openshift.xml*
+# A file where you can set the BATS_STANDALONE_XML_URL property
+bats-config.env

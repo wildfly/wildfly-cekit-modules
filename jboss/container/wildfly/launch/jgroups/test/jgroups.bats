@@ -9,9 +9,9 @@ export BATS_TEST_SKIPPED=
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TEST_DIRNAME
 # fake the logger so we don't have to deal with colors
-export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../test-common/logging.sh
-export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../jboss-eap-config-elytron/added/launch/elytron.sh
-export NODE_NAME_INCLUDE=$BATS_TEST_DIRNAME/node-name.sh
+export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
+export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../elytron/1.0/added/launch/elytron.sh
+export NODE_NAME_INCLUDE=$BATS_TEST_DIRNAME/../../os/node-name/added/launch/openshift-node-name.sh
 
 load $BATS_TEST_DIRNAME/../added/launch/jgroups.sh
 load $BATS_TEST_DIRNAME/../added/launch/ha.sh
@@ -34,7 +34,7 @@ teardown() {
    </encrypt-protocol>
 EOF
 )
-  run create_jgroups_elytron_encrypt_sym "keystore" "key_alias" "encrypt_password" 
+  run create_jgroups_elytron_encrypt_sym "keystore" "key_alias" "encrypt_password"
   xml=${output}
   result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Result: ${result}"
