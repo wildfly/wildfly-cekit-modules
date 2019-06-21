@@ -14,13 +14,23 @@ configure() {
 configure_microprofile_config_source() {
 
   local dirConfigSource=$(generate_microprofile_config_source "${MICROPROFILE_CONFIG_DIR}" "${MICROPROFILE_CONFIG_DIR_ORDINAL}")
-echo "dirConfigSource ${dirConfigSource}"
+  echo "dirConfigSource ${dirConfigSource}"
   if [ -n "$dirConfigSource" ]; then
     if grep -qF "<!-- ##MICROPROFILE_CONFIG_SOURCE## -->" $CONFIG_FILE; then
       sed -i "s|<!-- ##MICROPROFILE_CONFIG_SOURCE## -->|${dirConfigSource}|" $CONFIG_FILE
     else
       #expected to fail if config-map is already configured
       cat << EOF >> ${CLI_SCRIPT_FILE}
+      if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
+          echo \"Cannot configure Microprofile Config. MICROPROFILE_CONFIG_DIR was specified but the subsystem in not in the server configuration.\" >> \${error_file}
+          quit
+      end-if
+
+      if (outcome == success) of /subsystem=microprofile-config-smallrye/config-source=config-map:read-resource
+          echo \"Cannot configure Microprofile Config. MICROPROFILE_CONFIG_DIR was specified but there is already a config-source named config-map configured.\" >> \${error_file}
+          quit
+      end-if
+
       /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path=${MICROPROFILE_CONFIG_DIR}}, ordinal=${MICROPROFILE_CONFIG_DIR_ORDINAL})
 EOF
     fi
