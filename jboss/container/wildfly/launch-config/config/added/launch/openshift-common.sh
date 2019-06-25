@@ -128,6 +128,11 @@ function exec_cli_scripts() {
     CLI_DEBUG="TRUE";
   fi
 
+  # remove any empty line
+  if [ -f "${script}" ]; then
+    sed -i '/^$/d' $script
+  fi
+
   if [ -s "${script}" ]; then
 
     # Dump the cli script file for debugging
@@ -177,6 +182,8 @@ function exec_cli_scripts() {
       exit 1
     elif [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
       echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
+      echo "================= CLI Error file ================="
+      cat ${CLI_SCRIPT_ERROR_FILE}
       exit 1
     elif [ "${SCRIPT_DEBUG}" != "true" ] ; then
       rm ${script} 2> /dev/null
