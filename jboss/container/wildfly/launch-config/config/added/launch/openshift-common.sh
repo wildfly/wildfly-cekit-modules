@@ -111,7 +111,7 @@ function testXpathExpression() {
   unset -v "$2" || echo "Invalid identifier: $2" >&2
 
   if [ "${SCRIPT_DEBUG}" == "true" ]; then
-    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}"
+    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null
   else
     eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null
   fi
