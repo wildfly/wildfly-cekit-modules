@@ -34,7 +34,7 @@ curl -v -L $WILDFLY_DIST_MAVEN_LOCATION/$WILDFLY_VERSION/wildfly-dist-$WILDFLY_V
 
 # Populate maven repo
 java -jar /tmp/offliner.jar $OFFLINER_URLS \
-/tmp/offliner.txt --dir $MAVEN_LOCAL_REPO > /dev/null
+/tmp/offliner.txt --dir $GALLEON_LOCAL_MAVEN_REPO > /dev/null
 
 rm /tmp/offliner.jar && rm /tmp/offliner.txt
 
@@ -51,10 +51,11 @@ rm -rf $JBOSS_HOME/*
 
 # Build Galleon s2i feature-pack and install it in local maven repository
 mvn -f $GALLEON_FP_PATH/pom.xml install \
---settings $HOME/.m2/settings.xml -Dmaven.repo.local=$MAVEN_LOCAL_REPO $GALLEON_BUILD_FP_MAVEN_ARGS_APPEND
+--settings $HOME/.m2/settings.xml -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO $GALLEON_BUILD_FP_MAVEN_ARGS_APPEND
 
-keepFP=${DEBUG_GALLEON_FP_SRC:false}
+keepFP=${DEBUG_GALLEON_FP_SRC:-false}
 if [ "x$keepFP" == "xfalse" ]; then
+ echo Removing feature-pack src.
  # Remove the feature-pack src
  rm -rf $GALLEON_FP_PATH
 fi

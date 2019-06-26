@@ -12,6 +12,8 @@ envs:
   value: "*.war *.ear *.rar *.jar"
 - name: WILDFLY_S2I_OUTPUT_DIR
   value: "/s2i-output"
+- name: GALLEON_LOCAL_MAVEN_REPO
+  value: "$HOME/galleon-m2-repository"
   
 execute:
 - script: configure.sh
