@@ -170,6 +170,13 @@ function inject_external_datasources() {
   # Add extensions from envs
   if [ -n "$DATASOURCES" ]; then
     for datasource_prefix in $(echo $DATASOURCES | sed "s/,/ /g"); do
+      driver=$(find_env "${datasource_prefix}_DRIVER" )
+      if [ "$driver" == "postgresql" ]; then
+        db="POSTGRESQL"
+      elif [ "$driver" == "mysql" ]; then
+        db="MYSQL"
+      fi
+
       inject_datasource $datasource_prefix $datasource_prefix $datasource_prefix
     done
   fi
@@ -281,7 +288,7 @@ function generate_external_datasource_xml() {
   else
     ds=" <xa-datasource jndi-name=\"${jndi_name}\" pool-name=\"${pool_name}\" enabled=\"true\" use-java-context=\"true\" statistics-enabled=\"\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}\">"
     local xa_props=$(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_")
-    if [ -z "$xa_props" ] && [ "$driver" != "postgresql" ] && [ "$driver" != "mysql" ]; then
+    if [ -z "$xa_props" ]; then
       log_warning "At least one ${prefix}_XA_CONNECTION_PROPERTY_property for datasource ${service_name} is required. Datasource will not be configured."
       failed="true"
     else
@@ -701,7 +708,24 @@ function inject_datasource() {
     validate="false"
   fi
 
-  service_name=$prefix
+  case "$db" in
+	    "MYSQL")
+        if [ -z "${driver}" ]; then
+          driver="mysql"
+        fi
+	      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+      ;;
+      "POSTGRESQL")
+        if [ -z "${driver}" ]; then
+          driver="postgresql"
+        fi
+	      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+      ;;
+      *)
+        service_name=$prefix
+        ;;
+  esac
+
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"

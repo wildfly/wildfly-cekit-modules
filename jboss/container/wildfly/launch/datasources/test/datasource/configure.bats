@@ -48,6 +48,9 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -64,6 +67,9 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -80,6 +86,9 @@ load common
     TEST_URL="jdbc:mysql://localhost:3306/jbossdb"
     TEST_NONXA="true"
     TEST_JTA="false"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -116,6 +125,9 @@ load common
     TEST_DATABASE="testdb"
     TEST_MAX_POOL_SIZE="11"
     TEST_MIN_POOL_SIZE="9"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -137,6 +149,9 @@ load common
     TEST_MAX_POOL_SIZE="11"
     TEST_MIN_POOL_SIZE="9"
     TEST_XA_CONNECTION_PROPERTY_URL=""
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -187,6 +202,9 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -203,6 +221,9 @@ load common
     TEST_POSTGRESQL_SERVICE_HOST="localhost"
     TEST_POSTGRESQL_SERVICE_PORT="5432"
     TEST_DATABASE="postgresdb"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -217,6 +238,9 @@ load common
     TEST_PASSWORD="thefrog"
     TEST_NONXA="false"
     TEST_XA_CONNECTION_PROPERTY_URL="jdbc:mysql://localhost:3306/jbossdb"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -251,6 +275,9 @@ load common
     TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
     TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
     TEST_XA_CONNECTION_PROPERTY_DatabaseName="postgresdb"
+    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
