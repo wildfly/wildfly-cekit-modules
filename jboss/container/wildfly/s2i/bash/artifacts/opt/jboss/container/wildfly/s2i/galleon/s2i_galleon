@@ -1,6 +1,96 @@
-function galleon_provision_server() {
+function galleon_dump_repo_file_list() {
+    targetFile=$1
+    pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
+    find  -type f -printf '%P\n' > $targetFile
+    popd &> /dev/null
+}
+
+function galleon_cp_artifacts() {
+    filename=$1
+    targetDir=$2
+    prefix="> "
+    while read line; do
+      first=${line::1}
+      if [ $first == $prefix ]; then
+        file=${line#"$prefix"}
+        dir=`dirname $file`
+        mkdir -p "$targetDir/$dir" && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$file" "$targetDir/$dir"
+    fi
+    done < $filename
+}
+
+function galleon_build_repo_diff() {
+    LIVE=$HOME/galleon-maven-repo-live.txt
+    STATIC=$HOME/galleon-maven-repo-snapshot.txt
+    DIFF=$HOME/galleon-maven-repo.diff
+    TARGET_DIR=$1
+    LIVE_M2=$TARGET_DIR/galleon-m2
+
+    galleon_dump_repo_file_list $LIVE
+
+    diff $STATIC $LIVE > $DIFF
+
+    galleon_cp_artifacts $DIFF $LIVE_M2
+
+    rm -rf $LIVE $DIFF &> /dev/null
+}
+
+function galleon_handle_incremental_build() {
+    artifacts=/tmp/artifacts/galleon-m2
+    if [ -d $artifacts ]; then
+       pushd "$artifacts" &> /dev/null
+       cp -r * $GALLEON_LOCAL_MAVEN_REPO
+       popd &> /dev/null
+       rm -rf $artifacts &> /dev/null
+    fi
+}
+
+function galleon_init_mvn_env() {
+    # Capture the list of files present in maven repo. Used by save-artifacts
+    # Do it at s2i time, not at build image time, otherwise not exact result in file content (OS dependent ordering)
+    galleon_dump_repo_file_list $HOME/galleon-maven-repo-snapshot.txt
+
+    # Check if we have artifacts injected from previous build
+    galleon_handle_incremental_build
+
+    # store original MAVEN_ARGS and MAVEN_LOCAL_REPO
+    if [ -n "$MAVEN_ARGS" ]; then
+      ORIGINAL_MAVEN_ARGS=$MAVEN_ARGS
+    fi
+    if [ -n "$MAVEN_LOCAL_REPO" ]; then
+      ORIGINAL_MAVEN_LOCAL_REPO=$MAVEN_LOCAL_REPO
+    fi
     # Required for S2I_SOURCE_DIR to be initialized
     maven_s2i_init
+    # reset part of the s2i maven initialization to adapt to galleon local repo
+    MAVEN_LOCAL_REPO=$GALLEON_LOCAL_MAVEN_REPO
+    unset MAVEN_ARGS
+    if [ -n "$ORIGINAL_MAVEN_ARGS" ]; then
+      MAVEN_ARGS=$ORIGINAL_MAVEN_ARGS
+    fi
+    maven_init_var_MAVEN_ARGS
+}
+
+function galleon_reset_mvn_env() {
+    # cleanup galleon local repository if required
+    maven_cleanup
+
+    # restore MAVEN_LOCAL_REPO
+    unset MAVEN_LOCAL_REPO
+    if [ -n "$ORIGINAL_MAVEN_LOCAL_REPO" ]; then
+      MAVEN_LOCAL_REPO=$ORIGINAL_MAVEN_LOCAL_REPO
+    fi
+
+    # reset args to be clean when consumed by s2i
+    # MAVEN_ARGS could contain Galleon local repository
+    unset MAVEN_ARGS
+    if [ -n "$ORIGINAL_MAVEN_ARGS" ]; then
+      MAVEN_ARGS=$ORIGINAL_MAVEN_ARGS
+    fi
+}
+
+function galleon_provision_server() {
+    galleon_init_mvn_env
     # Embedded galleon description
     GALLEON_LOCAL_PROVISIONING=$S2I_SOURCE_DIR/galleon
     GALLEON_ROOT_DIR=${GALLEON_DEFINITIONS}
@@ -34,7 +124,7 @@ function galleon_provision_server() {
           fi
           targetDir=$GALLEON_DESCRIPTION_LOCATION/$ARTIFACT_DIR/server
           if [ -d $targetDir ]; then
-            replace_server $targetDir
+            galleon_replace_server $targetDir
           else
             echo "Error, no server provisioned in $targetDir"
             exit 1
@@ -43,10 +133,11 @@ function galleon_provision_server() {
           echo "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION exiting"
           exit 1
       fi
-    fi  
+    fi
+    galleon_reset_mvn_env
 }
 
-function replace_server() {
+function galleon_replace_server() {
   echo "Replacing server with provisioned one"
   srcDir=$1
   rm -rf $JBOSS_HOME/.galleon

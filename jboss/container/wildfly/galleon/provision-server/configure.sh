@@ -15,7 +15,7 @@ fi
 
 # Provision the default server
 # The active profiles are jboss-community-repository and securecentral
-mvn -f $GALLEON_DEFAULT_SERVER/pom.xml package -Dmaven.repo.local=$MAVEN_LOCAL_REPO \
+mvn -f $GALLEON_DEFAULT_SERVER/pom.xml package -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
 --settings $HOME/.m2/settings.xml $GALLEON_DEFAULT_SERVER_PROVISION_MAVEN_ARGS_APPEND
 
 TARGET_DIR=$GALLEON_DEFAULT_SERVER/target
@@ -32,4 +32,4 @@ rm -r $TARGET_DIR
 
 chown -R jboss:root $JBOSS_HOME && chmod -R ug+rwX $JBOSS_HOME 
 chown -R jboss:root $HOME
-chmod -R ug+rwX $MAVEN_LOCAL_REPO
+chmod -R ug+rwX $GALLEON_LOCAL_MAVEN_REPO
