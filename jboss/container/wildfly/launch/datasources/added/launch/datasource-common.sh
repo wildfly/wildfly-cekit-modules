@@ -376,7 +376,8 @@ function generate_external_datasource_xml() {
 function generate_external_datasource_cli() {
   local failed="false"
 
-  local ds_resource="/subsystem=datasources"
+  local subsystem_addr="/subsystem=datasources"
+  local ds_resource="${subsystem_addr}"
 
   local -A ds_tmp_key_values
   ds_tmp_key_values["jndi-name"]=${jndi_name}
@@ -468,7 +469,13 @@ function generate_external_datasource_cli() {
   # Otherwise we simply add it. Unfortunately CLI control flow does not work when wrapped
   # in a batch
 
-  ds="if (outcome == success) of $ds_resource:read-resource
+  ds="
+    if (outcome != success) of $subsystem_addr:read-resource
+      echo \"You have set environment variables to configure the datasource \'${pool_name}\'. Fix your configuration to contain a datasources subsystem for this to happen.\"
+      exit
+    end-if
+
+    if (outcome == success) of $ds_resource:read-resource
       batch
       $ds_resource:remove
       ${ds_tmp_add}
