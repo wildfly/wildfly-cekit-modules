@@ -225,9 +225,9 @@ function generate_datasource_common() {
       pool_name="$DB_POOL"
     fi
 
-    # Scripts that want to disable addition of the default data source should set
-    # DISABLE_GENERATE_DEFAULT_DATASOURCE=true
-    if [ -z "${DISABLE_GENERATE_DEFAULT_DATASOURCE}" ] || [ "${DISABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "FALSE" ]; then
+    # Scripts that want to enable addition of the default data source should set
+    # ENABLE_GENERATE_DEFAULT_DATASOURCE=true
+    if [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
       ds=$(generate_default_datasource)
     fi
   fi

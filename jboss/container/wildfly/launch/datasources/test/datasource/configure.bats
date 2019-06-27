@@ -318,6 +318,7 @@ load common
 }
 
 @test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - Missing driver" {
+
     DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
     TEST_USERNAME="kermit"
@@ -332,4 +333,18 @@ load common
     msg="WARN DRIVER not set for datasource TEST. Datasource will not be configured."
     echo ${output}
     [ "$output" = "$msg" ]
+}
+
+@test "inject_datasources: NO DATASOURCES - NO DEFAULT DS" {
+
+    run inject_datasources
+
+    assert_datasources "no-datasource-no-default.xml"
+}
+
+@test "inject_datasources: NO DATASOURCES - WITH DEFAULT DS" {
+    ENABLE_GENERATE_DEFAULT_DATASOURCE="true"
+    run inject_datasources
+
+    assert_datasources "no-datasource-enabled-default.xml"
 }
