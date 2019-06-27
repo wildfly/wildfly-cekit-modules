@@ -90,7 +90,8 @@ function generate_tx_datasource_xml() {
 
 # See generate_tx_datasource() for the arguments
 function generate_tx_datasource_cli() {
-  local ds_resource="/subsystem=datasources/data-source=${1}ObjectStorePool"
+  local subsystem_address="/subsystem=datasources"
+  local ds_resource="$subsystem_address/data-source=${1}ObjectStorePool"
   local ds_tmp_add="$ds_resource:add(jta=false, jndi-name=${2}ObjectStore, enabled=true, connection-url=jdbc:${8}://${5}:${6}/${7}, driver-name=$8"
   ds_tmp_add="${ds_tmp_add}, user-name=${3}, password=${4}"
   if [ -n "$tx_isolation" ]; then
@@ -107,7 +108,12 @@ function generate_tx_datasource_cli() {
   # We check if the datasource is there and remove it before re-adding in a batch.
   # Otherwise we simply add it. Unfortunately CLI control flow does not work when wrapped
   # in a batch
-  ds="if (outcome == success) of $ds_resource:read-resource
+  ds="
+    if (outcome != success) of $subsystem_addr:read-resource
+      echo \"You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. Fix your configuration to contain a datasources subsystem for this to happen.\"
+      exit
+    end-if
+    if (outcome == success) of $ds_resource:read-resource
       batch
       $ds_resource:remove
       $ds_tmp_add
@@ -123,12 +129,36 @@ function inject_jdbc_store() {
   init_node_name
 
   local prefix="os${JBOSS_NODE_NAME//-/}"
-  jdbcStore="<jdbc-store datasource-jndi-name=\"${1}\">\\
-                <action table-prefix=\"${prefix}\"/>\\
-                <communication table-prefix=\"${prefix}\"/>\\
-                <state table-prefix=\"${prefix}\"/>\\
-            </jdbc-store>"
-  sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
+
+  local dsConfMode
+  getConfigurationMode "<!-- ##JDBC_STORE## -->" "dsConfMode"
+  if [ "${dsConfMode}" = "xml" ]; then
+    jdbcStore="<jdbc-store datasource-jndi-name=\"${1}\">\\
+              <action table-prefix=\"${prefix}\"/>\\
+              <communication table-prefix=\"${prefix}\"/>\\
+              <state table-prefix=\"${prefix}\"/>\\
+          </jdbc-store>"
+    sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
+  elif [ "${dsConfMode}" = "cli" ]; then
+    local subsystem_addr="/subsystem=transactions"
+    # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we just overwrite all affected attributes
+    local cli="
+      if (outcome != success) of $subsystem_addr:read-resource
+        echo \"You have set environment variables to configure a jdbc transactional logstore. Fix your configuration to contain a transactions subsystem for this to happen.\"
+        exit
+      end-if
+
+      batch
+      $subsystem_addr:write-attribute(name=use-jdbc-store, value=true)
+      $subsystem_addr:write-attribute(name=jdbc-store-datasource, value=${1})
+      $subsystem_addr:write-attribute(name=jdbc-action-store-table-prefix, value=${prefix})
+      $subsystem_addr:write-attribute(name=jdbc-communication-store-table-prefix, value=${prefix})
+      $subsystem_addr:write-attribute(name=jdbc-state-store-table-prefix, value=${prefix})
+      run-batch
+    "
+    echo "${cli}" >> ${CLI_SCRIPT_FILE}
+  fi
+
 }
 
 
