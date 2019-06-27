@@ -332,7 +332,7 @@ load common
 
     msg="WARN DRIVER not set for datasource TEST. Datasource will not be configured."
     echo ${output}
-    [ "$output" = "$msg" ]
+    [[ "$output" =~ "${msg}" ]]
 }
 
 @test "inject_datasources: NO DATASOURCES - NO DEFAULT DS" {

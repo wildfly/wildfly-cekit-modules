@@ -1,3 +1,4 @@
+#!/bin/sh
 
 if [ -n "${TEST_LAUNCH_INCLUDE}" ]; then
     source "${TEST_LAUNCH_INCLUDE}"
@@ -55,7 +56,7 @@ function clearDatasourceEnv() {
 
 function clearDatasourcesEnv() {
   IFS=',' read -a db_backends <<< $DB_SERVICE_PREFIX_MAPPING
-  for db_backend in ${db_backends[@]}; do
+  for db_backend in "${db_backends[@]}"; do
     service_name=${db_backend%=*}
     service=${service_name^^}
     service=${service//-/_}
@@ -120,11 +121,11 @@ function inject_internal_datasources() {
       fi
     fi
 
-    if [ -z "$defaultDatasourceJndi" ]; then
+    if [ -z "$defaultDatasourceJndi" ] && [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
       defaultDatasourceJndi="java:jboss/datasources/ExampleDS"
     fi
   else
-    for db_backend in ${db_backends[@]}; do
+    for db_backend in "${db_backends[@]}"; do
 
       local service_name=${db_backend%=*}
       local service=${service_name^^}
@@ -152,16 +153,94 @@ function inject_internal_datasources() {
     done
   fi
 
+  writeEEDefaultDatasource
+}
+
+function writeEEDefaultDatasource() {
+  # Check the override and use that instead of the 'guess' if set
+  local forcedDefaultEeDs="false"
+  if [ -n "${defaultDatasourceJndi}" ] && [ -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
+    log_warning "The default datasource for the ee subsystem has been guessed to be ${defaultDatasourceJndi}. Specify this using EE_DEFAULT_DS_JNDI_NAME"
+  fi
+  if [ ! -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
+    defaultDatasourceJndi="${EE_DEFAULT_DS_JNDI_NAME}"
+    forcedDefaultEeDs="true"
+  fi
+
+  # Set the default datasource
+  local defaultEEDatasourceConfMode
+  getConfigurationMode "<!-- ##DEFAULT_DATASOURCE## -->" "defaultEEDatasourceConfMode"
+  if [ "${defaultEEDatasourceConfMode}" = "xml" ]; then
+    writeEEDefaultDatasourceXml
+  elif [ "${defaultEEDatasourceConfMode}" = "cli" ]; then
+    writeEEDefaultDatasourceCli
+  fi
+}
+
+function writeEEDefaultDatasourceXml() {
   if [ -n "$defaultDatasourceJndi" ]; then
     defaultDatasource="datasource=\"$defaultDatasourceJndi\""
   else
     defaultDatasource=""
   fi
-
   # new format replacement : datasource="##DEFAULT_DATASOURCE##"
   sed -i "s|datasource=\"##DEFAULT_DATASOURCE##\"|${defaultDatasource}|" $CONFIG_FILE
   # old format (for compat)
   sed -i "s|<!-- ##DEFAULT_DATASOURCE## -->|${defaultDatasource}|" $CONFIG_FILE
+}
+
+function writeEEDefaultDatasourceCli() {
+
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]\""
+  local ret
+  testXpathExpression "${xpath}" "ret"
+  if [ $ret -ne 0 ]; then
+    if [ "${forcedDefaultEeDs}" = "true" ]; then
+      echo "EE_DEFAULT_DS_JNDI_NAME was set to \'${EE_DEFAULT_DS_JNDI_NAME}\' but the configuration contains no ee subsystem"
+      exit 1
+    else
+      # We have no ee subsystem and have just guessed what should go in - this is fine
+      return
+    fi
+  fi
+
+  local resource="/subsystem=ee/service=default-bindings"
+  # Add the default bindings if not there
+  echo "
+    if (outcome != success) of $resource:read-resource
+      $resource:add
+    end-if
+  " >> ${CLI_SCRIPT_FILE}
+
+
+  xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
+  ret=""
+  testXpathExpression "${xpath}" "ret"
+  local writeDs="$resource:write-attribute(name=datasource, value=${defaultDatasourceJndi})"
+  local undefineDs="$resource:undefine-attribute(name=datasource)"
+  local cli_action
+  if [ $ret -eq 0 ]; then
+    # Attribute exists in config already
+    if [ "${forcedDefaultEeDs}" = true ]; then
+      # We forced it, so override with whatever the value of EE_DEFAULT_DS_JNDI_NAME was
+      if [ -n "${defaultDatasourceJndi}" ]; then
+        cli_action="${writeDs}"
+      else
+        cli_action="${undefineDs}"
+      fi
+    fi
+  else
+    # Attribute does not exist in config already, so write whatever was defined
+    if [ -n "${defaultDatasourceJndi}" ]; then
+      cli_action="${writeDs}"
+    fi
+  fi
+
+  if [ -n "${cli_action}" ]; then
+    echo "
+        ${cli_action}
+      " >> ${CLI_SCRIPT_FILE}
+  fi
 }
 
 function inject_external_datasources() {
