@@ -18,6 +18,7 @@ else
 fi
 
 function getDataSourceConfigureMode() {
+  # THe extra +x makes this check whether the variable is unset, as '' is a valid value
   if [ -z ${DS_CONFIGURE_MODE+x} ]; then
     getConfigurationMode "<!-- ##DATASOURCES## -->" "DS_CONFIGURE_MODE"
   fi
