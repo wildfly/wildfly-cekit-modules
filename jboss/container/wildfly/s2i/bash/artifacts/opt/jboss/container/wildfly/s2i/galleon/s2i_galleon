@@ -142,6 +142,7 @@ function galleon_replace_server() {
   srcDir=$1
   rm -rf $JBOSS_HOME/.galleon
   rm -rf $JBOSS_HOME/*
+  rm -rf /deployments/*
   cp -prf $srcDir/* $JBOSS_HOME
   cp -prf $srcDir/.galleon $JBOSS_HOME/.galleon
   cp -prf $JBOSS_HOME/standalone/deployments/* /deployments

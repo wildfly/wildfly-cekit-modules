@@ -43,6 +43,14 @@ if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
   source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
 fi
 
+if [ -d "$JBOSS_HOME/modules" ]; then
+  # Copy JBOSS_HOME/modules content (custom os modules) to modules.
+  MODULES_DIR=$GALLEON_FP_PATH/src/main/resources/modules/
+  mkdir -p $MODULES_DIR
+  cp -r $JBOSS_HOME/modules/* $MODULES_DIR
+  rm -rf $JBOSS_HOME/modules/
+fi
+
 # Copy JBOSS_HOME content (custom os content) to common package dir
 CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
 mkdir -p $CONTENT_DIR
