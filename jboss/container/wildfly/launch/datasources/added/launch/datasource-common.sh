@@ -106,7 +106,7 @@ function inject_internal_datasources() {
   IFS=',' read -a db_backends <<< $DB_SERVICE_PREFIX_MAPPING
 
   if [ -z "$TIMER_SERVICE_DATA_STORE" ]; then
-    inject_timer_service default-file-store
+    inject_default_timer_service
   fi
 
   if [ "${#db_backends[@]}" -eq "0" ]; then
@@ -312,12 +312,16 @@ function generate_datasource_common() {
   fi
 
   if [ -z "$service_name" ]; then
-    service_name="ExampleDS"
-    driver="hsql"
+    if [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
+      service_name="ExampleDS"
+      driver="hsql"
+    else
+      return
+    fi
   fi
 
   if [ -n "$TIMER_SERVICE_DATA_STORE" -a "$TIMER_SERVICE_DATA_STORE" = "${service_name}" ]; then
-    inject_timer_service ${pool_name}_ds
+    inject_timer_service ${pool_name}
     local refresh_interval=$(refresh_interval ${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1})
     inject_datastore $pool_name $jndi_name $driver $refresh_interval
   fi
@@ -624,34 +628,32 @@ function generate_default_datasource_cli() {
   echo "$ds"
 }
 
-# Arguments:
-# $1 - timer service datastore
-function inject_timer_service() {
-  local defaultdatastore="${1}"
-
-  local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"${defaultdatastore}\">\
+function inject_default_timer_service() {
+    local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"default-file-store\">\
                 <data-stores>\
                     <file-data-store name=\"default-file-store\" path=\"timer-service-data\" relative-to=\"jboss.server.data.dir\"/>\
-                    <!-- ##DATASTORES## -->\
                 </data-stores>\
             </timer-service>"
   sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
 }
 
-# Arguments:
-# $1 - service name
+# $1 - service/pool name
 # $2 - datasource jndi name
 # $3 - datasource databasename
 # $4 - datastore refresh-interval (only applicable on eap7.x)
-function inject_datastore() {
-  local servicename="${1}"
+function inject_timer_service() {
+  local pool_name="${1}"
+  local datastore_name="${pool_name}"_ds
   local jndi_name="${2}"
   local databasename="${3}"
   local refresh_interval="${4}"
 
-  local datastore="<database-data-store name=\"${servicename}_ds\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${servicename}_part\" ${refresh_interval}/>\
-        <!-- ##DATASTORES## -->"
-  sed -i "s|<!-- ##DATASTORES## -->|${datastore}|" $CONFIG_FILE
+  local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"${datastore_name}\">\
+                <data-stores>\
+                  <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" ${refresh_interval}/>
+                </data-stores>\
+            </timer-service>"
+  sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
 }
 
 function inject_datasource() {
