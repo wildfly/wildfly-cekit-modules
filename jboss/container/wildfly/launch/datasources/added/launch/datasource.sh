@@ -12,6 +12,7 @@ function configure() {
 function configureEnv() {
   inject_external_datasources
 
+  # TODO - Don't think this is being used any more? The real action seems to be in tx-datasource.sh
   if [ -n "$JDBC_STORE_JNDI_NAME" ]; then
     local jdbcStore="<jdbc-store datasource-jndi-name=\"${JDBC_STORE_JNDI_NAME}\"/>"
     sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
@@ -100,7 +101,7 @@ function inject_default_job_repository() {
     local resourceAddr="/subsystem=batch-jberet"
     if [ -z "${hardcoded}" ] ; then
       # We only need to do something when the user has explicitly set a default job repository.
-      # This is because the base configuration needs to have a job repository set up for CLI 
+      # This is because the base configuration needs to have a job repository set up for CLI
       # replacement to work as the CLI embedded server will not even boot if it is not there.
       # (in the xml marker replacement it works differently as we replace the marker with the xml
       # for the default repo).
