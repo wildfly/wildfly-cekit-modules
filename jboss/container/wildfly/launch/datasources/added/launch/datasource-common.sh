@@ -321,9 +321,7 @@ function generate_datasource_common() {
   fi
 
   if [ -n "$TIMER_SERVICE_DATA_STORE" -a "$TIMER_SERVICE_DATA_STORE" = "${service_name}" ]; then
-    inject_timer_service ${pool_name}
-    local refresh_interval=$(refresh_interval ${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1})
-    inject_datastore $pool_name $jndi_name $driver $refresh_interval
+    inject_timer_service ${pool_name} ${jndi_name} ${driver} ${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1}
   fi
 
   if [ "${dsConfMode}" = "xml" ]; then
@@ -333,13 +331,6 @@ function generate_datasource_common() {
     # If using cli, return the raw string, preserving line breaks
     echo "$ds"
   fi
-}
-
-# Global function to configure refresh-interval, this function needs to be overridden in the datasource.sh script
-# i.e. os-eap7-launch/.../datasource.sh
-function refresh_interval() {
-    # do nothing on default state
-    echo ""
 }
 
 function generate_external_datasource() {
@@ -629,12 +620,34 @@ function generate_default_datasource_cli() {
 }
 
 function inject_default_timer_service() {
+  local confMode
+  getConfigurationMode "<!-- ##TIMER_SERVICE## -->" "confMode"
+  if [ "$confMode" = "xml" ]; then
     local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"default-file-store\">\
-                <data-stores>\
-                    <file-data-store name=\"default-file-store\" path=\"timer-service-data\" relative-to=\"jboss.server.data.dir\"/>\
-                </data-stores>\
-            </timer-service>"
-  sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+                  <data-stores>\
+                      <file-data-store name=\"default-file-store\" path=\"timer-service-data\" relative-to=\"jboss.server.data.dir\"/>\
+                  </data-stores>\
+              </timer-service>"
+    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+  elif [ "$confMode" = "cli" ]; then
+    local hasEjb3Subsystem
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
+    testXpathExpression "${xpath}" "hasEjb3Subsystem"
+    if [ $hasEjb3Subsystem -eq 0 ]; then
+      # Since we are adding a default, we only do this if we have an ejb3 subsystem
+      local timerResource="/subsystem=ejb3/service=timer-service"
+      # Only add this if there is no timer service already existing in the config
+      local cli="
+        if (outcome != success) of ${timerResource}:read-resource
+          batch
+          ${timerResource}:add(thread-pool-name=default, default-data-store=default-file-store)
+          ${timerResource}/file-data-store=default-file-store:add(path=timer-service-data, relative-to=jboss.server.data.dir)
+          run-batch
+        end-if
+      "
+      echo "${cli}" >> ${CLI_SCRIPT_FILE}
+    fi
+  fi
 }
 
 # $1 - service/pool name
@@ -648,12 +661,50 @@ function inject_timer_service() {
   local databasename="${3}"
   local refresh_interval="${4}"
 
-  local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"${datastore_name}\">\
-                <data-stores>\
-                  <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" ${refresh_interval}/>
-                </data-stores>\
-            </timer-service>"
-  sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+  local confMode
+  getConfigurationMode "<!-- ##TIMER_SERVICE## -->" "confMode"
+  if [ "$confMode" = "xml" ]; then
+    local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"${datastore_name}\">\
+                  <data-stores>\
+                    <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" refresh-interval=\"${refresh_interval}\"/>
+                  </data-stores>\
+              </timer-service>"
+    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+  elif [ "$confMode" = "cli" ]; then
+    local hasEjb3Subsystem
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
+    testXpathExpression "${xpath}" "hasEjb3Subsystem"
+    if [ $hasEjb3Subsystem -ne 0 ]; then
+      # No ejb3 subsystem is an error
+      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen."
+      exit 1
+    else
+      local timerResource="/subsystem=ejb3/service=timer-service"
+      local datastoreResource="${timerResource}/database-data-store=${datastore_name}"
+      local datastoreAdd="
+        ${datastoreResource}:add(datasource-jndi-name=${jndi_name}, database=${databasename}, partition=${pool_name}_part, refresh-interval=${refresh_interval})"
+      # We add the timer-service and the datastore in a batch if it is not there
+      local cli="
+        if (outcome != success) of ${timerResource}:read-resource
+          batch
+          ${timerResource}:add(thread-pool-name=default, default-data-store=${datastore_name})
+          ${datastoreAdd}
+          run-batch
+        end-if"
+      # Next we add the datastore if not there. This will work both if we added it in the previous line, or if the
+      # user supplied a configuration that already contained the timer service but not the desired datastore
+      cli="${cli}
+        if (outcome != success) of ${datastoreResource}:read-resource
+          ${datastoreAdd}
+        end-if"
+      #Finally we write the default-data-store attribute, which should work whether we added the
+      #timer-service or the datastore or not
+      cli="${cli}
+        ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
+      "
+      echo "${cli}" >> ${CLI_SCRIPT_FILE}
+    fi
+  fi
 }
 
 function inject_datasource() {

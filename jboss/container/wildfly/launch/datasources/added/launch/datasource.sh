@@ -78,11 +78,6 @@ function generate_datasource() {
   fi
 }
 
-# $1 - refresh-interval
-function refresh_interval() {
-    echo "refresh-interval=\"$1\""
-}
-
 function inject_default_job_repositories() {
   inject_default_job_repository "in-memory" "hardcoded"
 }
