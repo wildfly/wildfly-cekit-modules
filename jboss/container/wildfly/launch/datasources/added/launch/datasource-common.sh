@@ -94,7 +94,6 @@ function inject_datasources_common() {
   fi
 
   inject_external_datasources
-
 }
 
 function inject_internal_datasources() {
@@ -166,18 +165,9 @@ function inject_internal_datasources() {
 }
 
 function inject_external_datasources() {
-  local db
   # Add extensions from envs
   if [ -n "$DATASOURCES" ]; then
     for datasource_prefix in $(echo $DATASOURCES | sed "s/,/ /g"); do
-      driver=$(find_env "${datasource_prefix}_DRIVER" )
-      if [ "$driver" == "postgresql" ]; then
-        db="POSTGRESQL"
-      elif [ "$driver" == "mysql" ]; then
-        db="MYSQL"
-      else
-        db="EXTERNAL"
-      fi
       inject_datasource $datasource_prefix $datasource_prefix $datasource_prefix
     done
   fi
@@ -214,6 +204,15 @@ function generate_datasource_common() {
   local validate="${13}"
   local url="${14}"
 
+  local dsConfMode
+  getDataSourceConfigureMode "dsConfMode"
+  if [ "${dsConfMode}" = "xml" ]; then
+    # CLOUD-3198 Since Sed replaces '&' with a full match, we need to escape it.
+    local url="${14//&/\\&}"
+    # CLOUD-3198 In addition to that, we also need to escape ';'
+    url="${url//;/\\;}"
+  fi
+
   if [ -n "$driver" ]; then
     ds=$(generate_external_datasource)
   else
@@ -244,8 +243,6 @@ function generate_datasource_common() {
     inject_datastore $pool_name $jndi_name $driver $refresh_interval
   fi
 
-  local dsConfMode
-  getDataSourceConfigureMode "dsConfMode"
   if [ "${dsConfMode}" = "xml" ]; then
     # Only do this replacement if we are replacing an xml marker
     echo "$ds" | sed ':a;N;$!ba;s|\n|\\n|g'
@@ -282,7 +279,7 @@ function generate_external_datasource_xml() {
   else
     ds=" <xa-datasource jndi-name=\"${jndi_name}\" pool-name=\"${pool_name}\" enabled=\"true\" use-java-context=\"true\" statistics-enabled=\"\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}\">"
     local xa_props=$(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_")
-    if [ -z "$xa_props" ] && [ "$driver" != "postgresql" ] && [ "$driver" != "mysql" ]; then
+    if [ -z "$xa_props" ]; then
       log_warning "At least one ${prefix}_XA_CONNECTION_PROPERTY_property for datasource ${service_name} is required. Datasource will not be configured."
       failed="true"
     else
@@ -578,51 +575,6 @@ function inject_datastore() {
   sed -i "s|<!-- ##DATASTORES## -->|${datastore}|" $CONFIG_FILE
 }
 
-function map_properties() {
-  local protocol=${1}
-  local serverNameVar=${2}
-  local portVar=${3}
-  local databaseNameVar=${4}
-
-  if [ -n "$host" ] && [ -n "$port" ] && [ -n "$database" ]; then
-    if [ -z "$url" ]; then
-      url="${protocol}://${host}:${port}/${database}"
-    fi
-
-    if [ "$NON_XA_DATASOURCE" == "false" ] && [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
-
-      if [ -z "${!serverNameVar}" ]; then
-        eval ${serverNameVar}=${host}
-      fi
-
-      if [ -z "${!portVar}" ]; then
-        eval ${portVar}=${port}
-      fi
-
-      if [ -z "${!databaseNameVar}" ]; then
-        eval ${databaseNameVar}=${database}
-      fi
-    fi
-  elif [ "$NON_XA_DATASOURCE" == "false" ]; then
-    if [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
-      if [ -z "${!serverNameVar}" ] || [ -z "${!portVar}" ] || [ -z "${!databaseNameVar}" ]; then
-        if [ "$prefix" != "$service" ]; then
-          log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
-        else
-          log_warning "Missing configuration for XA datasource $prefix. Either ${prefix}_XA_CONNECTION_PROPERTY_URL or $serverNameVar, and $portVar, and $databaseNameVar is required. Datasource will not be configured."
-        fi
-      else
-        host="${!serverNameVar}"
-        port="${!portVar}"
-        database="${!databaseNameVar}"
-      fi
-    fi
-  else
-    log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
-  fi
-
-}
-
 function inject_datasource() {
   local prefix=$1
   local service=$2
@@ -692,41 +644,17 @@ function inject_datasource() {
   NON_XA_DATASOURCE=$(find_env "${prefix}_NONXA" false)
 
   url=$(find_env "${prefix}_URL")
+  driver=$(find_env "${prefix}_DRIVER" )
+  checker=$(find_env "${prefix}_CONNECTION_CHECKER" )
+  sorter=$(find_env "${prefix}_EXCEPTION_SORTER" )
+  url=$(find_env "${prefix}_URL" )
+  if [ -n "$checker" ] && [ -n "$sorter" ]; then
+    validate=true
+  else
+    validate="false"
+  fi
 
-  case "$db" in
-    "MYSQL")
-      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
-
-      driver="mysql"
-      validate="true"
-      checker="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
-      sorter="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
-      ;;
-    "POSTGRESQL")
-      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
-
-      driver="postgresql"
-      validate="true"
-      checker="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-      sorter="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-      ;;
-    "MONGODB")
-      continue
-      ;;
-    *)
-      driver=$(find_env "${prefix}_DRIVER" )
-      checker=$(find_env "${prefix}_CONNECTION_CHECKER" )
-      sorter=$(find_env "${prefix}_EXCEPTION_SORTER" )
-      url=$(find_env "${prefix}_URL" )
-      if [ -n "$checker" ] && [ -n "$sorter" ]; then
-        validate=true
-      else
-        validate="false"
-      fi
-
-      service_name=$prefix
-      ;;
-  esac
+  service_name=$prefix
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"
