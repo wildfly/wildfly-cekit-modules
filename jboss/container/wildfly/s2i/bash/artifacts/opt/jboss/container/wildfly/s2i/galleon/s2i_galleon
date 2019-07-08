@@ -122,7 +122,7 @@ function galleon_provision_server() {
             echo "Aborting due to error code $ERR from mvn install"
             exit $ERR
           fi
-          targetDir=$GALLEON_DESCRIPTION_LOCATION/$ARTIFACT_DIR/server
+          targetDir=$GALLEON_DESCRIPTION_LOCATION/target/server
           if [ -d $targetDir ]; then
             galleon_replace_server $targetDir
           else
