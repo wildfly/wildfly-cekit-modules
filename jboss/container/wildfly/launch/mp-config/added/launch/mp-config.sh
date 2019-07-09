@@ -12,13 +12,16 @@ configure() {
 }
 
 configure_microprofile_config_source() {
-
   local dirConfigSource=$(generate_microprofile_config_source "${MICROPROFILE_CONFIG_DIR}" "${MICROPROFILE_CONFIG_DIR_ORDINAL}")
-  echo "dirConfigSource ${dirConfigSource}"
+
   if [ -n "$dirConfigSource" ]; then
-    if grep -qF "<!-- ##MICROPROFILE_CONFIG_SOURCE## -->" $CONFIG_FILE; then
+
+    local mpConfigMode
+    getConfigurationMode "<!-- ##MICROPROFILE_CONFIG_SOURCE## -->" "mpConfigMode"
+
+    if [ "${mpConfigMode}" = "xml" ]; then
       sed -i "s|<!-- ##MICROPROFILE_CONFIG_SOURCE## -->|${dirConfigSource}|" $CONFIG_FILE
-    else
+    elif [ "${mpConfigMode}" = "cli" ]; then
       #expected to fail if config-map is already configured
       cat << EOF >> ${CLI_SCRIPT_FILE}
       if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
@@ -33,6 +36,7 @@ configure_microprofile_config_source() {
 
       /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path=${MICROPROFILE_CONFIG_DIR}}, ordinal=${MICROPROFILE_CONFIG_DIR_ORDINAL})
 EOF
+
     fi
   elif [ -n "${MICROPROFILE_CONFIG_DIR}" ]; then
     # Invalid MICROPROFILE_CONFIG_DIR -- was not an absolute path.
