@@ -1,3 +1,39 @@
+GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/generic_layers
+GALLEON_EXTEND_CONFIG_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/extend_config
+GALLEON_DS_FP="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/ds-galleon-feature-pack
+
+function galleon_patch_generic_config() {
+   if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
+     for layer in $(echo $GALLEON_PROVISION_LAYERS | sed "s/,/ /g"); do
+       layers="$layers<include name=\"$layer\"/>"
+     done
+     if [ -n "$layers" ]; then
+       sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/config.xml
+     fi
+   fi
+
+   if [ "x$GALLEON_ADD_DS_FP" == "xtrue" ]; then
+      ds_fp=`cat "${GALLEON_DS_FP}" | sed ':a;N;$!ba;s/\n//g'`
+      sed -i "s|<!-- ##GALLEON_DS_FP## -->|${ds_fp}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+   fi
+}
+
+function galleon_patch_extend_default_config() {
+   if [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
+     for layer in $(echo $GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS | sed "s/,/ /g"); do
+       layers="$layers<include name=\"$layer\"/>"
+     done
+     if [ -n "$layers" ]; then
+       sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_EXTEND_CONFIG_DEFINITION/config.xml
+     fi
+   fi
+
+   if [ "x$GALLEON_ADD_DS_FP" == "xtrue" ]; then
+      ds_fp=`cat "${GALLEON_DS_FP}" | sed ':a;N;$!ba;s/\n//g'`
+      sed -i "s|<!-- ##GALLEON_DS_FP## -->|${ds_fp}|" $GALLEON_EXTEND_CONFIG_DEFINITION/pom.xml
+   fi
+}
+
 function galleon_dump_repo_file_list() {
     targetFile=$1
     pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
@@ -95,20 +131,54 @@ function galleon_provision_server() {
     GALLEON_LOCAL_PROVISIONING=$S2I_SOURCE_DIR/galleon
     GALLEON_ROOT_DIR=${GALLEON_DEFINITIONS}
 
-    if [ -z "$GALLEON_PROVISION_SERVER" ]; then
+    nb=0
+    if [ -n "$GALLEON_PROVISION_SERVER" ]; then
+      nb=$((nb+1))
+    fi
+
+    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
+      nb=$((nb+1))
+    fi
+
+    if [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
+      nb=$((nb+1))
+    fi
+
+    if [ $nb -gt 1 ]; then
+      echo "Error, GALLEON_PROVISION_SERVER, GALLEON_PROVISION_LAYERS or GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS can't be used at the same time."
+      exit 1
+    fi
+
+    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
+      galleon_patch_generic_config
+      GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
       if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-        echo "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
-        GALLEON_DESCRIPTION_LOCATION=$GALLEON_LOCAL_PROVISIONING
+        echo "Galleon provisioning of layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
       fi
-    else
-      if [ ! -d $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER ]; then
-        echo "Error, $GALLEON_PROVISION_SERVER doesn't exist, can't provision a server, exiting."
-        exit 1
-      fi
+    elif [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
+      galleon_patch_extend_default_config
+      GALLEON_DESCRIPTION_LOCATION="$GALLEON_EXTEND_CONFIG_DEFINITION"
       if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-        echo "$GALLEON_SERVER Galleon description overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
+        echo "Galleon provisioning of extended default configuration with layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
       fi
-      GALLEON_DESCRIPTION_LOCATION=$GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER
+    fi
+
+    if [ -z "$GALLEON_DESCRIPTION_LOCATION" ]; then
+        if [ -z "$GALLEON_PROVISION_SERVER" ]; then
+          if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
+            echo "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
+            GALLEON_DESCRIPTION_LOCATION=$GALLEON_LOCAL_PROVISIONING
+          fi
+        else
+          if [ ! -d $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER ]; then
+            echo "Error, $GALLEON_PROVISION_SERVER doesn't exist, can't provision a server, exiting."
+            exit 1
+          fi
+          if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
+            echo "$GALLEON_SERVER Galleon description overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
+          fi
+          GALLEON_DESCRIPTION_LOCATION=$GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER
+        fi
     fi
 
     if [ ! -z "$GALLEON_DESCRIPTION_LOCATION" ]; then
