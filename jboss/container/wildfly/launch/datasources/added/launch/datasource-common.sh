@@ -95,6 +95,7 @@ function inject_datasources_common() {
   fi
 
   inject_external_datasources
+
 }
 
 function inject_internal_datasources() {
@@ -707,6 +708,51 @@ function inject_timer_service() {
   fi
 }
 
+function map_properties() {
+  local protocol=${1}
+  local serverNameVar=${2}
+  local portVar=${3}
+  local databaseNameVar=${4}
+
+  if [ -n "$host" ] && [ -n "$port" ] && [ -n "$database" ]; then
+    if [ -z "$url" ]; then
+      url="${protocol}://${host}:${port}/${database}"
+    fi
+
+    if [ "$NON_XA_DATASOURCE" == "false" ] && [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
+
+      if [ -z "${!serverNameVar}" ]; then
+        eval ${serverNameVar}=${host}
+      fi
+
+      if [ -z "${!portVar}" ]; then
+        eval ${portVar}=${port}
+      fi
+
+      if [ -z "${!databaseNameVar}" ]; then
+        eval ${databaseNameVar}=${database}
+      fi
+    fi
+  elif [ "$NON_XA_DATASOURCE" == "false" ]; then
+    if [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
+      if [ -z "${!serverNameVar}" ] || [ -z "${!portVar}" ] || [ -z "${!databaseNameVar}" ]; then
+        if [ "$prefix" != "$service" ]; then
+          log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+        else
+          log_warning "Missing configuration for XA datasource $prefix. Either ${prefix}_XA_CONNECTION_PROPERTY_URL or $serverNameVar, and $portVar, and $databaseNameVar is required. Datasource will not be configured."
+        fi
+      else
+        host="${!serverNameVar}"
+        port="${!portVar}"
+        database="${!databaseNameVar}"
+      fi
+    fi
+  else
+    log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+  fi
+
+}
+
 function inject_datasource() {
   local prefix=$1
   local service=$2
@@ -777,16 +823,46 @@ function inject_datasource() {
 
   url=$(find_env "${prefix}_URL")
   driver=$(find_env "${prefix}_DRIVER" )
+  if [ -z "${driver}" ] && [ -n "${db}" ]; then
+    # $db is set by inject_internal_datasources and attempts to
+    # extract a driver name from the DB_SERVICE_PREFIX_MAPPING entry and puts it in upper case.
+    # If it is MYSQL or POSTGRESQL we use that as the driver name
+    if [ "${db}" = "MYSQL" ] || [ "${db}" = "POSTGRESQL" ]; then
+      driver="${db,,}"
+    fi
+  fi
+
   checker=$(find_env "${prefix}_CONNECTION_CHECKER" )
   sorter=$(find_env "${prefix}_EXCEPTION_SORTER" )
-  url=$(find_env "${prefix}_URL" )
+
   if [ -n "$checker" ] && [ -n "$sorter" ]; then
-    validate=true
+    validate="true"
   else
     validate="false"
   fi
 
-  service_name=$prefix
+  case "${driver}" in
+	    "mysql")
+	      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+        if [ "${validate}" = "false" ]; then
+          validate="true"
+          checker="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
+	        sorter="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
+        fi
+      ;;
+      "postgresql")
+	      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+        if [ "${validate}" = "false" ]; then
+          validate="true"
+          checker="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
+	        sorter="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
+        fi
+      ;;
+      *)
+        service_name=$prefix
+        ;;
+  esac
+
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"
