@@ -129,8 +129,6 @@ function configure_cli_keycloak() {
 
     echo "
        $undertow_config" >> ${CLI_SCRIPT_FILE}
-  else
-    log_warning "Missing SSO_URL. Unable to properly configure SSO-enabled applications"
   fi
   
 }
