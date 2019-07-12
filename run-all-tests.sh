@@ -5,6 +5,7 @@ BATS_SERVER_CONFIG_FILE_DIRECTORY="${SCRIPT_DIR}/test-common/configuration"
 BATS_SERVER_CONFIG_FILE_NAME="standalone-openshift.xml"
 BATS_SERVER_CONFIG_FILE="${BATS_SERVER_CONFIG_FILE_DIRECTORY}/${BATS_SERVER_CONFIG_FILE_NAME}"
 BATS_CONFIG_ENV_FILE="${BATS_SERVER_CONFIG_FILE_DIRECTORY}/bats-config.env"
+FILE_TEST_PATTERN=${1:-"*.bats"}
 
 
 if [ -z "${BATS_STANDALONE_XML_URL}" ] && [ -f "${BATS_CONFIG_ENV_FILE}" ]; then
@@ -35,7 +36,7 @@ if [ "${1}" = "--tap" ]; then
     tap="--tap"
 fi
 
-for testName in `find ./ -name *.bats`;
+for testName in `find ./ -name "${FILE_TEST_PATTERN}"`;
 do
     echo ${testName};
     bats ${tap} ${testName}
