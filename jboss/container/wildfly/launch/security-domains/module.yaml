@@ -1,0 +1,25 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.security-domains
+version: '1.0'
+description:
+
+execute:
+- script: configure.sh
+  user: '185'
+
+envs:
+  - name: "SECDOMAIN_NAME"
+    example: "myDomain"
+    description: "Defines an additional security domain."
+  - name: "SECDOMAIN_USERS_PROPERTIES"
+    example: "users.properties"
+    description: "The name of the properties file containing user definitions, defaults to users.properties"
+  - name: "SECDOMAIN_ROLES_PROPERTIES"
+    example: "roles.properties"
+    description: "The name of the properties file containing role definitions, defaults to roles.properties"
+  - name: "SECDOMAIN_LOGIN_MODULE"
+    example: "UsersRoles"
+    description: "The login module to be used, defaults to UsersRoles"
+  - name: "SECDOMAIN_PASSWORD_STACKING"
+    example: "true"
+    description: "If defined, the password-stacking module option is enabled and set to the value useFirstPass."

@@ -208,31 +208,127 @@ configure_https() {
 
 configure_security_domains() {
   if [ -n "${SECDOMAIN_NAME}" ]; then
-    elytron_integration="<elytron-integration>\n\
-                <security-realms>\n\
-                    <elytron-realm name=\"${SECDOMAIN_NAME}\" legacy-jaas-config=\"${SECDOMAIN_NAME}\"/>\n\
-                </security-realms>\n\
-            </elytron-integration>"
-    ejb_application_security_domains="<application-security-domains>\n\
-                <application-security-domain name=\"${SECDOMAIN_NAME}\" security-domain=\"${SECDOMAIN_NAME}\"/>\n\
-            </application-security-domains>"
-    http_application_security_domains="<application-security-domains>\n\
-                <application-security-domain name=\"${SECDOMAIN_NAME}\" http-authentication-factory=\"${SECDOMAIN_NAME}-http\"/>\n\
-            </application-security-domains>"
-    http_authentication_factory="<http-authentication-factory name=\"${SECDOMAIN_NAME}-http\" http-server-mechanism-factory=\"global\" security-domain=\"${SECDOMAIN_NAME}\">\n\
-                    <mechanism-configuration>\n\
-                        <mechanism mechanism-name=\"BASIC\"/>\n\
-                        <mechanism mechanism-name=\"FORM\"/>\n\
-                    </mechanism-configuration>\n\
-                </http-authentication-factory>"
-    elytron_security_domain="<security-domain name=\"${SECDOMAIN_NAME}\" default-realm=\"${SECDOMAIN_NAME}\" permission-mapper=\"default-permission-mapper\">\n\
-                    <realm name=\"${SECDOMAIN_NAME}\"/>\n\
-                </security-domain>"
+    configure_elytron_integration
+    configure_elytron_security_domain
+    configure_http_authentication_factory
+    configure_http_application_security_domains
+    configure_ejb_application_security_domains
   fi
+}
 
-  sed -i "s|<!-- ##ELYTRON_INTEGRATION## -->|${elytron_integration}|" $CONFIG_FILE
-  sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->|${ejb_application_security_domains}|" $CONFIG_FILE
-  sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->|${http_application_security_domains}|" $CONFIG_FILE
-  sed -i "s|<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|${http_authentication_factory}|" $CONFIG_FILE
-  sed -i "s|<!-- ##ELYTRON_SECURITY_DOMAIN## -->|${elytron_security_domain}|" $CONFIG_FILE
+configure_elytron_integration() {
+  local configureMode
+  getConfigurationMode "<!-- ##ELYTRON_INTEGRATION## -->" "configureMode"
+
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##INTEGRATION_ELYTRON_REALM## -->" $CONFIG_FILE; then
+    local elytron_realm="<elytron-realm name=\"${SECDOMAIN_NAME}\" legacy-jaas-config=\"${SECDOMAIN_NAME}\"/>\n"
+    local elytron_integration="<elytron-integration>\n\
+          <security-realms>\n\
+              <!-- ##INTEGRATION_ELYTRON_REALM## -->\
+          </security-realms>\n\
+    </elytron-integration>"
+
+    sed -i "s|<!-- ##ELYTRON_INTEGRATION## -->|${elytron_integration}|" $CONFIG_FILE
+    sed -i "s|<!-- ##INTEGRATION_ELYTRON_REALM## -->|${elytron_realm}<!-- ##INTEGRATION_ELYTRON_REALM## -->|" $CONFIG_FILE
+  elif [ "${configureMode}" = "cli" ]; then
+
+     cat << EOF >> ${CLI_SCRIPT_FILE}
+     if (outcome == success) of /subsystem=elytron:read-resource
+      /subsystem=security/elytron-realm=${SECDOMAIN_NAME}:add(legacy-jaas-config=${SECDOMAIN_NAME})
+    end-if
+EOF
+  fi
+}
+
+configure_elytron_security_domain() {
+  local configureMode
+  getConfigurationMode "<!-- ##ELYTRON_SECURITY_DOMAIN## -->" "configureMode"
+
+  if [ "${configureMode}" = "xml" ]; then
+
+    local elytron_security_domain="<security-domain name=\"${SECDOMAIN_NAME}\" default-realm=\"${SECDOMAIN_NAME}\" permission-mapper=\"default-permission-mapper\">\n\
+                      <realm name=\"${SECDOMAIN_NAME}\"/>\n\
+                  </security-domain>"
+
+    sed -i "s|<!-- ##ELYTRON_SECURITY_DOMAIN## -->|${elytron_security_domain}<!-- ##ELYTRON_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+
+  elif [ "${configureMode}" = "cli" ]; then
+
+      cat << EOF >> ${CLI_SCRIPT_FILE}
+        if (outcome == success) of /subsystem=elytron:read-resource
+          /subsystem=elytron/security-domain=${SECDOMAIN_NAME}:add(realms=[{realm=${SECDOMAIN_NAME}}],default-realm=${SECDOMAIN_NAME},permission-mapper=default-permission-mapper)
+        end-if
+EOF
+  fi
+}
+
+configure_http_authentication_factory() {
+  local configureMode
+  getConfigurationMode "<!-- ##HTTP_AUTHENTICATION_FACTORY## -->" "configureMode"
+
+  if [ "${configureMode}" = "xml" ]; then
+
+    local http_authentication_factory="<http-authentication-factory name=\"${SECDOMAIN_NAME}-http\" http-server-mechanism-factory=\"global\" security-domain=\"${SECDOMAIN_NAME}\">\n\
+                      <mechanism-configuration>\n\
+                          <mechanism mechanism-name=\"BASIC\"/>\n\
+                          <mechanism mechanism-name=\"FORM\"/>\n\
+                      </mechanism-configuration>\n\
+                  </http-authentication-factory>"
+
+      sed -i "s|<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|${http_authentication_factory}<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|" $CONFIG_FILE
+
+  elif [ "${configureMode}" = "cli" ]; then
+
+    cat << EOF >> ${CLI_SCRIPT_FILE}
+      if (outcome == success) of /subsystem=elytron:read-resource
+         /subsystem=elytron/http-authentication-factory=${SECDOMAIN_NAME}-http:add(http-server-mechanism-factory=global,security-domain=${SECDOMAIN_NAME},mechanism-configurations=[{mechanism-name=BASIC},{mechanism-name=FORM}])
+      end-if
+EOF
+  fi
+}
+
+configure_http_application_security_domains() {
+  local configureMode
+  getConfigurationMode "<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->" "configureMode"
+
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->" $CONFIG_FILE; then
+    local application_security_domain="<application-security-domain name=\"${SECDOMAIN_NAME}\" http-authentication-factory=\"${SECDOMAIN_NAME}-http\"/>\n"
+    local http_application_security_domains="<application-security-domains>\n\
+                <!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->\
+            </application-security-domains>"
+
+    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->|${http_application_security_domains}|" $CONFIG_FILE
+    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+
+  elif [ "${configureMode}" = "cli" ]; then
+
+    cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome == success) of /subsystem=undertow:read-resource
+      /subsystem=undertow/application-security-domain=${SECDOMAIN_NAME}:add(http-authentication-factory=${SECDOMAIN_NAME}-http)
+    end-if
+EOF
+  fi
+}
+
+configure_ejb_application_security_domains() {
+  local configureMode
+  getConfigurationMode "<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->" "configureMode"
+
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->" $CONFIG_FILE; then
+    local application_security_domain="<application-security-domain name=\"${SECDOMAIN_NAME}\" security-domain=\"${SECDOMAIN_NAME}\"/>\n"
+    local ejb_application_security_domains="<application-security-domains>\n\
+                <!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->\
+            </application-security-domains>"
+
+    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->|${ejb_application_security_domains}|" $CONFIG_FILE
+    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+
+  elif [ "${configureMode}" = "cli" ]; then
+
+    cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome == success) of /subsystem=ejb3:read-resource
+      /subsystem=ejb3/application-security-domain=${SECDOMAIN_NAME}:add(security-domain=${SECDOMAIN_NAME})
+    end-if
+EOF
+  fi
 }
