@@ -56,7 +56,6 @@
                             <plugin-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
-                                <optional-packages>passive+</optional-packages>
                             </plugin-options>
                             <feature-packs>
                                 <feature-pack>

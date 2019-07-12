@@ -22,6 +22,10 @@ envs:
   description: "Version of org.wildfly:wildfly-datasources-galleon-pack to be included, mandatory if GALLEON_ADD_DS_FP is set to true"
 - name: GALLEON_ADD_DS_FP
   value: false
+- name: GALLEON_VERSION
+  value: "4.0.1.Final"
+- name: GALLEON_WILDFLY_VERSION
+  value: "4.0.2.Final"
   description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
 - name: GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS
   description: "Used during s2i to provision a custom galleon server. Comma separated list of layers to extend the default config."
