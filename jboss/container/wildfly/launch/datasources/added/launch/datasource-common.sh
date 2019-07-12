@@ -713,14 +713,20 @@ function map_properties() {
   local serverNameVar=${2}
   local portVar=${3}
   local databaseNameVar=${4}
+  local invalidVar=${5}
 
+  local hasAllUrlParts="false"
   if [ -n "$host" ] && [ -n "$port" ] && [ -n "$database" ]; then
+    hasAllUrlParts="true"
+  fi
+
+  if [ -n "${url}" ] || [ "${hasAllUrlParts}" = true ]; then
     if [ -z "$url" ]; then
       url="${protocol}://${host}:${port}/${database}"
     fi
 
     if [ "$NON_XA_DATASOURCE" == "false" ] && [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
-
+      # It is an XA datasource
       if [ -z "${!serverNameVar}" ]; then
         eval ${serverNameVar}=${host}
       fi
@@ -734,12 +740,15 @@ function map_properties() {
       fi
     fi
   elif [ "$NON_XA_DATASOURCE" == "false" ]; then
+    # It is an XA datasource
     if [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
       if [ -z "${!serverNameVar}" ] || [ -z "${!portVar}" ] || [ -z "${!databaseNameVar}" ]; then
         if [ "$prefix" != "$service" ]; then
           log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+          eval ${invalidVar}="true"
         else
           log_warning "Missing configuration for XA datasource $prefix. Either ${prefix}_XA_CONNECTION_PROPERTY_URL or $serverNameVar, and $portVar, and $databaseNameVar is required. Datasource will not be configured."
+          eval ${invalidVar}="true"
         fi
       else
         host="${!serverNameVar}"
@@ -749,6 +758,7 @@ function map_properties() {
     fi
   else
     log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+    eval ${invalidVar}="true"
   fi
 
 }
@@ -803,7 +813,7 @@ function inject_datasource() {
     log_warning "${prefix}_JNDI: $jndi"
     log_warning
     log_warning "The ${db,,} datasource for $prefix service WILL NOT be configured."
-    continue
+    return
   fi
 
   # Transaction isolation level environment variable name format: [NAME]_[DATABASE_TYPE]_TX_ISOLATION
@@ -841,9 +851,10 @@ function inject_datasource() {
     validate="false"
   fi
 
+  local invalid
   case "${driver}" in
 	    "mysql")
-	      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+	      map_properties "jdbc:mysql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_Port" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName" "invalid"
         if [ "${validate}" = "false" ]; then
           validate="true"
           checker="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
@@ -851,7 +862,7 @@ function inject_datasource() {
         fi
       ;;
       "postgresql")
-	      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName"
+	      map_properties "jdbc:postgresql" "${prefix}_XA_CONNECTION_PROPERTY_ServerName" "${prefix}_XA_CONNECTION_PROPERTY_PortNumber" "${prefix}_XA_CONNECTION_PROPERTY_DatabaseName" "invalid"
         if [ "${validate}" = "false" ]; then
           validate="true"
           checker="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
@@ -863,6 +874,9 @@ function inject_datasource() {
         ;;
   esac
 
+  if [ "${invalid}" = "true" ]; then
+    return
+  fi
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"
