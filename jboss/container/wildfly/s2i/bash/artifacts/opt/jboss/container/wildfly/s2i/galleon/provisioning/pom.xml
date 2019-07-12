@@ -37,7 +37,7 @@
         <s2i.fp.groupid>${env.GALLEON_S2I_FP_GROUP_ID}</s2i.fp.groupid>
         <s2i.fp.artifactid>${env.GALLEON_S2I_FP_ARTIFACT_ID}</s2i.fp.artifactid>
         <version.org.wildfly>${env.WILDFLY_VERSION}</version.org.wildfly>
-        <version.org.jboss.galleon>4.0.1.Final</version.org.jboss.galleon>
+        <version.org.jboss.galleon>${env.GALLEON_VERSION}</version.org.jboss.galleon>
     </properties>
     <modules>
         <module>extend_config</module>
