@@ -39,7 +39,7 @@ load common
     assert_datasources "datasources_sybase_pool_nonxa.xml"
 }
 
-@test "inject_datasources: DATASOURCES - NONXA - URL " {
+@test "inject_datasources: DATASOURCES - NONXA - URL - Explicit driver" {
     DATASOURCES="TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
     TEST_DRIVER="postgresql"
@@ -48,9 +48,6 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -67,9 +64,6 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -86,9 +80,6 @@ load common
     TEST_URL="jdbc:mysql://localhost:3306/jbossdb"
     TEST_NONXA="true"
     TEST_JTA="false"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -125,12 +116,6 @@ load common
     TEST_DATABASE="testdb"
     TEST_MAX_POOL_SIZE="11"
     TEST_MIN_POOL_SIZE="9"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
-    TEST_XA_CONNECTION_PROPERTY_DatabaseName="testdb"
-    TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
-    TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
 
     run inject_datasources
 
@@ -152,12 +137,6 @@ load common
     TEST_MAX_POOL_SIZE="11"
     TEST_MIN_POOL_SIZE="9"
     TEST_XA_CONNECTION_PROPERTY_URL=""
-    TEST_XA_CONNECTION_PROPERTY_DatabaseName="testdb"
-    TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
-    TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -208,10 +187,6 @@ load common
     TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
     TEST_NONXA="true"
     TEST_JTA="false"
-    TEST_DRIVER="postgresql"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -219,7 +194,7 @@ load common
     assert_datasources "prefix_postgresql_nonxa.xml"
 }
 
-@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - Host+Port+Database" {
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - Host+Port+Database - Inferred driver" {
     DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
     TEST_USERNAME="kermit"
@@ -228,14 +203,6 @@ load common
     TEST_POSTGRESQL_SERVICE_HOST="localhost"
     TEST_POSTGRESQL_SERVICE_PORT="5432"
     TEST_DATABASE="postgresdb"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
-    TEST_DRIVER="postgresql"
-    TEST_XA_CONNECTION_PROPERTY_DatabaseName="postgresdb"
-    TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
-    TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
-
 
     run inject_datasources
 
@@ -243,22 +210,50 @@ load common
     assert_datasources "prefix_postgresql_xa.xml"
 }
 
-@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - MySQL - Host+Port+Database" {
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - Host+Port+Database - Explicit driver" {
+    DB_SERVICE_PREFIX_MAPPING="test-driverisexplicit=TEST"
+    TEST_DRIVER="postgresql"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_NONXA="false"
+    TEST_DRIVERISEXPLICIT_SERVICE_HOST="localhost"
+    TEST_DRIVERISEXPLICIT_SERVICE_PORT="5432"
+    TEST_DATABASE="postgresdb"
+
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_datasources "prefix_postgresql_xa_explicit_driver.xml"
+}
+
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - MySQL - Host+Port+Database - Inferred driver" {
     DB_SERVICE_PREFIX_MAPPING="test-mysql=TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
     TEST_USERNAME="kermit"
     TEST_PASSWORD="thefrog"
     TEST_NONXA="false"
     TEST_XA_CONNECTION_PROPERTY_URL="jdbc:mysql://localhost:3306/jbossdb"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.mysql.MySQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
-    TEST_DRIVER="mysql"
 
     run inject_datasources
 
     [ "$status" -eq 0 ]
     assert_datasources "prefix_mysql_xa.xml"
+}
+
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - MySQL - Host+Port+Database - Explicit driver" {
+    DB_SERVICE_PREFIX_MAPPING="test-driverisexplicit=TEST"
+    TEST_DRIVER="mysql"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_NONXA="false"
+    TEST_XA_CONNECTION_PROPERTY_URL="jdbc:mysql://localhost:3306/jbossdb"
+
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_datasources "prefix_mysql_xa_explicit_driver.xml"
 }
 
 @test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA - Oracle" {
@@ -285,13 +280,9 @@ load common
     TEST_USERNAME="kermit"
     TEST_PASSWORD="thefrog"
     TEST_NONXA="false"
-    TEST_DRIVER="postgresql"
     TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
     TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
     TEST_XA_CONNECTION_PROPERTY_DatabaseName="postgresdb"
-    TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker"
-    TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter"
-    TEST_BACKGROUND_VALIDATION="false"
 
     run inject_datasources
 
@@ -317,8 +308,24 @@ load common
     assert_datasources "prefix_ibmdb2_xa.xml"
 }
 
-@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - Missing driver" {
+@test "inject_datasources: DATASOURCES - Missing required values" {
+    DATASOURCES="TEST"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_DRIVER="postgresql"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_NONXA="false"
 
+    TEST_XA_CONNECTION_PROPERTY_PortNumber="50000"
+    TEST_XA_CONNECTION_PROPERTY_DatabaseName="ibmdb2db"
+
+    run inject_datasources
+
+    expected="WARN Missing configuration for XA datasource TEST. Either TEST_XA_CONNECTION_PROPERTY_URL or TEST_XA_CONNECTION_PROPERTY_ServerName, and TEST_XA_CONNECTION_PROPERTY_PortNumber, and TEST_XA_CONNECTION_PROPERTY_DatabaseName is required. Datasource will not be configured."
+    [ "$output" = "$expected" ]
+}
+
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - Missing required values" {
     DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
     TEST_USERNAME="kermit"
@@ -330,7 +337,7 @@ load common
 
     run inject_datasources
 
-    msg="WARN DRIVER not set for datasource TEST. Datasource will not be configured."
+    msg="WARN Missing configuration for datasource TEST. TEST_POSTGRESQL_SERVICE_HOST, TEST_POSTGRESQL_SERVICE_PORT, and/or TEST_DATABASE is missing. Datasource will not be configured."
     echo ${output}
     [[ "$output" =~ "${msg}" ]]
 }
