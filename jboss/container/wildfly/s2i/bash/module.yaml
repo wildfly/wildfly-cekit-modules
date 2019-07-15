@@ -23,7 +23,7 @@ envs:
 - name: GALLEON_ADD_DS_FP
   value: false
 - name: GALLEON_VERSION
-  value: "4.0.1.Final"
+  value: "4.0.2.Final"
 - name: GALLEON_WILDFLY_VERSION
   value: "4.0.2.Final"
   description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
