@@ -23,11 +23,11 @@
         <artifactId>galleon-s2i-parent</artifactId>
         <version>1.0.0.Final</version>
     </parent>
-    <artifactId>extend-config-provisioning</artifactId>
+    <artifactId>generic-provisioning</artifactId>
     <packaging>pom</packaging>
-    <name>Extends the default configuration with Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</name>
+    <name>Provision a provisioning.xml file</name>
   
-    <description>Extends the default configuration with Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</description>
+    <description>Provision a provisioning.xml file</description>
 
     <licenses>
         <license>
@@ -36,7 +36,6 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
-
     <build>
         <plugins>
             <plugin>
@@ -44,9 +43,9 @@
                 <artifactId>galleon-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>wildfly-extends-default-config with layers ${env.GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS}</id>
+                        <id>provision a provisioning.xml file</id>
                         <goals>
-                            <goal>provision</goal>
+                            <goal>provision-file</goal>
                         </goals>
                         <phase>compile</phase>
                         <configuration>
@@ -57,22 +56,7 @@
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
                             </plugin-options>
-                            <feature-packs>
-                                <feature-pack>
-                                    <groupId>${s2i.fp.groupid}</groupId>
-                                    <artifactId>${s2i.fp.artifactid}</artifactId>
-                                    <version>${version.org.wildfly}</version>
-                                    <inherit-configs>false</inherit-configs>
-                                    <included-configs>
-                                        <configuration-id>
-                                            <name>standalone.xml</name>
-                                            <model>standalone</model>
-                                        </configuration-id>
-                                    </included-configs>
-                                </feature-pack>
-                                <!-- ##GALLEON_DS_FP## -->
-                            </feature-packs>
-                            <customConfig>config.xml</customConfig>
+                            <provisioningFile>provisioning.xml</provisioningFile>
                         </configuration>
                     </execution>
                 </executions>

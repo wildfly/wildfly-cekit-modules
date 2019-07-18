@@ -6,6 +6,8 @@ description: Common scripts for S2I.
 envs:
 - name: JBOSS_CONTAINER_WILDFLY_S2I_MODULE
   value: /opt/jboss/container/wildfly/s2i
+- name: JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION
+  value: /opt/jboss/container/wildfly/s2i/galleon/provisioning/generic_provisioning
 - name: GALLEON_DEFINITIONS
   description: "Mandatory. Absolute path to directory that contains galleon server provisioning maven projects."
 - name: S2I_SOURCE_DEPLOYMENTS_FILTER
@@ -23,10 +25,12 @@ envs:
 - name: GALLEON_ADD_DS_FP
   value: false
 - name: GALLEON_VERSION
-  value: "4.0.2.Final"
+  value: "4.0.3.Final"
 - name: GALLEON_WILDFLY_VERSION
   value: "4.0.2.Final"
   description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
+- name: GALLEON_S2I_PRODUCER_NAME
+  description: Mandatory. Name of the built feature-pack producer.
 - name: GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS
   description: "Used during s2i to provision a custom galleon server. Comma separated list of layers to extend the default config."
 - name: GALLEON_PROVISION_SERVER

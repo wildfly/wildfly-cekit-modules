@@ -53,6 +53,13 @@ if [ -d "$JBOSS_HOME/modules" ]; then
   rm -rf $JBOSS_HOME/modules/
 fi
 
+
+# Install the producers and universe
+mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-producers/pom.xml install -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
+--settings $HOME/.m2/settings.xml
+mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-universe/pom.xml install -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
+--settings $HOME/.m2/settings.xml
+
 # Copy JBOSS_HOME content (custom os content) to common package dir
 CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
 mkdir -p $CONTENT_DIR
