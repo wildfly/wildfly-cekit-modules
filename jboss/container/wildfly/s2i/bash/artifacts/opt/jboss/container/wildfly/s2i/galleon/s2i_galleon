@@ -53,6 +53,17 @@ function galleon_cp_artifacts() {
         mkdir -p "$targetDir/$dir" && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$file" "$targetDir/$dir"
     fi
     done < $filename
+
+   # In case resolver-status changed, copy them (very few files). This avoid to re-download status for s2i FP
+   # not present in remote repository.
+   pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
+   find -name resolver-status.properties -printf '%P\n' > ../resolvers.txt
+   popd &> /dev/null
+   while read line; do
+     dir=`dirname $line`
+     mkdir -p "$targetDir/$dir"  && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$line" "$targetDir/$dir"
+   done < resolvers.txt
+   rm -rf resolvers.txt &> /dev/null
 }
 
 function galleon_build_repo_diff() {
@@ -162,12 +173,18 @@ function galleon_provision_server() {
         echo "Galleon provisioning of extended default configuration with layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
       fi
     fi
-
+    
     if [ -z "$GALLEON_DESCRIPTION_LOCATION" ]; then
         if [ -z "$GALLEON_PROVISION_SERVER" ]; then
           if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-            echo "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
-            GALLEON_DESCRIPTION_LOCATION=$GALLEON_LOCAL_PROVISIONING
+            if [ -f "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" ]; then
+              echo "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
+              cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+              GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+            else
+               echo "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION, provisioning.xml file doesn't exist, exiting"
+               exit 1
+            fi
           fi
         else
           if [ ! -d $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER ]; then
@@ -177,15 +194,16 @@ function galleon_provision_server() {
           if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
             echo "$GALLEON_SERVER Galleon description overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
           fi
-          GALLEON_DESCRIPTION_LOCATION=$GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER
+          cp $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER/provisioning.xml "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+          GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
         fi
     fi
 
     if [ ! -z "$GALLEON_DESCRIPTION_LOCATION" ]; then
       
       if [ -f "$GALLEON_DESCRIPTION_LOCATION/pom.xml" ]; then
-          echo "Provisioning WildFly server from $GALLEON_DESCRIPTION_LOCATION..."
-          maven_build "$GALLEON_DESCRIPTION_LOCATION" install
+          echo "Provisioning WildFly server..."
+          maven_build "$GALLEON_DESCRIPTION_LOCATION" package
 
           ERR=$?
           if [ $ERR -ne 0 ]; then

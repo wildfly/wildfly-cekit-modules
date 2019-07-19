@@ -4,7 +4,7 @@ set -e
 SCRIPT_DIR=$(dirname $0)
 
 if [ ! -d "$GALLEON_DEFAULT_SERVER" ]; then
-  echo "GALLEON_DEFAULT_SERVER must be set to the absolute path to directory that contains galleon default server provisioning maven project."
+  echo "GALLEON_DEFAULT_SERVER must be set to the absolute path to directory that contains galleon default server provisioning file."
   exit 1
 fi
 
@@ -15,10 +15,11 @@ fi
 
 # Provision the default server
 # The active profiles are jboss-community-repository and securecentral
-mvn -f $GALLEON_DEFAULT_SERVER/pom.xml package -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
+cp "$GALLEON_DEFAULT_SERVER"/provisioning.xml "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"/pom.xml package -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
 --settings $HOME/.m2/settings.xml $GALLEON_DEFAULT_SERVER_PROVISION_MAVEN_ARGS_APPEND
 
-TARGET_DIR=$GALLEON_DEFAULT_SERVER/target
+TARGET_DIR="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"/target
 SERVER_DIR=$TARGET_DIR/server
 
 if [ ! -d $SERVER_DIR ]; then
