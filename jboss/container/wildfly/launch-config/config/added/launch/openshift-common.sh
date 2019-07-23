@@ -33,6 +33,8 @@ CLI_SCRIPT_FILE=/tmp/cli-script.cli
 CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
 # The property file used to pass variables to jboss-cli.sh
 CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
+# An output file for
+CLI_VALIDATION_FAILURES_FILE=/tmp/cli-validation-failures.log
 # The CLI file that could have been used in S2I phase to define dirvers
 S2I_CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
 
@@ -45,6 +47,9 @@ if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
 fi
 if [ -s "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
   echo -n "" > "${CLI_SCRIPT_PROPERTY_FILE}"
+fi
+if [ -s "${CLI_VALIDATION_FAILURES_FILE}" ]; then
+  echo -n "" > "${CLI_VALIDATION_FAILURES_FILE}"
 fi
 if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" ]; then
 # If we have content in S2I_CLI_DRIVERS_FILE and we are not in pure CLI mode, then
@@ -97,6 +102,15 @@ function getConfigurationMode() {
   fi
 
   printf -v "$2" '%s' "${configVia}"
+}
+
+function generateCliValidationErrorAndExit() {
+  unset -v "$2" || echo "Invalid identifier: $2" >&2
+
+  local msg="echo \"$1\" > ${CLI_VALIDATION_FAILURES_FILE}
+    exit
+  "
+  printf -v "$2" '%s' "${msg}"
 }
 
 # Test an XpathExpression against server config file and returns
@@ -176,6 +190,13 @@ function exec_cli_scripts() {
 
     echo "Duration: " $((end-start)) " milliseconds"
 
+    if [ -s "${CLI_VALIDATION_FAILURES_FILE}" ]; then
+      while IFS= read -r line
+      do
+        log_error "$line"
+      done < "${CLI_VALIDATION_FAILURES_FILE}"
+      exit 1
+    fi
 
     if [ $cli_result -ne 0 ]; then
       echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server cannot start or the operations to configure the server failed."
