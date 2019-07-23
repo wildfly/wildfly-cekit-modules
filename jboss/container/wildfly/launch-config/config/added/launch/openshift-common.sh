@@ -104,6 +104,15 @@ function getConfigurationMode() {
   printf -v "$2" '%s' "${configVia}"
 }
 
+function generateCliValidationErrorAndExit() {
+  unset -v "$2" || echo "Invalid identifier: $2" >&2
+
+  local msg="echo \"$1\" > ${CLI_VALIDATION_FAILURES_FILE}
+    exit
+  "
+  printf -v "$2" '%s' "${msg}"
+}
+
 # Test an XpathExpression against server config file and returns
 # the xmllint exit code
 #
