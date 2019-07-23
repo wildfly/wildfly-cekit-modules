@@ -450,6 +450,7 @@ function generate_external_datasource_cli() {
 
   local subsystem_addr="/subsystem=datasources"
   local ds_resource="${subsystem_addr}"
+  local other_ds_resource
 
   local -A ds_tmp_key_values
   ds_tmp_key_values["jndi-name"]=${jndi_name}
@@ -461,15 +462,17 @@ function generate_external_datasource_cli() {
   local -A ds_tmp_xa_connection_properties
 
   if [ -n "$NON_XA_DATASOURCE" ] && [ "$NON_XA_DATASOURCE" = "true" ]; then
-    ds_resource="$ds_resource/data-source=${pool_name}"
+    ds_resource="${subsystem_addr}/data-source=${pool_name}"
+    other_ds_resource="${subsystem_addr}/xa-data-source=${pool_name}"
 
     ds_tmp_key_values["jta"]="${jta}"
     ds_tmp_key_values['connection-url']="${url}"
 
   else
-    ds_resource="$ds_resource/xa-data-source=${pool_name}"
+    ds_resource="${subsystem_addr}/xa-data-source=${pool_name}"
+    other_ds_resource="${subsystem_addr}/data-source=${pool_name}"
 
-        local xa_props=$(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_")
+    local xa_props=$(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_")
     if [ -z "$xa_props" ] && [ "$driver" != "postgresql" ] && [ "$driver" != "mysql" ]; then
       log_warning "At least one ${prefix}_XA_CONNECTION_PROPERTY_property for datasource ${service_name} is required. Datasource will not be configured."
       failed="true"
@@ -541,24 +544,28 @@ function generate_external_datasource_cli() {
   # Otherwise we simply add it. Unfortunately CLI control flow does not work when wrapped
   # in a batch
 
+  local no_ds_subsystem_message_and_exit
+  local clashing_name_message_and_exit
+  generateCliValidationErrorAndExit "You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen." "no_ds_subsystem_message_and_exit"
+  generateCliValidationErrorAndExit "You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name." "clashing_name_message_and_exit"
+
   ds="
-    if (outcome != success) of $subsystem_addr:read-resource
-      echo \"You have set environment variables to configure the datasource \'${pool_name}\'. Fix your configuration to contain a datasources subsystem for this to happen.\"
-      exit
+    if (outcome != success) of ${subsystem_addr}:read-resource
+      ${no_ds_subsystem_message_and_exit}
     end-if
 
-    if (outcome == success) of $ds_resource:read-resource
-      batch
-      $ds_resource:remove
-      ${ds_tmp_add}
-      ${ds_tmp_xa_properties}
-      run-batch
-    else
-      batch
-      ${ds_tmp_add}
-      ${ds_tmp_xa_properties}
-      run-batch
+    if (outcome == success) of ${ds_resource}:read-resource
+      ${clashing_name_message_and_exit}
     end-if
+
+    if (outcome == success) of ${other_ds_resource}:read-resource
+      ${clashing_name_message_and_exit}
+    end-if
+
+    batch
+    ${ds_tmp_add}
+    ${ds_tmp_xa_properties}
+    run-batch
   "
   if [ "$failed" == "true" ]; then
     echo ""
