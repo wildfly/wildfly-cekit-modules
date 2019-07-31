@@ -4,6 +4,18 @@
 # IFS=$'\n\t'
 
 export BATS_TEST_SKIPPED=
+export JBOSS_HOME=$BATS_TMPDIR/jboss_home
+
+rm -rf $JBOSS_HOME
+mkdir -p $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../added/launch/elytron.sh $JBOSS_HOME/bin/launch
+mkdir -p $JBOSS_HOME/standalone/configuration
+
+# Set up the environment variables and load dependencies
+WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
+export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
+source $JBOSS_HOME/bin/launch/openshift-common.sh
 
 load $BATS_TEST_DIRNAME/../added/launch/elytron.sh
 
@@ -279,13 +291,13 @@ EOF
     CONFIGURE_ELYTRON_SSL=
     run configure_https
     echo "${output}"
-    [ "${output}" = "Using PicketBox SSL configuration." ]
+    [ "${output}" = "INFO Using PicketBox SSL configuration." ]
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing all required vars" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARNING! Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE'
+    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD=
     HTTPS_KEYSTORE=
@@ -300,7 +312,7 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_PASSWORD" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARNING! Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD'
+    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD=
     HTTPS_KEYSTORE="ks"
@@ -315,7 +327,7 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_KEYSTORE_TYPE" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARNING! Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE_TYPE'
+    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE_TYPE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
     HTTPS_KEYSTORE="ks"
@@ -330,7 +342,7 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_KEYSTORE" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARNING! Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE'
+    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
     HTTPS_KEYSTORE=
@@ -345,7 +357,7 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, no HTTPS_KEY_PASSWORD" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='No HTTPS_KEY_PASSWORD was provided; using HTTPS_PASSWORD for Elytron LocalhostKeyManager.'
+    expected='WARN No HTTPS_KEY_PASSWORD was provided; using HTTPS_PASSWORD for Elytron LocalhostKeyManager.'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
     HTTPS_KEYSTORE="keystore.ks"

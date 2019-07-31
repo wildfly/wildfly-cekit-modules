@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.launch.elytron
 version: '1.0'
-description: EAP Elytron configuration scripts
+description: Elytron configuration scripts
 execute:
 - script: configure.sh
   user: '185'
@@ -11,16 +11,19 @@ envs:
       description: "Use Elytron to configure TLS and associated configuration elements."
     - name: "HTTPS_PASSWORD"
       example: "mypassword"
-      description: "Password for the HTTPS keystore."
+      description: "If defined along with HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE, sets the password to open the keystore."
+    - name: "HTTPS_KEY_PASSWORD"
+      example: "mypassword"
+      description: "The password used to protect the private key of the generated key pair. If it is undefined, then the HTTPS_PASSWORD value is used as the HTTPS_KEY_PASSWORD."
     - name: "HTTPS_KEYSTORE_DIR"
       example: "/some/directory/path/"
-      description: "Path to directory containing keystore file. If leading directory separator is omitted, interpreted to be relative to jboss.server.config.dir."
+      description: "If defined along with HTTPS_PASSWORD and HTTPS_KEYSTORE, sets the path to directory containing keystore file. If leading directory separator is omitted, interpreted to be relative to jboss.server.config.dir."
     - name: "HTTPS_KEYSTORE"
       example: "mykeystore.jks"
-      description: "Name of the keystore containing the key to use for TLS."
+      description: "If defined along with HTTPS_PASSWORD and HTTPS_KEYSTORE_DIR, sets the name of the keystore containing the key to use for TLS."
     - name: "HTTPS_KEYSTORE_TYPE"
       example: "JKS"
-      description: "The underlying type of the keystore (JKS, JCEKS, etc.)"
+      description: "The underlying type of the keystore (JKS, JCEKS, etc.). Defaults to JCEKS"
     - name: "SECDOMAIN_NAME"
       example: "MySecurityDomain"
       description: "The name of the Elytron security domain."
