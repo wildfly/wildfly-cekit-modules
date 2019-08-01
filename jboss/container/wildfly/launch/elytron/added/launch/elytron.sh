@@ -1,10 +1,4 @@
 # only processes a single environment as the placeholder is not preserved
-if [ -n "${LOGGING_INCLUDE}" ]; then
-    source "${LOGGING_INCLUDE}"
-else
-  source $JBOSS_HOME/bin/launch/logging.sh
-fi
-
 prepareEnv() {
   unset HTTPS_NAME
   unset HTTPS_PASSWORD

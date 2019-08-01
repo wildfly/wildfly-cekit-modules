@@ -14,10 +14,10 @@ mkdir -p $JBOSS_HOME/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
-export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
 source $JBOSS_HOME/bin/launch/openshift-common.sh
 
 load $BATS_TEST_DIRNAME/../added/launch/elytron.sh
+load $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
 
 setup() {
   export CONFIG_FILE=${BATS_TMPDIR}/standalone-openshift.xml
