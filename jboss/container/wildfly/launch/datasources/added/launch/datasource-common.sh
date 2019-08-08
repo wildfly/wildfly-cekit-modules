@@ -544,22 +544,20 @@ function generate_external_datasource_cli() {
   # Otherwise we simply add it. Unfortunately CLI control flow does not work when wrapped
   # in a batch
 
-  local no_ds_subsystem_message_and_exit
-  local clashing_name_message_and_exit
-  generateCliValidationErrorAndExit "You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen." "no_ds_subsystem_message_and_exit"
-  generateCliValidationErrorAndExit "You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name." "clashing_name_message_and_exit"
-
   ds="
     if (outcome != success) of ${subsystem_addr}:read-resource
-      ${no_ds_subsystem_message_and_exit}
+      echo \"You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen.\" >> \${error_file}
+      exit
     end-if
 
     if (outcome == success) of ${ds_resource}:read-resource
-      ${clashing_name_message_and_exit}
+      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      exit
     end-if
 
     if (outcome == success) of ${other_ds_resource}:read-resource
-      ${clashing_name_message_and_exit}
+      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      exit
     end-if
 
     batch
