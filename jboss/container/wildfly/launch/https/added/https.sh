@@ -107,7 +107,7 @@ function configureHttpsCli() {
         if (result == []) of /subsystem=undertow/server=\$serverName:read-children-names(child-type=https-listener)
           /subsystem=undertow/server=\$serverName/https-listener=https:add(security-realm=ApplicationRealm, socket-binding=https, proxy-address-forwarding=true)
         else
-          echo \"There is already an undertow https-listener for the '\$serverName' server so we are not adding it\"
+          echo There is already an undertow https-listener for the '\$serverName' server so we are not adding it >> \${warning_file}
         end-if
     done
 EOF

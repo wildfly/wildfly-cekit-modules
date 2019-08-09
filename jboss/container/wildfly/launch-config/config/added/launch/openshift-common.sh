@@ -33,6 +33,8 @@ CLI_SCRIPT_FILE=/tmp/cli-script.cli
 CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
 # The property file used to pass variables to jboss-cli.sh
 CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
+# An output file for warning
+CLI_WARNING_FILE=/tmp/cli-warning.log
 # The CLI file that could have been used in S2I phase to define dirvers
 S2I_CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
 
@@ -46,6 +48,9 @@ fi
 if [ -s "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
   echo -n "" > "${CLI_SCRIPT_PROPERTY_FILE}"
 fi
+if [ -s "${CLI_WARNING_FILE}" ]; then
+  echo -n "" > "${CLI_WARNING_FILE}"
+fi
 if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" ]; then
 # If we have content in S2I_CLI_DRIVERS_FILE and we are not in pure CLI mode, then
 # the CLI operations generated in S2I will be processed at runtime
@@ -55,6 +60,7 @@ else
 fi
 
 echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > "${CLI_SCRIPT_PROPERTY_FILE}"
+echo "warning_file=${CLI_WARNING_FILE}" >> "${CLI_SCRIPT_PROPERTY_FILE}"
 
 # Takes the following parameters:
 # - $1      - the xml marker to test for
@@ -179,18 +185,28 @@ function exec_cli_scripts() {
     if [ $cli_result -ne 0 ]; then
       echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server cannot start or the operations to configure the server failed."
       exit 1
-    elif [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
-      echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
-      while IFS= read -r line
-      do
-        log_error "$line"
-      done < "${CLI_SCRIPT_ERROR_FILE}"
-      exit 1
-    elif [ "${SCRIPT_DEBUG}" != "true" ] ; then
-      rm ${script} 2> /dev/null
-      rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_ERROR_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
+    else
+      if [ -s "${CLI_WARNING_FILE}" ]; then
+        while IFS= read -r line
+        do
+          log_warning "$line"
+        done < "${CLI_WARNING_FILE}"
+      fi
+      if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
+        echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
+        while IFS= read -r line
+        do
+          log_error "$line"
+        done < "${CLI_SCRIPT_ERROR_FILE}"
+        exit 1
+      fi
+      if [ "${SCRIPT_DEBUG}" != "true" ] ; then
+        rm ${script} 2> /dev/null
+        rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
+        rm ${CLI_SCRIPT_ERROR_FILE} 2> /dev/null
+        rm ${CLI_WARNING_FILE} 2> /dev/null
+        rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
+      fi
     fi
   else
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
