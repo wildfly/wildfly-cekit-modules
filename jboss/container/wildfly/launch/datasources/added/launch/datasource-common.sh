@@ -546,17 +546,17 @@ function generate_external_datasource_cli() {
 
   ds="
     if (outcome != success) of ${subsystem_addr}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${ds_resource}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${other_ds_resource}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
@@ -618,17 +618,17 @@ function generate_default_datasource_cli() {
 
   ds="
     if (outcome != success) of ${subsystem_addr}:read-resource
-      echo \"You have set environment variables to configure the default datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen.\" >> \${error_file}
+      echo You have set environment variables to configure the default datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${ds_resource}:read-resource
-      echo \"You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${xa_resource}:read-resource
-      echo \"You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
