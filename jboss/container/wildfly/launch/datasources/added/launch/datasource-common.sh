@@ -197,7 +197,7 @@ function writeEEDefaultDatasourceCli() {
   testXpathExpression "${xpath}" "ret"
   if [ $ret -ne 0 ]; then
     if [ "${forcedDefaultEeDs}" = "true" ]; then
-      echo "EE_DEFAULT_DS_JNDI_NAME was set to \'${EE_DEFAULT_DS_JNDI_NAME}\' but the configuration contains no ee subsystem"
+      log_error "EE_DEFAULT_DS_JNDI_NAME was set to \'${EE_DEFAULT_DS_JNDI_NAME}\' but the configuration contains no ee subsystem"
       exit 1
     else
       # We have no ee subsystem and have just guessed what should go in - this is fine
@@ -611,16 +611,28 @@ function generate_default_datasource_xml() {
 function generate_default_datasource_cli() {
   local ds_tmp_url=$1
 
-  local ds_resource="/subsystem=datasources/data-source=${pool_name}"
-
-  # Here we assume that if the default DS was created any other way, we don't do anything.
-  # All the default ds parameters are hardcoded. So if it already exists, we leave it alone.
-  # TODO Double-check the ds_tmp_url parameter, it looks like it is hardcoded too
+  local subsystem_addr="/subsystem=datasources"
+  local ds_resource="${subsystem_addr}/data-source=${pool_name}"
+  local xa_resource="${subsystem_addr}/xa-data-source=${pool_name}"
+  # Here we assume that if the default DS was created any other way, we we give an error.
 
   ds="
-    if (outcome != success) of $ds_resource:read-resource
-      $ds_resource:add(jta=true, jndi-name=${jndi_name}, enabled=true, use-java-context=true, statistics-enabled=\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}, driver-name=h2, user-name=sa, password=sa, connection-url=\"${ds_tmp_url}\")
+    if (outcome != success) of ${subsystem_addr}:read-resource
+      echo \"You have set environment variables to configure the default datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen.\" >> \${error_file}
+      exit
     end-if
+
+    if (outcome == success) of ${ds_resource}:read-resource
+      echo \"You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of ${xa_resource}:read-resource
+      echo \"You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      exit
+    end-if
+
+    $ds_resource:add(jta=true, jndi-name=${jndi_name}, enabled=true, use-java-context=true, statistics-enabled=\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}, driver-name=h2, user-name=sa, password=sa, connection-url=\"${ds_tmp_url}\")
 "
   echo "$ds"
 }
