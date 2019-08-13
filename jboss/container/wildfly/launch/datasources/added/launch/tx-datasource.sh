@@ -146,10 +146,17 @@ function inject_jdbc_store() {
     sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
   elif [ "${dsConfMode}" = "cli" ]; then
     local subsystem_addr="/subsystem=transactions"
-    # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we just overwrite all affected attributes
+    # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we
+    # error if the base configuration already contains different values for that.
+    # If all is well we write the values
     local cli="
       if (outcome != success) of $subsystem_addr:read-resource
-        echo \"You have set environment variables to configure a jdbc transactional logstore. Fix your configuration to contain a transactions subsystem for this to happen.\"
+        echo You have set environment variables to configure a jdbc transactional logstore. Fix your configuration to contain a transactions subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      if (result.use-jdbc-store == true && (result.jdbc-store-datasource != \"${1}\" || result.jdbc-action-store-table-prefix != \"${prefix}\" || result.jdbc-communication-store-table-prefix != \"${prefix}\" || result.jdbc-state-store-table-prefix != \"${prefix}\")) of $subsystem_addr:query(select=[\"use-jdbc-store\", \"jdbc-store-datasource\", \"jdbc-action-store-table-prefix\", \"jdbc-communication-store-table-prefix\", \"jdbc-state-store-table-prefix\"])
+        echo You have set environment variables to configure a jdbc logstore in the transactions subsystem which conflict with the values that already exist in the base configuration. Fix your configuration. >> \${error_file}
         exit
       end-if
 
@@ -187,7 +194,7 @@ function inject_tx_datasource() {
       log_warning "Current values:"
       log_warning
       log_warning "${service}_SERVICE_HOST: $host"
-      log_warning " ${service}_SERVICE_PORT: $port"
+      log_warning "${service}_SERVICE_PORT: $port"
       log_warning
       log_warning "Please make sure you provided correct service name and prefix in the mapping. Additionally please check that you do not set portalIP to None in the $service_name service. Headless services are not supported at this time."
       log_warning
