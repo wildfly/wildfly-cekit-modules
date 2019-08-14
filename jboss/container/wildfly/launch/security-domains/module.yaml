@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.launch.security-domains
 version: '1.0'
-description:
+description: The security domains configuration under security subsystem.
 
 execute:
 - script: configure.sh
