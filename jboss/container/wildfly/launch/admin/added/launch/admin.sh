@@ -1,3 +1,4 @@
+#!/bin/sh
 source $JBOSS_HOME/bin/launch/logging.sh
 
 function prepareEnv() {
@@ -28,7 +29,21 @@ function configure_administration() {
         exit
     fi
 
-    local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
-    sed -i "s|><!-- ##MGMT_IFACE_REALM## -->| ${mgmt_iface_replace_str}>|" "$CONFIG_FILE"
+    local mode
+    getConfigurationMode "<!-- ##MGMT_IFACE_REALM## -->" "mode"
+
+    if [ "${mode}" = "xml" ]; then
+      local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
+      sed -i "s|><!-- ##MGMT_IFACE_REALM## -->| ${mgmt_iface_replace_str}>|" "$CONFIG_FILE"
+    elif [ "${mode}" = "cli" ]; then
+      cat << EOF >> "${CLI_SCRIPT_FILE}"
+      if (outcome != success) of /core-service=management/management-interface=http-interface:read-resource
+        echo You have set environment variables to configure http-interface security-realm. Fix your configuration to contain the http-interface for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      /core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)
+EOF
+    fi
   fi
 }
