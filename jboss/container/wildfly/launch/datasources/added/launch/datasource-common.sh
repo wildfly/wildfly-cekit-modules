@@ -693,8 +693,10 @@ function inject_timer_service() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
     testXpathExpression "${xpath}" "hasEjb3Subsystem"
     if [ $hasEjb3Subsystem -ne 0 ]; then
-      # No ejb3 subsystem is an error
-      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen."
+      # No ejb3 subsystem is an error. We need to push this into the error file since this runs inside a sub-shell and
+      # any echo without a redirect here goes to the CLI file. Also any attempt to exit here only exits the sub-shell,
+      # Not the whole launch process
+      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
       exit 1
     else
       local timerResource="/subsystem=ejb3/service=timer-service"
