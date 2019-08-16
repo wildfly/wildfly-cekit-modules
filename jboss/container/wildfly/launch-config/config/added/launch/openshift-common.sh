@@ -125,6 +125,23 @@ function testXpathExpression() {
   printf -v "$2" '%s' "$?"
 }
 
+function processErrorsAndWarnings() {
+  if [ -s "${CLI_WARNING_FILE}" ]; then
+    while IFS= read -r line
+    do
+      log_warning "$line"
+    done < "${CLI_WARNING_FILE}"
+  fi
+  if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
+    echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
+    while IFS= read -r line
+    do
+      log_error "$line"
+    done < "${CLI_SCRIPT_ERROR_FILE}"
+    exit 1
+  fi
+}
+
 function exec_cli_scripts() {
   local script="$1"
   local stdOut="discard"
@@ -138,6 +155,9 @@ function exec_cli_scripts() {
   if [ -f "${script}" ]; then
     sed -i '/^$/d' $script
   fi
+
+  # Process any errors and warnings generated creating the CLI script
+  processErrorsAndWarnings
 
   if [ -s "${script}" ]; then
 
@@ -186,20 +206,7 @@ function exec_cli_scripts() {
       echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server cannot start or the operations to configure the server failed."
       exit 1
     else
-      if [ -s "${CLI_WARNING_FILE}" ]; then
-        while IFS= read -r line
-        do
-          log_warning "$line"
-        done < "${CLI_WARNING_FILE}"
-      fi
-      if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
-        echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CLI_SCRIPT_ERROR_FILE}"
-        while IFS= read -r line
-        do
-          log_error "$line"
-        done < "${CLI_SCRIPT_ERROR_FILE}"
-        exit 1
-      fi
+      processErrorsAndWarnings
       if [ "${SCRIPT_DEBUG}" != "true" ] ; then
         rm ${script} 2> /dev/null
         rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
