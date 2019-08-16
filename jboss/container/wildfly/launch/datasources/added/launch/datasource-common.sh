@@ -698,32 +698,40 @@ function inject_timer_service() {
       # Not the whole launch process
       echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
       exit 1
-    else
-      local timerResource="/subsystem=ejb3/service=timer-service"
-      local datastoreResource="${timerResource}/database-data-store=${datastore_name}"
-      local datastoreAdd="
-        ${datastoreResource}:add(datasource-jndi-name=${jndi_name}, database=${databasename}, partition=${pool_name}_part, refresh-interval=${refresh_interval})"
-      # We add the timer-service and the datastore in a batch if it is not there
-      local cli="
-        if (outcome != success) of ${timerResource}:read-resource
-          batch
-          ${timerResource}:add(thread-pool-name=default, default-data-store=${datastore_name})
-          ${datastoreAdd}
-          run-batch
-        end-if"
-      # Next we add the datastore if not there. This will work both if we added it in the previous line, or if the
-      # user supplied a configuration that already contained the timer service but not the desired datastore
-      cli="${cli}
-        if (outcome != success) of ${datastoreResource}:read-resource
-          ${datastoreAdd}
-        end-if"
-      #Finally we write the default-data-store attribute, which should work whether we added the
-      #timer-service or the datastore or not
-      cli="${cli}
-        ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
-      "
-      echo "${cli}" >> ${CLI_SCRIPT_FILE}
     fi
+    local timerResource="/subsystem=ejb3/service=timer-service"
+    local datastoreResource="${timerResource}/database-data-store=${datastore_name}"
+    local datastoreAdd="
+      ${datastoreResource}:add(datasource-jndi-name=${jndi_name}, database=${databasename}, partition=${pool_name}_part, refresh-interval=${refresh_interval})"
+    # We add the timer-service and the datastore in a batch if it is not there
+    local cli="
+      if (outcome != success) of ${timerResource}:read-resource
+        batch
+        ${timerResource}:add(thread-pool-name=default, default-data-store=${datastore_name})
+        ${datastoreAdd}
+        run-batch
+      end-if"
+    # Next we add the datastore if not there. This will work both if we added it in the previous line, or if the
+    # user supplied a configuration that already contained the timer service but not the desired datastore
+    cli="${cli}
+      if (outcome != success) of ${datastoreResource}:read-resource
+        ${datastoreAdd}
+      end-if"
+    # Next we do a check to see if the datastore contains the same values as calculated from the variables.
+    # This is needed for the case when the base configuration already contained it, so the adds above
+    # would not have taken effect.
+    cli="${cli}
+      if (result.allow-execution != true || result.database != \"${databasename}\" || result.datasource-jndi-name != \"${jndi_name}\" || result.partition != \"${pool_name}_part\" || result.refresh-interval != ${refresh_interval})  of /subsystem=ejb3/service=timer-service/database-data-store=test_mysql-TEST_ds:query(select=[\"allow-execution\", \"database\", \"datasource-jndi-name\", \"partition\", \"refresh-interval\"])
+        echo You have set environment variables to configure a timer service database-data-store in the ejb3 subsystem which conflict with the values that already exist in the base configuration. Fix your configuration. >> \${error_file}
+        exit
+      end-if
+    "
+    #Finally we write the default-data-store attribute, which should work whether we added the
+    #timer-service or the datastore or not
+    cli="${cli}
+      ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
+    "
+    echo "${cli}" >> ${CLI_SCRIPT_FILE}
   fi
 }
 
