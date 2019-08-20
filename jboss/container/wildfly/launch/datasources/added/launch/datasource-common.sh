@@ -110,6 +110,8 @@ function inject_internal_datasources() {
     inject_default_timer_service
   fi
 
+  local defaultDatasourceJndi
+
   if [ "${#db_backends[@]}" -eq "0" ]; then
     datasource=$(generate_datasource)
     if [ -n "$datasource" ]; then
@@ -147,9 +149,12 @@ function inject_internal_datasources() {
       inject_datasource $prefix $service $service_name
 
       if [ -z "$defaultDatasourceJndi" ]; then
-        # make sure we re-read $jndi, messaging uses it too
         jndi=$(get_jndi_name "$prefix" "$service")
-        defaultDatasourceJndi="$jndi"
+        if [ -z "${EE_DEFAULT_DATASOURCE}" ]; then
+          defaultDatasourceJndi="$jndi"
+        elif [ -n "${EE_DEFAULT_DATASOURCE}" -a "${EE_DEFAULT_DATASOURCE}" = "${service_name}" ]; then
+          defaultDatasourceJndi="$jndi"
+        fi
       fi
     done
   fi
@@ -159,13 +164,8 @@ function inject_internal_datasources() {
 
 function writeEEDefaultDatasource() {
   # Check the override and use that instead of the 'guess' if set
-  local forcedDefaultEeDs="false"
-  if [ -n "${defaultDatasourceJndi}" ] && [ -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
-    log_warning "The default datasource for the ee subsystem has been guessed to be ${defaultDatasourceJndi}. Specify this using EE_DEFAULT_DS_JNDI_NAME"
-  fi
-  if [ ! -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
-    defaultDatasourceJndi="${EE_DEFAULT_DS_JNDI_NAME}"
-    forcedDefaultEeDs="true"
+  if [ "${#db_backends[@]}" -gt "1" ] && [ -n "${defaultDatasourceJndi}" ] && [ -z "${EE_DEFAULT_DATASOURCE+x}" ]; then
+    log_warning "The default datasource for the ee subsystem has been guessed to be ${defaultDatasourceJndi}. Specify this using EE_DEFAULT_DATASOURCE"
   fi
 
   # Set the default datasource
@@ -191,13 +191,17 @@ function writeEEDefaultDatasourceXml() {
 }
 
 function writeEEDefaultDatasourceCli() {
+  local forcedDefaultEeDs="false"
+  if [ ! -z "${EE_DEFAULT_DATASOURCE+x}" ]; then
+    forcedDefaultEeDs="true"
+  fi
 
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]\""
   local ret
   testXpathExpression "${xpath}" "ret"
-  if [ $ret -ne 0 ]; then
+  if [ "${ret}" -ne 0 ]; then
     if [ "${forcedDefaultEeDs}" = "true" ]; then
-      log_error "EE_DEFAULT_DS_JNDI_NAME was set to \'${EE_DEFAULT_DS_JNDI_NAME}\' but the configuration contains no ee subsystem"
+      log_error "EE_DEFAULT_DATASOURCE was set to '${EE_DEFAULT_DATASOURCE}' but the base configuration contains no ee subsystem. Fix your configuration. "
       exit 1
     else
       # We have no ee subsystem and have just guessed what should go in - this is fine
@@ -214,20 +218,29 @@ function writeEEDefaultDatasourceCli() {
   " >> ${CLI_SCRIPT_FILE}
 
 
-  xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
+  xpath="\"//*[local-name()='default-bindings' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
   ret=""
   testXpathExpression "${xpath}" "ret"
+
   local writeDs="$resource:write-attribute(name=datasource, value=${defaultDatasourceJndi})"
-  local undefineDs="$resource:undefine-attribute(name=datasource)"
   local cli_action
-  if [ $ret -eq 0 ]; then
+  if [ "${ret}" -eq 0 ]; then
     # Attribute exists in config already
-    if [ "${forcedDefaultEeDs}" = true ]; then
-      # We forced it, so override with whatever the value of EE_DEFAULT_DS_JNDI_NAME was
-      if [ -n "${defaultDatasourceJndi}" ]; then
-        cli_action="${writeDs}"
+    if [ -n "${defaultDatasourceJndi}" ]; then
+      # Base config already has a value, what happens next depends on if it was forced or guessed
+      if [ "${forcedDefaultEeDs}" = true ]; then
+        # We forced it, so log an error and exit if we have a conflict between the base config and the env var setting
+        cli_action="
+          if (result != \"${defaultDatasourceJndi}\") of ${resource}:read-attribute(name=datasource)
+            echo You have set environment variables to configure the datasource in the default-bindings in the ee subsystem subsystem which conflicts with the value that already exists in the base configuration. Fix your configuration. >> \${error_file}
+            exit
+          end-if"
       else
-        cli_action="${undefineDs}"
+        # We guessed it, so log a warning if we have a conflict between the base config and the env var setting
+        cli_action="
+          if (result != \"${defaultDatasourceJndi}\") of ${resource}:read-attribute(name=datasource)
+            echo You have set environment variables to configure the datasource in the default-bindings in the ee subsystem subsystem which conflicts with the value that already exists in the base configuration. The base configuration value will be used. Fix your configuration. >> \${warning_file}
+          end-if"
       fi
     fi
   else
