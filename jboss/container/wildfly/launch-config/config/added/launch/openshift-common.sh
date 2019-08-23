@@ -110,19 +110,18 @@ function getConfigurationMode() {
 #
 # Parameters:
 # - $1      - the xpath expression to use
-# - $2      - the variable which will hold the result
+# - $2      - the variable which will hold the exit code
+# - $3      - an optional variable to hold the output of the xpath command
 #
 function testXpathExpression() {
   local xpath="$1"
   unset -v "$2" || echo "Invalid identifier: $2" >&2
 
-  if [ "${SCRIPT_DEBUG}" == "true" ]; then
-    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null 2>/dev/null
-  else
-    eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 1>/dev/null 2>/dev/null
-  fi
+  local output
+  output=$(eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 2>/dev/null)
 
   printf -v "$2" '%s' "$?"
+  unset -v "$3" && printf -v "$3" '%s' "${output}"
 }
 
 function processErrorsAndWarnings() {
