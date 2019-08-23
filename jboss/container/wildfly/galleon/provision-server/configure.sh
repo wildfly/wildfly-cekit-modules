@@ -2,6 +2,21 @@
 # Configure module
 set -e
 SCRIPT_DIR=$(dirname $0)
+ARTIFACTS_DIR=${SCRIPT_DIR}/artifacts
+
+# Copy settings used by server at startup.
+pushd ${ARTIFACTS_DIR}
+cp settings-startup.xml $HOME/.m2/
+popd
+
+# Construct the settings in use by galleon.
+cp $HOME/.m2/settings.xml $HOME/.m2/settings-galleon.xml
+local_repo_xml="\n\
+  <localRepository>${GALLEON_LOCAL_MAVEN_REPO}</localRepository>"
+sed -i "s|<!-- ### configured local repository ### -->|${local_repo_xml}|" "$HOME/.m2/settings-galleon.xml"
+# By default the settings.xml are valid for execution of the server
+#s2i will replace the default settings with the one needed by s2i during assembly.
+cp $HOME/.m2/settings-startup.xml $HOME/.m2/settings.xml
 
 if [ ! -d "$GALLEON_DEFAULT_SERVER" ]; then
   echo "GALLEON_DEFAULT_SERVER must be set to the absolute path to directory that contains galleon default server provisioning file."

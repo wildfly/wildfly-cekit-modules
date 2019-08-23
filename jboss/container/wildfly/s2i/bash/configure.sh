@@ -49,3 +49,8 @@ galleon_profile="<profile>\n\
     </profile>\n\
 "
 sed -i "s|<\!-- ### configured profiles ### -->|$galleon_profile <\!-- ### configured profiles ### -->|" $HOME/.m2/settings.xml
+
+# Copy settings.xml to a safe location that will be set at assembly time.
+cp $HOME/.m2/settings.xml $HOME/.m2/settings-s2i.xml
+chown jboss:root $HOME/.m2/settings-s2i.xml
+chmod ug+rwX $HOME/.m2/settings-s2i.xml

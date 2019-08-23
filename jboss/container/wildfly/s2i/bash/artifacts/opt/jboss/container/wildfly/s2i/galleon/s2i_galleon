@@ -118,10 +118,33 @@ function galleon_init_mvn_env() {
     maven_init_var_MAVEN_ARGS
 }
 
-function galleon_reset_mvn_env() {
-    # cleanup galleon local repository if required
-    maven_cleanup
+function galleon_is_slim_server {
+  val="$(xmllint --xpath "string(//*[local-name()='installation']/*[local-name()='options']/*[local-name()='option'][@name='jboss-maven-dist']/@value)" "$JBOSS_HOME/.galleon/provisioning.xml")"
+  if [ -z "$val" -o "$val" != "true" ]; then
+    echo false
+  else
+    echo true
+  fi
+}
 
+function galleon_cleanup {
+    # cleanup galleon local repository if required
+    # We can only delete the maven repository if the provisioned server is not a slim one.
+    if [ "${MAVEN_CLEAR_REPO,,}" == "true" ]; then
+      isSlim="$(galleon_is_slim_server)"
+      if [ "$isSlim" != "true" ]; then
+        log_info "Clearing local maven repository at $GALLEON_LOCAL_MAVEN_REPO"
+        rm -rf "$GALLEON_LOCAL_MAVEN_REPO"
+        if [ $? -ne 0 ]; then
+          log_error "Cannot remove local Maven repository $GALLEON_LOCAL_MAVEN_REPO"
+        fi
+      else
+        log_warning "Can't clean galleon local repository, server requires it to resolve JBoss modules artifacts."
+      fi
+    fi
+}
+
+function galleon_reset_mvn_env() {
     # restore MAVEN_LOCAL_REPO
     unset MAVEN_LOCAL_REPO
     if [ -n "$ORIGINAL_MAVEN_LOCAL_REPO" ]; then
@@ -196,6 +219,14 @@ function galleon_provision_server() {
           fi
           cp $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER/provisioning.xml "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
           GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+        fi
+
+        # No galleon provisioning, check that we are not in a chained build case (or patching case) that implies to re-provision a fat default server
+        if [ -z "$GALLEON_DESCRIPTION_LOCATION" ]; then
+          if [ ! -z "$GALLEON_PROVISION_DEFAULT_FAT_SERVER" ]; then
+             cp $GALLEON_DEFAULT_FAT_SERVER/provisioning.xml "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+             GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
+          fi
         fi
     fi
 
