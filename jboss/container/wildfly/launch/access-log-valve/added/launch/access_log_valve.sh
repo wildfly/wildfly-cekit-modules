@@ -32,25 +32,116 @@
 source $JBOSS_HOME/bin/launch/logging.sh
 
 function configure() {
-  configure_access_log_valve
+    configure_access_log_valve
   configure_access_log_handler
 }
 
 function configure_access_log_valve() {
-    EAP7x_VALVE="<access-log use-server-log=\"true\" pattern=\"%h %l %u %t %{i,X-Forwarded-Host} \&quot;%r\&quot; %s %b\"/>"
 
-    if [ "${ENABLE_ACCESS_LOG^^}" == "TRUE" ]; then
-      sed -i "s|<!-- ##ACCESS_LOG_VALVE## -->|${EAP7x_VALVE}|" $CONFIG_FILE
+  local mode
+  getConfigurationMode "<!-- ##ACCESS_LOG_VALVE## -->" "mode"
+
+  if [ "${ENABLE_ACCESS_LOG^^}" == "TRUE" ]; then
+    local pattern="%h %l %u %t %{i,X-Forwarded-Host} \&quot;%r\&quot; %s %b"
+    if [ "${mode}" == "xml" ]; then
+      local valve="<access-log use-server-log=\"true\" pattern=\"${pattern}\"/>"
+      sed -i "s|<!-- ##ACCESS_LOG_VALVE## -->|${valve}|" $CONFIG_FILE
     else
-        log_info "Access log is disabled, ignoring configuration."
+      # A lot of XPath here since we need to do more advanced stuff than CLI allows us to...
+
+      # Check there is an Undertow subsystem
+      local subsystemRet
+      local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]\""
+      testXpathExpression "${xpath}" "subsystemRet"
+      if [ "${subsystemRet}" -ne 0 ]; then
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        exit 1
+      fi
+
+      # Not having any servers is an error
+      local serverNamesRet
+      # We grab the <server name="..."> attributes, and will use them later
+      local serverNames
+      local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
+      testXpathExpression "${xpath}" "serverNamesRet" "serverNames"
+      if [ "${serverNamesRet}" -ne 0 ]; then
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        exit 1
+      fi
+
+      # Not having any server hosts is an error
+      local hostsRet
+      local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='host']\""
+      testXpathExpression "${xpath}" "ret"
+      if [ "${hostsRet}" -ne 0 ]; then
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        exit 1
+      fi
+
+      serverNames=$(splitAttributesStringIntoLinkes "${serverNames}" "name")
+      while read -r serverName; do
+        add_cli_commands_for_server_hosts "${serverName}"
+      done <<< "${serverNames}"
     fi
+  else
+      log_info "Access log is disabled, ignoring configuration."
+  fi
 }
+
+function add_cli_commands_for_server_hosts() {
+  local serverName=$1
+
+  local ret
+  local hostNames
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host']/@name\""
+  testXpathExpression "${xpath}" "ret" "hostNames"
+  if [ "${ret}" -ne 0 ]; then
+    echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. This is not added to the undertow server '${serverName}' since it has no hosts." >> ${CLI_WARNING_FILE}
+    return
+  fi
+
+  hostNames=$(splitAttributesStringIntoLinkes "${hostNames}" "name")
+  while read -r hostName; do
+    add_cli_commands_for_host "${serverName}" "${hostName}"
+  done <<< "${hostNames}"
+
+}
+
+function add_cli_commands_for_host() {
+  local serverName=$1
+  local hostName=$2
+
+  local ret
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host' and @name='${hostName}']/*[local-name()='access-log']\""
+  testXpathExpression "${xpath}" "ret"
+
+  local cli
+  local resourceAddr="/subsystem=undertow/server=${serverName}/host=${hostName}/setting=access-log"
+  if [ "${ret}" -eq 0 ]; then
+    # There is already an access log defined. Check it has the same values and give an error if not
+    cli="
+      if (result.pattern != \"${pattern}\" || result.use-server-log != false)) of ${resourceAddr}:query(select=[\"pattern\", \"use-server-log\"])
+        echo You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration. >> \${error_file}
+        exit
+      end-if
+    "
+  else
+    # There is no access log defined. Add it
+    cli="
+      ${resourceAddr}:add(pattern=\"${pattern}\", use-server-log=true)
+    "
+  fi
+
+  echo "$cli" >> ${CLI_SCRIPT_FILE}
+}
+
 
 function version_compare () {
     [ "$1" = "`echo -e \"$1\n$2\" | sort -V | head -n1`" ] && echo "older" || echo "newer"
 }
 
 function configure_access_log_handler() {
+
   if [ "${ENABLE_ACCESS_LOG^^}" == "TRUE" ]; then
     IS_NEWER_OR_EQUAL_TO_7_2=$(version_compare "$JBOSS_DATAGRID_VERSION" "7.2")
 
@@ -61,6 +152,57 @@ function configure_access_log_handler() {
       log_category="org.infinispan.REST_ACCESS_LOG"
     fi
 
-    sed -i "s|<!-- ##ACCESS_LOG_HANDLER## -->|<logger category=\"${log_category}\"><level name=\"TRACE\"/></logger>|" $CONFIG_FILE
+    local mode
+    getConfigurationMode "<!-- ##ACCESS_LOG_HANDLER## -->" "mode"
+
+    if [ "${mode}" = "xml" ]; then
+      sed -i "s|<!-- ##ACCESS_LOG_HANDLER## -->|<logger category=\"${log_category}\"><level name=\"TRACE\"/></logger>|" $CONFIG_FILE
+    elif [ "${mode}" = "cli" ]; then
+
+      if [ -z "${ENABLE_ACCESS_LOG_TRACE}" ] || [ "${ENABLE_ACCESS_LOG_TRACE^^}" != "TRUE" ]; then
+        # The EAP configuration did not contain an ##ACCESS_LOG_HANDLER## marker. So it looks like
+        # this is for some layered products. Also since it is a TRACE level warning perhaps the user
+        # is meant to add the marker to get this trace logging. However, with the CLI alternative
+        # this would have taken effect regardless.
+        # So explicitly enable it by setting -e ENABLE_ACCESS_LOG_TRACE=true
+        return
+      fi
+
+      subsystemAddr="/subsystem=logging"
+      resourceAddr="${subsystemAddr}/logger=${log_category}"
+      local cli="
+        if (outcome != success) of ${subsystemAddr}:read-resource
+          echo You have set ENABLE_ACCESS_LOG=true to add the access log logger category. Fix your configuration to contain the logging subsystem for this to happen. >> \${error_file}
+        end-if
+
+        if (outcome == success && (result.category != "${log_category}" || result.level != "TRACE")) of ${resourceAddr}:query(select=[\"category\", \"level\"])
+          echo You have set ENABLE_ACCESS_LOG=true to add the access log logger category '${log_category}'. However one already exists which has conflicting values. Fix your configuration to contain the logging subsystem for this to happen. >> \${error_file}
+        end-if
+
+        if (outcome != success) of ${resourceAddr}:read-resource
+          ${resourceAddr}:add(level=TRACE)
+        end-if
+      "
+      echo "${cli}" >> ${CLI_SCRIPT_FILE}
+    fi
   fi
 }
+
+# An XPath expression e.g getting all name attributes for all the servers in the undertow subsystem
+# will return a variable with all the attributes with their names on one line, e.g
+#     'name="server-one" name="server-two" name="server-three"'
+# Call this with ($input is the string above)
+#     convertAttributesToValueOnEachLine "$input" "name"
+# to convert this to :
+# "server-one
+# server-two
+# server-three"
+function splitAttributesStringIntoLinkes() {
+  local input="${1}"
+  local attribute_name="${2}"
+
+  local temp
+  temp=$(echo $input | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
+  echo "${temp}"
+}
+
