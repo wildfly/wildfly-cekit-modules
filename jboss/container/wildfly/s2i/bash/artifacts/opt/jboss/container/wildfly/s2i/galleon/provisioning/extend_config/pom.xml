@@ -70,7 +70,6 @@
                                         </configuration-id>
                                     </included-configs>
                                 </feature-pack>
-                                <!-- ##GALLEON_DS_FP## -->
                             </feature-packs>
                             <customConfig>config.xml</customConfig>
                         </configuration>
