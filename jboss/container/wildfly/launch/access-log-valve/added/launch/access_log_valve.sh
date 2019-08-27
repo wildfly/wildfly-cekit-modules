@@ -42,12 +42,13 @@ function configure_access_log_valve() {
   getConfigurationMode "<!-- ##ACCESS_LOG_VALVE## -->" "mode"
 
   if [ "${ENABLE_ACCESS_LOG^^}" == "TRUE" ]; then
-    local pattern="%h %l %u %t %{i,X-Forwarded-Host} \&quot;%r\&quot; %s %b"
+
     if [ "${mode}" == "xml" ]; then
+      local pattern=$(getPattern "add-xml")
       local valve="<access-log use-server-log=\"true\" pattern=\"${pattern}\"/>"
       sed -i "s|<!-- ##ACCESS_LOG_VALVE## -->|${valve}|" $CONFIG_FILE
     else
-      # A lot of XPath here since we need to do more advanced stuff than CLI allows us to...
+            # A lot of XPath here since we need to do more advanced stuff than CLI allows us to...
 
       # Check there is an Undertow subsystem
       local subsystemRet
@@ -78,7 +79,7 @@ function configure_access_log_valve() {
         exit 1
       fi
 
-      serverNames=$(splitAttributesStringIntoLinkes "${serverNames}" "name")
+      serverNames=$(splitAttributesStringIntoLinks "${serverNames}" "name")
       while read -r serverName; do
         add_cli_commands_for_server_hosts "${serverName}"
       done <<< "${serverNames}"
@@ -100,7 +101,7 @@ function add_cli_commands_for_server_hosts() {
     return
   fi
 
-  hostNames=$(splitAttributesStringIntoLinkes "${hostNames}" "name")
+  hostNames=$(splitAttributesStringIntoLinks "${hostNames}" "name")
   while read -r hostName; do
     add_cli_commands_for_host "${serverName}" "${hostName}"
   done <<< "${hostNames}"
@@ -111,22 +112,49 @@ function add_cli_commands_for_host() {
   local serverName=$1
   local hostName=$2
 
-  local ret
+  local alRet
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host' and @name='${hostName}']/*[local-name()='access-log']\""
-  testXpathExpression "${xpath}" "ret"
+  testXpathExpression "${xpath}" "alRet"
 
   local cli
   local resourceAddr="/subsystem=undertow/server=${serverName}/host=${hostName}/setting=access-log"
-  if [ "${ret}" -eq 0 ]; then
+  if [ "${alRet}" -eq 0 ]; then
     # There is already an access log defined. Check it has the same values and give an error if not
+    # We tried doing this in CLI but there seems to be a problem checking/comparing return values when
+    # the value contains a string which is the case for the 'pattern' attribute
+
+    # Check use-server-log with CLI since it works
     cli="
-      if (result.pattern != \"${pattern}\" || result.use-server-log != false)) of ${resourceAddr}:query(select=[\"pattern\", \"use-server-log\"])
+      if (result.use-server-log != true) of ${resourceAddr}:query(select=[\"pattern\", \"use-server-log\"])
         echo You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration. >> \${error_file}
         exit
       end-if
     "
+    # Check pattern with XPath since it contains spaces and won't in CLI
+    local pathRet
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host' and @name='${hostName}']/*[local-name()='access-log']/@pattern\""
+    local existingPattern
+    testXpathExpression "${xpath}" "pathRet" "existingPattern"
+    local nonMatching
+    if [ "${pathRet}" -eq 0 ]; then
+      existingPattern=$(splitAttributesStringIntoLinks "${existingPattern}" "pattern")
+      local pattern=$(getPattern "read-xml")
+      while read -r value; do
+        if [ "${value}" != "${pattern}" ]; then
+          nonMatching="1"
+        fi
+      done <<< "${existingPattern}"
+    else
+      nonMatching="1"
+    fi
+
+    if [ "${nonMatching}" == "1" ]; then
+      echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration." >> ${CLI_SCRIPT_ERROR_FILE}
+      return
+    fi
   else
     # There is no access log defined. Add it
+    local pattern=$(getPattern "add-cli")
     cli="
       ${resourceAddr}:add(pattern=\"${pattern}\", use-server-log=true)
     "
@@ -197,7 +225,7 @@ function configure_access_log_handler() {
 # "server-one
 # server-two
 # server-three"
-function splitAttributesStringIntoLinkes() {
+function splitAttributesStringIntoLinks() {
   local input="${1}"
   local attribute_name="${2}"
 
@@ -206,3 +234,13 @@ function splitAttributesStringIntoLinkes() {
   echo "${temp}"
 }
 
+function getPattern() {
+  local mode="${1}"
+  if [ "${mode}" = "add-xml" ]; then
+    echo "%h %l %u %t %{i,X-Forwarded-Host} \&quot;%r\&quot; %s %b"
+  elif [ "${mode}" = "read-xml" ]; then
+    echo "%h %l %u %t %{i,X-Forwarded-Host} &quot;%r&quot; %s %b"
+  elif [ "${mode}" = "add-cli" ]; then
+    echo "%h %l %u %t %{i,X-Forwarded-Host} \\\"%r\\\" %s %b"
+  fi
+}
