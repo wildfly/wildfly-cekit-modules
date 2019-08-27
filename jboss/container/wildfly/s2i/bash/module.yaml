@@ -37,6 +37,13 @@ envs:
   description: "Used during s2i to provision a custom galleon server. Name of a galleon built-in configuration."
 - name: GALLEON_PROVISION_LAYERS
   description: "Used during s2i to provision a custom galleon server. Comma separated list of layers to compose the configuration."
+- name: GALLEON_DEFAULT_FAT_SERVER
+  description: "Mandatory. Absolute path to directory that contains galleon fat default server provisioning.xml file"
+- name: GALLEON_PROVISION_DEFAULT_FAT_SERVER
+  description: "When set to true and if no galleon provisioning is done during s2i, provision the default fat server."
+- name: S2I_COPY_SERVER
+  description: "When set to true, copy the galleon provisioned server to s2i output dir to be consumed by next build in the chain. True by default."
+  value: "true"
 execute:
 - script: configure.sh
 

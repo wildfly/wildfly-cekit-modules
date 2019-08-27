@@ -5,7 +5,7 @@ description: Provision the default server in JBOSS_HOME.
 
 envs:
 - name: GALLEON_DEFAULT_SERVER
-  description: "Mandatory. Absolute path to directory that contains galleon default server provisioning maven project."
+  description: "Mandatory. Absolute path to directory that contains galleon default server provisioning.xml file."
 - name: GALLEON_PROVISON_FP_MAVEN_ARGS_APPEND
   description: "Optional. Maven arguments to use when provisioning the default server."
 execute:
