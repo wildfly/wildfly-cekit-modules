@@ -20,10 +20,6 @@ envs:
   description: "Mandatory. groupid of s2i galleon feature-pack"
 - name: GALLEON_S2I_FP_ARTIFACT_ID
   description: "Mandatory. artifactid of s2i galleon feature-pack"
-- name: GALLEON_WF_EXTRAS_DS_VERSION
-  description: "Version of org.wildfly:wildfly-datasources-galleon-pack to be included, mandatory if GALLEON_ADD_DS_FP is set to true"
-- name: GALLEON_ADD_DS_FP
-  value: false
 - name: GALLEON_VERSION
   value: "4.0.3.Final"
 - name: GALLEON_WILDFLY_VERSION

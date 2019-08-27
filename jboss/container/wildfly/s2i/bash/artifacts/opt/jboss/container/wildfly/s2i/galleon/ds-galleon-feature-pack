@@ -1,1 +1,0 @@
-<feature-pack><groupId>org.wildfly</groupId><artifactId>wildfly-datasources-galleon-pack</artifactId><version>${env.GALLEON_WF_EXTRAS_DS_VERSION}</version><inherit-packages>false</inherit-packages><inherit-configs>false</inherit-configs></feature-pack>

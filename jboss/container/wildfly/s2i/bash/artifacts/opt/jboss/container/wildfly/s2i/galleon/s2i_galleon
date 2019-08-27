@@ -1,6 +1,5 @@
 GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/generic_layers
 GALLEON_EXTEND_CONFIG_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/extend_config
-GALLEON_DS_FP="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/ds-galleon-feature-pack
 
 function galleon_patch_generic_config() {
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
@@ -10,11 +9,6 @@ function galleon_patch_generic_config() {
      if [ -n "$layers" ]; then
        sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/config.xml
      fi
-   fi
-
-   if [ "x$GALLEON_ADD_DS_FP" == "xtrue" ]; then
-      ds_fp=`cat "${GALLEON_DS_FP}" | sed ':a;N;$!ba;s/\n//g'`
-      sed -i "s|<!-- ##GALLEON_DS_FP## -->|${ds_fp}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
    fi
 }
 
@@ -26,11 +20,6 @@ function galleon_patch_extend_default_config() {
      if [ -n "$layers" ]; then
        sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_EXTEND_CONFIG_DEFINITION/config.xml
      fi
-   fi
-
-   if [ "x$GALLEON_ADD_DS_FP" == "xtrue" ]; then
-      ds_fp=`cat "${GALLEON_DS_FP}" | sed ':a;N;$!ba;s/\n//g'`
-      sed -i "s|<!-- ##GALLEON_DS_FP## -->|${ds_fp}|" $GALLEON_EXTEND_CONFIG_DEFINITION/pom.xml
    fi
 }
 
