@@ -42,7 +42,7 @@ function configure_access_log_valve() {
   getConfigurationMode "<!-- ##ACCESS_LOG_VALVE## -->" "mode"
 
   if [ "${ENABLE_ACCESS_LOG^^}" == "TRUE" ]; then
-
+    log_info "Configuring Access Log Valve."
     if [ "${mode}" == "xml" ]; then
       local pattern=$(getPattern "add-xml")
       local valve="<access-log use-server-log=\"true\" pattern=\"${pattern}\"/>"
