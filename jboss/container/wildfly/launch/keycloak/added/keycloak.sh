@@ -53,14 +53,10 @@ SAML="KEYCLOAK-SAML"
 SECURE_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-deployments
 SECURE_SAML_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-saml-deployments
 
+SUBSYSTEM_END_MARKER="</profile>"
+EXTENSIONS_END_MARKER="</extensions>"
+
 function configure_cli_keycloak() {
-  if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
-    echo "$SECURE_DEPLOYMENTS or $SECURE_SAML_DEPLOYMENTS have been found. They are not supported, use automatic SSO configuration"
-    return
-  fi
-
-  if [ -n "$SSO_URL" ]; then
-
     # We cannot have nested if sentences in CLI, so we use Xpath here to see if the subsystem=keycloak is in the file
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:keycloak:')]\""
     local ret_oidc
@@ -71,9 +67,58 @@ function configure_cli_keycloak() {
     local ret_saml
     testXpathExpression "${xpath}" "ret_saml"
 
-    enable_keycloak_deployments
     app_sec_domain=${SSO_SECURITY_DOMAIN:-other}
     id=$(date +%s)
+
+    if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
+
+      elytron_assert="$(elytron_common_assert $app_sec_domain)"
+
+      if [ -f $SECURE_DEPLOYMENTS ]; then
+        if [ "${ret_oidc}" -ne 0 ]; then
+          keycloak_subsystem=`cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+          keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
+
+          sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
+
+          oidc_elytron="$(configure_OIDC_elytron $id)"
+          ejb_config="$(configure_ejb $id $app_sec_domain)"
+        
+          echo " 
+            $elytron_assert
+            $oidc_elytron
+            $ejb_config" >> ${CLI_SCRIPT_FILE}
+        else
+          log_warning "keycloak subsystem already exists, no configuration applied"
+        fi
+      fi
+
+      if [ -f $SECURE_SAML_DEPLOYMENTS ]; then
+        if [ "${ret_saml}" -ne 0 ]; then
+          keycloak_subsystem=`cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+          keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
+
+          sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
+
+          saml_elytron="$(configure_SAML_elytron $id)"
+        
+          echo "
+            $elytron_assert
+            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
+        else
+          log_warning "keycloak saml subsystem already exists, no configuration applied"
+        fi
+      fi
+
+      undertow_config="$(configure_undertow $id $app_sec_domain)"
+      echo "
+       $undertow_config" >> ${CLI_SCRIPT_FILE}
+
+      configure_extensions_no_marker
+      enable_keycloak_deployments
+
+  elif [ -n "$SSO_URL" ]; then
+    enable_keycloak_deployments
 
     oidc_extension="$(configure_OIDC_extension)"
     saml_extension="$(configure_SAML_extension)"
@@ -111,7 +156,7 @@ function configure_cli_keycloak() {
           $oidc
           $ejb_config" >> ${CLI_SCRIPT_FILE}
       else
-          echo "keycloak subsystem already exists, no configuration applied"
+          log_warning "keycloak subsystem already exists, no configuration applied"
       fi
     fi
     
@@ -123,7 +168,7 @@ function configure_cli_keycloak() {
           $saml_elytron
           $saml"  >> ${CLI_SCRIPT_FILE}
       else
-        echo "keycloak saml subsystem already exists, no configuration applied"
+        log_warning "keycloak saml subsystem already exists, no configuration applied"
       fi
     fi
 
@@ -137,7 +182,7 @@ function configure_OIDC_extension() {
   cli="if (outcome != success) of /extension=org.keycloak.keycloak-adapter-subsystem:read-resource
         /extension=org.keycloak.keycloak-adapter-subsystem:add()
       else
-        echo org.keycloak.keycloak-adapter-subsystem extension already added
+        echo org.keycloak.keycloak-adapter-subsystem extension already added >> \${warning_file}
       end-if"
   echo "$cli"
 }
@@ -147,7 +192,7 @@ function configure_SAML_extension() {
       if (outcome != success) of /extension=org.keycloak.keycloak-saml-adapter-subsystem:read-resource
         /extension=org.keycloak.keycloak-saml-adapter-subsystem:add()
       else
-        echo org.keycloak.keycloak-saml-adapter-subsystem extension already added
+        echo org.keycloak.keycloak-saml-adapter-subsystem extension already added >> \${warning_file}
       end-if"
   echo "$cli"
 }
@@ -177,7 +222,7 @@ function configure_undertow() {
 if (outcome == success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
     /subsystem=undertow/application-security-domain=${security_domain}:add(http-authentication-factory=keycloak-http-authentication-$id)
 else
-    echo Undertow not configured, no keycloak-http-authentication-$id found, keycloak subsystems must have been already configured.
+    echo Undertow not configured, no keycloak-http-authentication-$id found, keycloak subsystems must have been already configured. >> \${warning_file}
 end-if"
 echo "$cli"
 }
@@ -188,39 +233,39 @@ function configure_SAML_elytron() {
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakSAMLRealm-$id:read-resource
     /subsystem=elytron/custom-realm=KeycloakSAMLRealm-$id:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
 else
-    echo Keycloak SAML Realm already installed
+    echo Keycloak SAML Realm already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/security-domain=KeycloakDomain-$id:read-resource
     /subsystem=elytron/security-domain=KeycloakDomain-$id:add(default-realm=KeycloakSAMLRealm-$id,permission-mapper=default-permission-mapper,security-event-listener=local-audit,realms=[{realm=KeycloakSAMLRealm-$id}])
 else
-    echo Keycloak Security Domain already installed. Trying to install Keycloak SAML Realm.
+    echo Keycloak Security Domain already installed. Trying to install Keycloak SAML Realm. >> \${warning_file}
     /subsystem=elytron/security-domain=KeycloakDomain-$id:list-add(name=realms, value={realm=KeycloakSAMLRealm-$id})
 end-if
 
 if (outcome != success) of /subsystem=elytron/constant-realm-mapper=keycloak-saml-realm-mapper-$id:read-resource
     /subsystem=elytron/constant-realm-mapper=keycloak-saml-realm-mapper-$id:add(realm-name=KeycloakSAMLRealm-$id)
 else
-    echo Keycloak SAML Realm Mapper already installed
+    echo Keycloak SAML Realm Mapper already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-$id:read-resource
     /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-$id:add(module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
 else
-    echo Keycloak SAML HTTP Mechanism Factory already installed
+    echo Keycloak SAML HTTP Mechanism Factory already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:read-resource
     /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:add(http-server-mechanism-factories=[keycloak-saml-http-server-mechanism-factory-$id, global])
 else
-    echo Keycloak HTTP Mechanism Factory already installed. Trying to install Keycloak SAML HTTP Mechanism Factory.
+    echo Keycloak HTTP Mechanism Factory already installed. Trying to install Keycloak SAML HTTP Mechanism Factory. >> \${warning_file}
     /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:list-add(name=http-server-mechanism-factories, value=keycloak-saml-http-server-mechanism-factory-$id)
 end-if
 
 if (outcome != success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
     /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:add(security-domain=KeycloakDomain-$id,http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id,mechanism-configurations=[{mechanism-name=KEYCLOAK-SAML,mechanism-realm-configurations=[{realm-name=KeycloakSAMLCRealm-$id,realm-mapper=keycloak-saml-realm-mapper-$id}]}])
 else
-    echo Keycloak HTTP Authentication Factory already installed. Trying to install Keycloak SAML Mechanism Configuration
+    echo Keycloak HTTP Authentication Factory already installed. Trying to install Keycloak SAML Mechanism Configuration >> \${warning_file}
     /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:list-add(name=mechanism-configurations, value={mechanism-name=KEYCLOAK-SAML,mechanism-realm-configurations=[{realm-name=KeycloakSAMLRealm-$id,realm-mapper=keycloak-saml-realm-mapper-$id}]})
 end-if
 "
@@ -233,39 +278,39 @@ function configure_OIDC_elytron() {
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakOIDCRealm-$id:read-resource
     /subsystem=elytron/custom-realm=KeycloakOIDCRealm-$id:add(class-name=org.keycloak.adapters.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-wildfly-elytron-oidc-adapter)
 else
-    echo Keycloak OpenID Connect Realm already installed
+    echo Keycloak OpenID Connect Realm already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/security-domain=KeycloakDomain-$id:read-resource
     /subsystem=elytron/security-domain=KeycloakDomain-$id:add(default-realm=KeycloakOIDCRealm-$id,permission-mapper=default-permission-mapper,security-event-listener=local-audit,realms=[{realm=KeycloakOIDCRealm-$id}])
 else
-    echo Keycloak Security Domain already installed. Trying to install Keycloak OpenID Connect Realm.
+    echo Keycloak Security Domain already installed. Trying to install Keycloak OpenID Connect Realm. >> \${warning_file}
     /subsystem=elytron/security-domain=KeycloakDomain-$id:list-add(name=realms, value={realm=KeycloakOIDCRealm-$id})
 end-if
 
 if (outcome != success) of /subsystem=elytron/constant-realm-mapper=keycloak-oidc-realm-mapper-$id:read-resource
     /subsystem=elytron/constant-realm-mapper=keycloak-oidc-realm-mapper-$id:add(realm-name=KeycloakOIDCRealm-$id)
 else
-    echo Keycloak OpenID Connect Realm Mapper already installed
+    echo Keycloak OpenID Connect Realm Mapper already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-oidc-http-server-mechanism-factory-$id:read-resource
     /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-oidc-http-server-mechanism-factory-$id:add(module=org.keycloak.keycloak-wildfly-elytron-oidc-adapter)
 else
-    echo Keycloak OpenID Connect HTTP Mechanism already installed
+    echo Keycloak OpenID Connect HTTP Mechanism already installed >> \${warning_file}
 end-if
 
 if (outcome != success) of /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:read-resource
     /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:add(http-server-mechanism-factories=[keycloak-oidc-http-server-mechanism-factory-$id, global])
 else
-    echo Keycloak HTTP Mechanism Factory already installed. Trying to install Keycloak OpenID Connect HTTP Mechanism Factory.
+    echo Keycloak HTTP Mechanism Factory already installed. Trying to install Keycloak OpenID Connect HTTP Mechanism Factory. >> \${warning_file}
     /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:list-add(name=http-server-mechanism-factories, value=keycloak-oidc-http-server-mechanism-factory-$id)
 end-if
 
 if (outcome != success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
     /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:add(security-domain=KeycloakDomain-$id,http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id,mechanism-configurations=[{mechanism-name=KEYCLOAK,mechanism-realm-configurations=[{realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]}])
 else
-    echo Keycloak HTTP Authentication Factory already installed. Trying to install Keycloak OpenID Connect Mechanism Configuration
+    echo Keycloak HTTP Authentication Factory already installed. Trying to install Keycloak OpenID Connect Mechanism Configuration >> \${warning_file}
     /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:list-add(name=mechanism-configurations, value={mechanism-name=KEYCLOAK,mechanism-realm-configurations=[{realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]})
 end-if"
 
@@ -477,6 +522,10 @@ function get_token() {
 
 function configure_extension() {
   sed -i 's|<!-- ##KEYCLOAK_EXTENSION## -->|<extension module="org.keycloak.keycloak-adapter-subsystem"/><extension module="org.keycloak.keycloak-saml-adapter-subsystem"/>|' "${CONFIG_FILE}"
+}
+
+function configure_extensions_no_marker() {
+  sed -i "s|${EXTENSIONS_END_MARKER}|<extension module=\"org.keycloak.keycloak-adapter-subsystem\"/><extension module=\"org.keycloak.keycloak-saml-adapter-subsystem\"/>${EXTENSIONS_END_MARKER}|" "${CONFIG_FILE}"
 }
 
 function configure_security_domain() {
