@@ -32,7 +32,7 @@
 source $JBOSS_HOME/bin/launch/logging.sh
 
 function configure() {
-    configure_access_log_valve
+  configure_access_log_valve
   configure_access_log_handler
 }
 
@@ -56,7 +56,7 @@ function configure_access_log_valve() {
       testXpathExpression "${xpath}" "subsystemRet"
       if [ "${subsystemRet}" -ne 0 ]; then
         echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
-        exit 1
+        return
       fi
 
       # Not having any servers is an error
@@ -67,16 +67,16 @@ function configure_access_log_valve() {
       testXpathExpression "${xpath}" "serverNamesRet" "serverNames"
       if [ "${serverNamesRet}" -ne 0 ]; then
         echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
-        exit 1
+        return
       fi
 
       # Not having any server hosts is an error
       local hostsRet
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='host']\""
-      testXpathExpression "${xpath}" "ret"
+      testXpathExpression "${xpath}" "hostsRet"
       if [ "${hostsRet}" -ne 0 ]; then
         echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
-        exit 1
+        return
       fi
 
       serverNames=$(splitAttributesStringIntoLinks "${serverNames}" "name")

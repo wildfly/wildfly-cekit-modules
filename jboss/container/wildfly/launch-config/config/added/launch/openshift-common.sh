@@ -121,7 +121,10 @@ function testXpathExpression() {
   output=$(eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 2>/dev/null)
 
   printf -v "$2" '%s' "$?"
-  unset -v "$3" && printf -v "$3" '%s' "${output}"
+
+  if [ -n "$3" ]; then
+    unset -v "$3" && printf -v "$3" '%s' "${output}"
+  fi
 }
 
 function processErrorsAndWarnings() {
