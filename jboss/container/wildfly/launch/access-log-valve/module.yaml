@@ -1,0 +1,7 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.access-log-valve
+version: '1.0'
+description: Configures the access-log valve and log handler
+execute:
+  - script: configure.sh
+    user: '185'
