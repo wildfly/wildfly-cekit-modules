@@ -5,3 +5,10 @@ description: Configures the access-log valve and log handler
 execute:
   - script: configure.sh
     user: '185'
+envs:
+    - name: "ENABLE_ACCESS_LOG"
+      example: "true"
+      description: "If true add the access-log to the hosts in the undertow subsystem."
+    - name: "ENABLE_ACCESS_LOG_TRACE"
+      example: "true"
+      description: "If true and ENABLE_ACCESS_LOG is also true, adds a TRACE level log category to the logging subsystem"
