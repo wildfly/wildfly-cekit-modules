@@ -25,9 +25,9 @@
     </parent>
     <artifactId>extend-config-provisioning</artifactId>
     <packaging>pom</packaging>
-    <name>Extends the default configuration with Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</name>
+    <name>Extends the default configuration with Galleon layers from s2i feature-pack</name>
   
-    <description>Extends the default configuration with Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</description>
+    <description>Extends the default configuration with Galleon layers from s2i feature-pack</description>
 
     <licenses>
         <license>
