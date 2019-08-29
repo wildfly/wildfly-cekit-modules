@@ -25,9 +25,9 @@
     </parent>
     <artifactId>layers-provisioning</artifactId>
     <packaging>pom</packaging>
-    <name>Provision a set of Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</name>
+    <name>Provision a set of Galleon layers from s2i feature-pack</name>
   
-    <description>Provision a set of Galleon layers from s2i feature-pack and wildfly-extra galleon datasources</description>
+    <description>Provision a set of Galleon layers from s2i feature-pack</description>
 
     <licenses>
         <license>
