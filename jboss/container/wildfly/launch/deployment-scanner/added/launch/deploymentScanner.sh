@@ -33,7 +33,6 @@ function configure_deployment_scanner() {
       done
     end-if
     "
-    echo "TEMP CLI COMMAND: $cli_command"
     cat << EOF >> ${CLI_SCRIPT_FILE}
   	  ${cli_command}
 EOF
