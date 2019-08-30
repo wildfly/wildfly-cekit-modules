@@ -37,7 +37,7 @@ function inject_datasources() {
     inject_job_repository "${default_job_repository_pool_name}"
     inject_default_job_repository "${default_job_repository_pool_name}"
   else
-    inject_default_job_repositories
+    inject_hardcoded_default_job_repository
   fi
 
   rm "${DEFAULT_JOB_REPOSITORY_FILE_NAME}"
@@ -78,7 +78,7 @@ function generate_datasource() {
   fi
 }
 
-function inject_default_job_repositories() {
+function inject_hardcoded_default_job_repository() {
   inject_default_job_repository "in-memory" "hardcoded"
 }
 
@@ -101,7 +101,9 @@ function inject_default_job_repository() {
       # (in the xml marker replacement it works differently as we replace the marker with the xml
       # for the default repo).
       # The hardcoded default-job-repository should only be set if there is a batch-jberet
-      # subsystem
+      # subsystem. If the user specified the DEFAULT_JOB_REPOSITORY variable, and there is no
+      # batch-jberet subsystem, this will give an error in inject_job_repository() so there is
+      # no need to do that again here.
       echo "
       if (outcome == success) of ${resourceAddr}:read-resource
         ${resourceAddr}:write-attribute(name=default-job-repository, value=${1})
@@ -124,8 +126,14 @@ function inject_job_repository() {
 
     sed -i "s|<!-- ##JOB_REPOSITORY## -->|${jobrepo%$'\n'}|" $CONFIG_FILE
   elif [ "${dsConfMode}" = "cli" ]; then
-    local resourceAddr="/subsystem=batch-jberet/jdbc-job-repository=${1}"
+    local subsystemAddr="/subsystem=batch-jberet"
+    local resourceAddr="${subsystemAddr}/jdbc-job-repository=${1}"
     local jobrepo="
+      if (outcome != success) of ${subsystemAddr}:read-resource
+        echo You have set the DEFAULT_JOB_REPOSITORY environment variables to configure a default-job-repository pointing to the '${DEFAULT_JOB_REPOSITORY}' datasource. Fix your configuration to contain a batch-jberet subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
       if (outcome == success) of ${resourceAddr}:read-resource
         batch
         ${resourceAddr}:remove

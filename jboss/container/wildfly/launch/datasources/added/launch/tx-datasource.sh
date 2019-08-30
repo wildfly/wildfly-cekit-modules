@@ -1,3 +1,5 @@
+#!/bin/sh
+
 # Openshift EAP launch script datasource generation routines
 
 if [ -f $JBOSS_HOME/bin/launch/launch-common.sh ]; then
@@ -91,7 +93,8 @@ function generate_tx_datasource_xml() {
 # See generate_tx_datasource() for the arguments
 function generate_tx_datasource_cli() {
   local subsystem_address="/subsystem=datasources"
-  local ds_resource="$subsystem_address/data-source=${1}ObjectStorePool"
+  local ds_resource="${subsystem_address}/data-source=${1}ObjectStorePool"
+  local xa_resource="${subsystem_address}/xa-data-source=${1}ObjectStorePool"
   local ds_tmp_add="$ds_resource:add(jta=false, jndi-name=${2}ObjectStore, enabled=true, connection-url=jdbc:${8}://${5}:${6}/${7}, driver-name=$8"
   ds_tmp_add="${ds_tmp_add}, user-name=${3}, password=${4}"
   if [ -n "$tx_isolation" ]; then
@@ -105,22 +108,24 @@ function generate_tx_datasource_cli() {
   fi
   ds_tmp_add="${ds_tmp_add})"
 
-  # We check if the datasource is there and remove it before re-adding in a batch.
-  # Otherwise we simply add it. Unfortunately CLI control flow does not work when wrapped
-  # in a batch
   ds="
-    if (outcome != success) of $subsystem_addr:read-resource
-      echo \"You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. Fix your configuration to contain a datasources subsystem for this to happen.\"
+    if (outcome != success) of ${subsystem_addr}:read-resource
+      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
       exit
     end-if
-    if (outcome == success) of $ds_resource:read-resource
-      batch
-      $ds_resource:remove
-      $ds_tmp_add
-      run-batch
-    else
-      $ds_tmp_add
-    end-if"
+
+    if (outcome == success) of ${ds_resource}:read-resource
+      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of ${xa_resource}:read-resource
+      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+      exit
+    end-if
+
+    ${ds_tmp_add}
+    "
 
   echo "${ds}"
 }
@@ -141,10 +146,17 @@ function inject_jdbc_store() {
     sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
   elif [ "${dsConfMode}" = "cli" ]; then
     local subsystem_addr="/subsystem=transactions"
-    # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we just overwrite all affected attributes
+    # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we
+    # error if the base configuration already contains different values for that.
+    # If all is well we write the values
     local cli="
       if (outcome != success) of $subsystem_addr:read-resource
-        echo \"You have set environment variables to configure a jdbc transactional logstore. Fix your configuration to contain a transactions subsystem for this to happen.\"
+        echo You have set environment variables to configure a jdbc transactional logstore. Fix your configuration to contain a transactions subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      if (result.use-jdbc-store == true && (result.jdbc-store-datasource != \"${1}\" || result.jdbc-action-store-table-prefix != \"${prefix}\" || result.jdbc-communication-store-table-prefix != \"${prefix}\" || result.jdbc-state-store-table-prefix != \"${prefix}\")) of $subsystem_addr:query(select=[\"use-jdbc-store\", \"jdbc-store-datasource\", \"jdbc-action-store-table-prefix\", \"jdbc-communication-store-table-prefix\", \"jdbc-state-store-table-prefix\"])
+        echo You have set environment variables to configure a jdbc logstore in the transactions subsystem which conflict with the values that already exist in the base configuration. Fix your configuration. >> \${error_file}
         exit
       end-if
 
@@ -182,7 +194,7 @@ function inject_tx_datasource() {
       log_warning "Current values:"
       log_warning
       log_warning "${service}_SERVICE_HOST: $host"
-      log_warning " ${service}_SERVICE_PORT: $port"
+      log_warning "${service}_SERVICE_PORT: $port"
       log_warning
       log_warning "Please make sure you provided correct service name and prefix in the mapping. Additionally please check that you do not set portalIP to None in the $service_name service. Headless services are not supported at this time."
       log_warning
@@ -228,12 +240,12 @@ function inject_tx_datasource() {
     case "$db" in
       "MYSQL")
         driver="mysql"
-        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)\n"
+        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)"
         inject_jdbc_store "${jndi}ObjectStore"
         ;;
       "POSTGRESQL")
         driver="postgresql"
-        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)\n"
+        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)"
         inject_jdbc_store "${jndi}ObjectStore"
         ;;
       *)

@@ -110,6 +110,8 @@ function inject_internal_datasources() {
     inject_default_timer_service
   fi
 
+  local defaultDatasourceJndi
+
   if [ "${#db_backends[@]}" -eq "0" ]; then
     datasource=$(generate_datasource)
     if [ -n "$datasource" ]; then
@@ -147,9 +149,12 @@ function inject_internal_datasources() {
       inject_datasource $prefix $service $service_name
 
       if [ -z "$defaultDatasourceJndi" ]; then
-        # make sure we re-read $jndi, messaging uses it too
         jndi=$(get_jndi_name "$prefix" "$service")
-        defaultDatasourceJndi="$jndi"
+        if [ -z "${EE_DEFAULT_DATASOURCE}" ]; then
+          defaultDatasourceJndi="$jndi"
+        elif [ -n "${EE_DEFAULT_DATASOURCE}" -a "${EE_DEFAULT_DATASOURCE}" = "${service_name}" ]; then
+          defaultDatasourceJndi="$jndi"
+        fi
       fi
     done
   fi
@@ -159,13 +164,8 @@ function inject_internal_datasources() {
 
 function writeEEDefaultDatasource() {
   # Check the override and use that instead of the 'guess' if set
-  local forcedDefaultEeDs="false"
-  if [ -n "${defaultDatasourceJndi}" ] && [ -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
-    log_warning "The default datasource for the ee subsystem has been guessed to be ${defaultDatasourceJndi}. Specify this using EE_DEFAULT_DS_JNDI_NAME"
-  fi
-  if [ ! -z "${EE_DEFAULT_DS_JNDI_NAME+x}" ]; then
-    defaultDatasourceJndi="${EE_DEFAULT_DS_JNDI_NAME}"
-    forcedDefaultEeDs="true"
+  if [ "${#db_backends[@]}" -gt "1" ] && [ -n "${defaultDatasourceJndi}" ] && [ -z "${EE_DEFAULT_DATASOURCE+x}" ]; then
+    log_warning "The default datasource for the ee subsystem has been guessed to be ${defaultDatasourceJndi}. Specify this using EE_DEFAULT_DATASOURCE"
   fi
 
   # Set the default datasource
@@ -191,13 +191,17 @@ function writeEEDefaultDatasourceXml() {
 }
 
 function writeEEDefaultDatasourceCli() {
+  local forcedDefaultEeDs="false"
+  if [ ! -z "${EE_DEFAULT_DATASOURCE+x}" ]; then
+    forcedDefaultEeDs="true"
+  fi
 
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]\""
   local ret
   testXpathExpression "${xpath}" "ret"
-  if [ $ret -ne 0 ]; then
+  if [ "${ret}" -ne 0 ]; then
     if [ "${forcedDefaultEeDs}" = "true" ]; then
-      echo "EE_DEFAULT_DS_JNDI_NAME was set to \'${EE_DEFAULT_DS_JNDI_NAME}\' but the configuration contains no ee subsystem"
+      log_error "EE_DEFAULT_DATASOURCE was set to '${EE_DEFAULT_DATASOURCE}' but the base configuration contains no ee subsystem. Fix your configuration. "
       exit 1
     else
       # We have no ee subsystem and have just guessed what should go in - this is fine
@@ -214,20 +218,29 @@ function writeEEDefaultDatasourceCli() {
   " >> ${CLI_SCRIPT_FILE}
 
 
-  xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
+  xpath="\"//*[local-name()='default-bindings' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
   ret=""
   testXpathExpression "${xpath}" "ret"
+
   local writeDs="$resource:write-attribute(name=datasource, value=${defaultDatasourceJndi})"
-  local undefineDs="$resource:undefine-attribute(name=datasource)"
   local cli_action
-  if [ $ret -eq 0 ]; then
+  if [ "${ret}" -eq 0 ]; then
     # Attribute exists in config already
-    if [ "${forcedDefaultEeDs}" = true ]; then
-      # We forced it, so override with whatever the value of EE_DEFAULT_DS_JNDI_NAME was
-      if [ -n "${defaultDatasourceJndi}" ]; then
-        cli_action="${writeDs}"
+    if [ -n "${defaultDatasourceJndi}" ]; then
+      # Base config already has a value, what happens next depends on if it was forced or guessed
+      if [ "${forcedDefaultEeDs}" = true ]; then
+        # We forced it, so log an error and exit if we have a conflict between the base config and the env var setting
+        cli_action="
+          if (result != \"${defaultDatasourceJndi}\") of ${resource}:read-attribute(name=datasource)
+            echo You have set environment variables to configure the datasource in the default-bindings in the ee subsystem subsystem which conflicts with the value that already exists in the base configuration. Fix your configuration. >> \${error_file}
+            exit
+          end-if"
       else
-        cli_action="${undefineDs}"
+        # We guessed it, so log a warning if we have a conflict between the base config and the env var setting
+        cli_action="
+          if (result != \"${defaultDatasourceJndi}\") of ${resource}:read-attribute(name=datasource)
+            echo You have set environment variables to configure the datasource in the default-bindings in the ee subsystem subsystem which conflicts with the value that already exists in the base configuration. The base configuration value will be used. Fix your configuration. >> \${warning_file}
+          end-if"
       fi
     fi
   else
@@ -546,17 +559,17 @@ function generate_external_datasource_cli() {
 
   ds="
     if (outcome != success) of ${subsystem_addr}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${ds_resource}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
     if (outcome == success) of ${other_ds_resource}:read-resource
-      echo \"You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name.\" >> \${error_file}
+      echo You have set environment variables to configure the datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
       exit
     end-if
 
@@ -611,16 +624,28 @@ function generate_default_datasource_xml() {
 function generate_default_datasource_cli() {
   local ds_tmp_url=$1
 
-  local ds_resource="/subsystem=datasources/data-source=${pool_name}"
-
-  # Here we assume that if the default DS was created any other way, we don't do anything.
-  # All the default ds parameters are hardcoded. So if it already exists, we leave it alone.
-  # TODO Double-check the ds_tmp_url parameter, it looks like it is hardcoded too
+  local subsystem_addr="/subsystem=datasources"
+  local ds_resource="${subsystem_addr}/data-source=${pool_name}"
+  local xa_resource="${subsystem_addr}/xa-data-source=${pool_name}"
+  # Here we assume that if the default DS was created any other way, we we give an error.
 
   ds="
-    if (outcome != success) of $ds_resource:read-resource
-      $ds_resource:add(jta=true, jndi-name=${jndi_name}, enabled=true, use-java-context=true, statistics-enabled=\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}, driver-name=h2, user-name=sa, password=sa, connection-url=\"${ds_tmp_url}\")
+    if (outcome != success) of ${subsystem_addr}:read-resource
+      echo You have set environment variables to configure the default datasource '${pool_name}'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
+      exit
     end-if
+
+    if (outcome == success) of ${ds_resource}:read-resource
+      echo You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of ${xa_resource}:read-resource
+      echo You have set environment variables to configure the default datasource '${pool_name}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+      exit
+    end-if
+
+    $ds_resource:add(jta=true, jndi-name=${jndi_name}, enabled=true, use-java-context=true, statistics-enabled=\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}, driver-name=h2, user-name=sa, password=sa, connection-url=\"${ds_tmp_url}\")
 "
   echo "$ds"
 }
@@ -681,35 +706,45 @@ function inject_timer_service() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
     testXpathExpression "${xpath}" "hasEjb3Subsystem"
     if [ $hasEjb3Subsystem -ne 0 ]; then
-      # No ejb3 subsystem is an error
-      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen."
+      # No ejb3 subsystem is an error. We need to push this into the error file since this runs inside a sub-shell and
+      # any echo without a redirect here goes to the CLI file. Also any attempt to exit here only exits the sub-shell,
+      # Not the whole launch process
+      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
       exit 1
-    else
-      local timerResource="/subsystem=ejb3/service=timer-service"
-      local datastoreResource="${timerResource}/database-data-store=${datastore_name}"
-      local datastoreAdd="
-        ${datastoreResource}:add(datasource-jndi-name=${jndi_name}, database=${databasename}, partition=${pool_name}_part, refresh-interval=${refresh_interval})"
-      # We add the timer-service and the datastore in a batch if it is not there
-      local cli="
-        if (outcome != success) of ${timerResource}:read-resource
-          batch
-          ${timerResource}:add(thread-pool-name=default, default-data-store=${datastore_name})
-          ${datastoreAdd}
-          run-batch
-        end-if"
-      # Next we add the datastore if not there. This will work both if we added it in the previous line, or if the
-      # user supplied a configuration that already contained the timer service but not the desired datastore
-      cli="${cli}
-        if (outcome != success) of ${datastoreResource}:read-resource
-          ${datastoreAdd}
-        end-if"
-      #Finally we write the default-data-store attribute, which should work whether we added the
-      #timer-service or the datastore or not
-      cli="${cli}
-        ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
-      "
-      echo "${cli}" >> ${CLI_SCRIPT_FILE}
     fi
+    local timerResource="/subsystem=ejb3/service=timer-service"
+    local datastoreResource="${timerResource}/database-data-store=${datastore_name}"
+    local datastoreAdd="
+      ${datastoreResource}:add(datasource-jndi-name=${jndi_name}, database=${databasename}, partition=${pool_name}_part, refresh-interval=${refresh_interval})"
+    # We add the timer-service and the datastore in a batch if it is not there
+    local cli="
+      if (outcome != success) of ${timerResource}:read-resource
+        batch
+        ${timerResource}:add(thread-pool-name=default, default-data-store=${datastore_name})
+        ${datastoreAdd}
+        run-batch
+      end-if"
+    # Next we add the datastore if not there. This will work both if we added it in the previous line, or if the
+    # user supplied a configuration that already contained the timer service but not the desired datastore
+    cli="${cli}
+      if (outcome != success) of ${datastoreResource}:read-resource
+        ${datastoreAdd}
+      end-if"
+    # Next we do a check to see if the datastore contains the same values as calculated from the variables.
+    # This is needed for the case when the base configuration already contained it, so the adds above
+    # would not have taken effect.
+    cli="${cli}
+      if (result.allow-execution != true || result.database != \"${databasename}\" || result.datasource-jndi-name != \"${jndi_name}\" || result.partition != \"${pool_name}_part\" || result.refresh-interval != ${refresh_interval})  of /subsystem=ejb3/service=timer-service/database-data-store=test_mysql-TEST_ds:query(select=[\"allow-execution\", \"database\", \"datasource-jndi-name\", \"partition\", \"refresh-interval\"])
+        echo You have set environment variables to configure a timer service database-data-store in the ejb3 subsystem which conflict with the values that already exist in the base configuration. Fix your configuration. >> \${error_file}
+        exit
+      end-if
+    "
+    #Finally we write the default-data-store attribute, which should work whether we added the
+    #timer-service or the datastore or not
+    cli="${cli}
+      ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
+    "
+    echo "${cli}" >> ${CLI_SCRIPT_FILE}
   fi
 }
 
