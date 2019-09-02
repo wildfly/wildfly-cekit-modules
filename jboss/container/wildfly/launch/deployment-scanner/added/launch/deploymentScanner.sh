@@ -36,7 +36,7 @@ function configure_deployment_scanner() {
       return
     fi
 
-    # Not having any servers is an error
+    # Not having any scanners is an error
     local scannersRet
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:deployment-scanner:')]/*[local-name()='deployment-scanner']\""
     testXpathExpression "${xpath}" "scannersRet"
@@ -51,7 +51,7 @@ function configure_deployment_scanner() {
         echo You have set environment variables to set auto-deploy-exploded for the deployment scanner but your configuration already contains a conflicting value. Fix your configuration. >> \${error_file}
         exit
       else
-        /subsystem=deployment-scanner/scanner=\$scannerName:write-attribute(name=auto-deploy-exploded, value=${auto_deploy_exploded}
+        /subsystem=deployment-scanner/scanner=\$scannerName:write-attribute(name=auto-deploy-exploded, value=${auto_deploy_exploded})
       end-if
     done"
     echo "${cli_command}" >> "${CLI_SCRIPT_FILE}"
