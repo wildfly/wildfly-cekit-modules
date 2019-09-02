@@ -331,7 +331,7 @@ configure_ejb() {
 if (outcome != success) of /subsystem=ejb3/application-security-domain=$security_domain:read-resource
     /subsystem=ejb3/application-security-domain=other:add(security-domain=KeycloakDomain-$id)
 else
-    echo ejb3 already contains $undertow_sec_domain application security domain. Fix your configuration or set SSO_SECURITY_DOMAIN env variable. >> \${error_file}
+    echo ejb3 already contains $security_domain application security domain. Fix your configuration or set SSO_SECURITY_DOMAIN env variable. >> \${error_file}
     quit
 end-if"
     echo "$cli"
