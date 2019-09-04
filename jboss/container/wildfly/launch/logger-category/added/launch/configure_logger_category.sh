@@ -15,7 +15,6 @@
 #                <level name="TRACE"/>
 #            </logger>
 source $JBOSS_HOME/bin/launch/logging.sh
-
 prepareEnv() {
   unset LOGGER_CATEGORIES
 }
@@ -47,7 +46,7 @@ add_logger_category() {
               local ret
               testXpathExpression "${xpath}" "ret"
               if [ "${ret}" -ne 0 ]; then
-                break;
+                echo "You have set LOGGER_CATEGORIES to configure a looger. Fix your configuration to contain the logging subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
               fi
         fi
 
