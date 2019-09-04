@@ -120,7 +120,7 @@ EOF
 
 @test "Test error when no subsystem is present" {
   #this is the return of xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package' or @category='my.other.package']" $CONFIG_FILE
-  expected="You have set LOGGER_CATEGORIES to configure a looger. Fix your configuration to contain the logging subsystem for this to happen."
+  expected="You have set LOGGER_CATEGORIES to configure a logger. Fix your configuration to contain the logging subsystem for this to happen."
   cp $BATS_TEST_DIRNAME/server-configs/no-logger-subsystem.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
   LOGGER_CATEGORIES=com.my.package:DEBUG,my.other.package:UNKNOWN_LOG_LEVEL
   run run_logger_category_script
