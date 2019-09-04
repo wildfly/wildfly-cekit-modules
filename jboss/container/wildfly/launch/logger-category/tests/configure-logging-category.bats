@@ -49,6 +49,38 @@ EOF
   [ "${result}" = "${expected}" ]
 }
 
+@test "Add ALL logger category" {
+  #this is the return of xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package']" $CONFIG_FILE
+  expected=$(cat <<EOF
+<logger category="com.my.package"><level name="ALL"/></logger>
+EOF
+)
+  LOGGER_CATEGORIES=com.my.package:ALL
+  run run_logger_category_script
+  result=$(xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package']" $CONFIG_FILE)
+  result="$(echo "<test>${result}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected=$(echo "<test>${expected}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)
+  echo "Expected: ${expected}"
+  echo "Result: ${result}"
+  [ "${result}" = "${expected}" ]
+}
+
+@test "Add TRACE logger category" {
+  #this is the return of xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package']" $CONFIG_FILE
+  expected=$(cat <<EOF
+<logger category="com.my.package"><level name="TRACE"/></logger>
+EOF
+)
+  LOGGER_CATEGORIES=com.my.package:TRACE
+  run run_logger_category_script
+  result=$(xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package']" $CONFIG_FILE)
+  result="$(echo "<test>${result}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected=$(echo "<test>${expected}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)
+  echo "Expected: ${expected}"
+  echo "Result: ${result}"
+  [ "${result}" = "${expected}" ]
+}
+
 @test "Add 2 logger categories" {
   #this is the return of xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package' or @category='my.other.package']" $CONFIG_FILE
   expected=$(cat <<EOF
@@ -93,6 +125,24 @@ EOF
 EOF
 )
   LOGGER_CATEGORIES=" com.my.package:DEBUG, my.other.package:ERROR, my.another.package"
+  run run_logger_category_script
+  result=$(xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package' or @category='my.other.package' or @category='my.another.package']" $CONFIG_FILE)
+  result="$(echo "<test>${result}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
+  expected=$(echo "<test>${expected}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)
+  echo "Expected: ${expected}"
+  echo "Result: ${result}"
+  [ "${result}" = "${expected}" ]
+}
+
+@test "Add 3 logger categories with ALL and with spaces" {
+  #this is the return of xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package' or @category='my.other.package' or @category='my.another.package']" $CONFIG_FILE '
+  expected=$(cat <<EOF
+<logger category="com.my.package"><level name="ALL"/></logger>
+<logger category="my.other.package"><level name="ERROR"/></logger>
+<logger category="my.another.package"><level name="FINE"/></logger>
+EOF
+)
+  LOGGER_CATEGORIES=" com.my.package:ALL,my.other.package:ERROR,my.another.package"
   run run_logger_category_script
   result=$(xmllint --xpath "//*[local-name()='subsystem']//*[local-name()='logger'][@category='com.my.package' or @category='my.other.package' or @category='my.another.package']" $CONFIG_FILE)
   result="$(echo "<test>${result}</test>" | sed 's|\\n||g' | xmllint --format --noblanks -)"

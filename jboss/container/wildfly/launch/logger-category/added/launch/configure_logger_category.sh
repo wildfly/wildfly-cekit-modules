@@ -56,7 +56,7 @@ add_logger_category() {
             logger_category=$(echo $logger | awk -F':' '{print $1}')
             logger_level=$(echo $logger | awk -F':' '{print $2}')
 
-            if [[ ! "${allowed_log_levels[@]}" =~ " ${logger_level}" ]]; then
+            if [[ ! "${allowed_log_levels[@]}" =~ "${logger_level}" ]]; then
                  log_warning "Log Level ${logger_level} is not allowed, the allowed levels are ${allowed_log_levels[@]}"
             elif [ "${WORK_MODE}" = "xml" ]; then
                 log_info "Configuring logger category ${logger_category} with level ${logger_level:-FINE}"
