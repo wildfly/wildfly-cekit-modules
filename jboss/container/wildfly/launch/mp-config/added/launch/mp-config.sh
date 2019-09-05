@@ -25,7 +25,7 @@ configure_microprofile_config_source() {
       #expected to fail if config-map is already configured
       cat << EOF >> ${CLI_SCRIPT_FILE}
       if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
-          echo \"Cannot configure Microprofile Config. MICROPROFILE_CONFIG_DIR was specified but the subsystem in not in the server configuration.\" >> \${error_file}
+          echo \"You have set MICROPROFILE_CONFIG_DIR to configure a config-source. Fix your configuration to contain the microprofile-config subsystem for this to happen.\" >> \${error_file}
           quit
       end-if
 
