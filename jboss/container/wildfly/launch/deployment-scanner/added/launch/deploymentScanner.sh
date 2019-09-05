@@ -20,8 +20,6 @@ function configure_deployment_scanner() {
   local configure_mode=""
   getConfigurationMode "##AUTO_DEPLOY_EXPLODED##" "configure_mode"
 
-  echo "configure_mode ${configure_mode}"
-
   if [ "${configure_mode}" = "xml" ]; then
     sed -i "s|##AUTO_DEPLOY_EXPLODED##|${auto_deploy_exploded}|" "$CONFIG_FILE"
   elif [ "${configure_mode}" = "cli" ] && [ "${explicitly_set}" = "true" ]; then
