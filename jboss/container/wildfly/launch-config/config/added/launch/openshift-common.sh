@@ -202,7 +202,7 @@ function exec_cli_scripts() {
 
     echo "Configuring the server using embedded server"
     start=$(date +%s%3N)
-    eval ${JBOSS_HOME}/bin/jboss-cli.sh "--file=${CLI_SCRIPT_FILE_FOR_EMBEDDED}" "--properties=${CLI_SCRIPT_PROPERTY_FILE}" "1>${CLI_SCRIPT_OUTPUT_FILE}"
+    eval ${JBOSS_HOME}/bin/jboss-cli.sh "--file=${CLI_SCRIPT_FILE_FOR_EMBEDDED}" "--properties=${CLI_SCRIPT_PROPERTY_FILE}" "&>${CLI_SCRIPT_OUTPUT_FILE}"
     cli_result=$?
     end=$(date +%s%3N)
     
@@ -213,14 +213,8 @@ function exec_cli_scripts() {
     echo "Duration: " $((end-start)) " milliseconds"
 
     if [ $cli_result -ne 0 ]; then
-      echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script."
-      description="$(grep failure-description ${CLI_SCRIPT_OUTPUT_FILE})"
-      if [ -n "$description" ]; then
-        clean_desc=`echo $description | sed 's/^"failure-description" => "\(.*\)",$/\1/'`
-        echo "$clean_desc"
-      else
-        echo "Embedded server cannot start or the operations to configure the server failed, set SCRIPT_DEBUG=true to enable debug."
-      fi
+      log_error "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script."
+      cat "${CLI_SCRIPT_OUTPUT_FILE}"
       exit 1
     else
       processErrorsAndWarnings
