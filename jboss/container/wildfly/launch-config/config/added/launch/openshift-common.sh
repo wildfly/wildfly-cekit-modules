@@ -150,6 +150,24 @@ function processErrorsAndWarnings() {
   fi
 }
 
+# An XPath expression e.g getting all name attributes for all the servers in the undertow subsystem
+# will return a variable with all the attributes with their names on one line, e.g
+#     'name="server-one" name="server-two" name="server-three"'
+# Call this with ($input is the string above)
+#     convertAttributesToValueOnEachLine "$input" "name"
+# to convert this to :
+# "server-one
+# server-two
+# server-three"
+function splitAttributesStringIntoLinks() {
+  local input="${1}"
+  local attribute_name="${2}"
+
+  local temp
+  temp=$(echo $input | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
+  echo "${temp}"
+}
+
 function exec_cli_scripts() {
   local script="$1"
   local stdOut="discard"

@@ -1,14 +1,4 @@
-if [ -n "${NODE_NAME_INCLUDE}" ]; then
-    source "${NODE_NAME_INCLUDE}"
-else
-    source ${JBOSS_HOME}/bin/launch/openshift-node-name.sh
-fi
-
-if [ -n "${LOGGING_INCLUDE}" ]; then
-    source "${LOGGING_INCLUDE}"
-else
-  source $JBOSS_HOME/bin/launch/logging.sh
-fi
+source $JBOSS_HOME/bin/launch/jgroups_common.sh
 
 prepareEnv() {
   unset OPENSHIFT_KUBE_PING_NAMESPACE
@@ -127,16 +117,16 @@ generate_jgroups_auth_config() {
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
     config="
       if (outcome != success) of /subsystem=jgroups:read-resource
-            echo \"Cannot configure the jgroups authentication. The jgroups subsystem is not present in the server configuration file.\" >> \${error_file}
+            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> "${CLI_SCRIPT_ERROR_FILE}"
             quit
       end-if
 "
     local stacks=(tcp udp)
     for stack in "${stacks[@]}"; do
       op=("/subsystem=jgroups/stack=$stack/protocol=AUTH:add()"
-        "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
+          "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
       )
-      config="${config} $(configureProtocolCliHelper "$stack" "AUTH" "${op[@]}")"
+      config="${config} $(configure_protocol_cli_helper "$stack" "AUTH" "${op[@]}")"
     done
   fi
 
@@ -172,7 +162,7 @@ generate_generic_ping_config() {
           if [ "${socket_binding}x" != "x" ]; then
             op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
           fi
-          config="${config} $(configureProtocolCliHelper "$stack" "${ping_protocol}" "${op}")"
+          config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}")"
         done
       fi
     fi
@@ -228,7 +218,7 @@ generate_dns_ping_config() {
             op_prop2="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
           fi
 
-          config="${config} $(configureProtocolCliHelper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
+          config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
         done
       fi
     fi
@@ -281,37 +271,4 @@ configure_ha() {
   elif [ "${CONF_PING_MODE}" = "cli" ]; then
     echo "${ping_protocol_element}" >> ${CLI_SCRIPT_FILE};
   fi
-}
-
-
-configureProtocolCliHelper() {
-  local params=("${@}")
-  local stack=${params[0]}
-  local protocol=${params[1]}
-  local result
-
-  result="
-      if (outcome != success) of /subsystem=jgroups/stack=${stack}:read-resource
-          /subsystem=jgroups/stack=${stack}:add()
-      end-if
-
-      if (outcome == success) of /subsystem=jgroups/stack="${stack}"/protocol="${protocol}":read-resource
-          echo \"Cannot configure jgroups '${protocol}' protocol under ${stack} stack. This protocol is already configured.\" >> \${error_file}
-          quit
-      end-if
-
-      if (outcome != success) of /subsystem=jgroups/stack="${stack}"/protocol="${protocol}":read-resource
-          batch"
-
-  # starts in 2, since 0 and 1 are arguments
-  for ((j=2; j<${#params[@]}; ++j)); do
-    result="${result}
-             ${params[j]}"
-  done
-
-  result="${result}
-          run-batch
-      end-if
-"
-  echo "${result}"
 }

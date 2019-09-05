@@ -3,26 +3,30 @@ export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
+rm -rf $JBOSS_HOME 2>/dev/null
 mkdir -p $JBOSS_HOME/bin/launch
+# copy scripts we are going to use
+cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/jgroups.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../added/launch/jgroups_common.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/ha.sh $JBOSS_HOME/bin/launch
 mkdir -p $JBOSS_HOME/standalone/configuration
 
-# fake the logger so we don't have to deal with colors
-export LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
-export ELYTRON_INCLUDE=$BATS_TEST_DIRNAME/../../elytron/added/launch/elytron.sh
-export NODE_NAME_INCLUDE=$BATS_TEST_DIRNAME/../../os/node-name/added/launch/openshift-node-name.sh
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
-source $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh
-load $JBOSS_HOME/bin/launch/jgroups.sh
-load $JBOSS_HOME/bin/launch/ha.sh
+
+# source the scripts needed
+source $JBOSS_HOME/bin/launch/openshift-common.sh
+source $JBOSS_HOME/bin/launch/logging.sh
+source $JBOSS_HOME/bin/launch/jgroups.sh
+source $JBOSS_HOME/bin/launch/ha.sh
+
 export OPENSHIFT_DNS_PING_SERVICE_NAMESPACE="testnamespace"
 export CONF_AUTH_MODE="xml"
 export CONF_PING_MODE="xml"
 
 setup() {
-  echo setup
   cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
 }
 
@@ -104,6 +108,20 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
+# note openshift.KUBE_PING is aliased to kubernetes.KUBE_PING
+@test "Generate JGroups ping config - openshift.KUBE_PING by generate_dns_ping_config" {
+    expected=$(cat <<EOF
+WARN Ping protocol openshift.KUBE_PING is deprecated, replacing with kubernetes.KUBE_PING instead.
+<protocol type="kubernetes.KUBE_PING" ></protocol>
+EOF
+)
+  ping_protocol="openshift.KUBE_PING"
+  run generate_dns_ping_config "${ping_protocol}"
+  echo "Result: ${output}"
+  echo "Expected: ${expected}"
+  [ "${output}" = "${expected}" ]
+}
+
 # note openshift.DNS_PING is aliased to dns.DNS_PING
 @test "Generate JGroups ping config - openshift.DNS_PING" {
     expected=$(cat <<EOF
@@ -117,6 +135,21 @@ EOF
   echo "Expected: ${expected}"
   [ "${output}" = "${expected}" ]
 }
+
+# note openshift.DNS_PING is aliased to dns.DNS_PING
+@test "Generate JGroups ping config - openshift.DNS_PING by generate_generic_ping_config" {
+    expected=$(cat <<EOF
+WARN Ping protocol openshift.DNS_PING is deprecated, replacing with dns.DNS_PING instead.
+<protocol type="dns.DNS_PING" />
+EOF
+)
+  ping_protocol="openshift.DNS_PING"
+  run generate_generic_ping_config "${ping_protocol}"
+  echo "Result: ${output}"
+  echo "Expected: ${expected}"
+  [ "${output}" = "${expected}" ]
+}
+
 
 # note openshift.DNS_PING is aliased to dns.DNS_PING
 @test "Generate JGroups ping config - openshift.DNS_PING with socket binding" {
