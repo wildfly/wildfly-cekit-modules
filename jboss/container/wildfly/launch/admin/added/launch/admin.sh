@@ -41,8 +41,9 @@ function configure_administration() {
         echo You have set environment variables to configure http-interface security-realm. Fix your configuration to contain the http-interface for this to happen. >> \${error_file}
         exit
       end-if
-
-      /core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)
+      if (result == undefined) of /core-service=management/management-interface=http-interface:read-attribute(name=http-authentication-factory)
+        /core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)
+      end-if
 EOF
     fi
   fi
