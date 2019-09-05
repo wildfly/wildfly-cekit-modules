@@ -11,3 +11,28 @@ modules:
 execute:
 - script: configure.sh
   user: '185'
+envs:
+  - name: "JGROUPS_CLUSTER_PASSWORD"
+    example: "p@ssw0rd"
+    description: Password used to authenticate the node so it is allowed to join the JGroups cluster. Required, when using ASYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, authentication is disabled, cluster communication is not encrypted and a warning is issued. Optional, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol.
+  - name: "JGROUPS_ENCRYPT_KEYSTORE"
+    example: "jgroups.jceks"
+    description: Name of the keystore file within the secret specified via JGROUPS_ENCRYPT_SECRET variable, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
+  - name: "JGROUPS_ENCRYPT_KEYSTORE_DIR"
+    example: "/etc/jgroups-encrypt-secret-volume"
+    description: Directory path of the keystore file within the secret specified via JGROUPS_ENCRYPT_SECRET variable, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
+  - name: "JGROUPS_ENCRYPT_NAME"
+    example: "jgroups"
+    description: Name associated with the server’s certificate, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
+  - name: "JGROUPS_ENCRYPT_PASSWORD"
+    example: "p@ssw0rd"
+    description: Password used to access the keystore and the certificate, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
+  - name: "JGROUPS_ENCRYPT_PROTOCOL"
+    example: "SYM_ENCRYPT"
+    description: JGroups protocol to use for encryption of cluster traffic. Can be either SYM_ENCRYPT or ASYM_ENCRYPT. Defaults to SYM_ENCRYPT.
+  - name: "JGROUPS_ENCRYPT_SECRET"
+    example: "app-secret"
+    description: Name of the secret, containing the JGroups keystore file used for securing the JGroups communications, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
+  - name: "JGROUPS_PING_PROTOCOL"
+    example: "openshift.DNS_PING"
+    description: JGroups protocol to use for node discovery. Can be either openshift.DNS_PING or kubernetes.KUBE_PING. 
