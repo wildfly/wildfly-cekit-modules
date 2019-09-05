@@ -38,6 +38,7 @@
         <s2i.fp.groupid>${env.GALLEON_S2I_FP_GROUP_ID}</s2i.fp.groupid>
         <s2i.fp.artifactid>${env.GALLEON_S2I_FP_ARTIFACT_ID}</s2i.fp.artifactid>
         <version.org.wildfly>${env.WILDFLY_VERSION}</version.org.wildfly>
+        <version.s2i.fp>${env.S2I_FP_VERSION}</version.s2i.fp>
         <version.org.jboss.galleon>${env.GALLEON_VERSION}</version.org.jboss.galleon>
     </properties>
     <modules>
