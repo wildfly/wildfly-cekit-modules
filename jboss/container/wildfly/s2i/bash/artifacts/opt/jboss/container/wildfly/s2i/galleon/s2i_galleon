@@ -4,7 +4,12 @@ GALLEON_EXTEND_CONFIG_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/p
 function galleon_patch_generic_config() {
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
      for layer in $(echo $GALLEON_PROVISION_LAYERS | sed "s/,/ /g"); do
-       layers="$layers<include name=\"$layer\"/>"
+       if [[ "$layer" =~ ^-.* ]]; then
+         layer="${layer:1}"
+         layers="$layers<exclude name=\"$layer\"/>"
+       else
+         layers="$layers<include name=\"$layer\"/>"
+       fi
      done
      if [ -n "$layers" ]; then
        sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/config.xml
@@ -15,7 +20,12 @@ function galleon_patch_generic_config() {
 function galleon_patch_extend_default_config() {
    if [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
      for layer in $(echo $GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS | sed "s/,/ /g"); do
-       layers="$layers<include name=\"$layer\"/>"
+       if [[ "$layer" =~ ^-.* ]]; then
+         layer="${layer:1}"
+         layers="$layers<exclude name=\"$layer\"/>"
+       else
+         layers="$layers<include name=\"$layer\"/>"
+       fi
      done
      if [ -n "$layers" ]; then
        sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_EXTEND_CONFIG_DEFINITION/config.xml

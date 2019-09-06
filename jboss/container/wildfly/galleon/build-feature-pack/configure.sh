@@ -36,6 +36,11 @@ curl -v -L $WILDFLY_DIST_MAVEN_LOCATION/$WILDFLY_VERSION/wildfly-dist-$WILDFLY_V
 cd /tmp
 java -jar /tmp/offliner.jar $OFFLINER_URLS \
 /tmp/offliner.txt --dir $GALLEON_LOCAL_MAVEN_REPO > /dev/null
+if [ -f ./errors.log ]; then
+  echo ERRORS WHILE RETRIEVING ARTIFACTS. Offliner file is invalid or you are using a SNAPSHOT BUILD
+  echo Offliner errors:
+  cat ./errors.log
+fi
 cd ..
 
 rm /tmp/offliner.jar && rm /tmp/offliner.txt

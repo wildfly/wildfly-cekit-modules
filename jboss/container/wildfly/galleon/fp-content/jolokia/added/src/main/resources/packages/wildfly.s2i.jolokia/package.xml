@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+
+<package-spec xmlns="urn:jboss:galleon:package:2.0" name="wildfly.s2i.jolokia">
+    <dependencies>
+        <!-- used in standalone.conf -->
+        <origin name="org.wildfly.core:wildfly-core-galleon-pack">
+           <package name="org.jboss.logmanager"/>
+           <package name="org.wildfly.common"/>
+           <package name="org.glassfish.javax.json"/>
+           <package name="javax.json.api"/>
+        </origin>
+    </dependencies>
+</package-spec>

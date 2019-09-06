@@ -62,7 +62,7 @@
                                 <feature-pack>
                                     <groupId>${s2i.fp.groupid}</groupId>
                                     <artifactId>${s2i.fp.artifactid}</artifactId>
-                                    <version>${version.org.wildfly}</version>
+                                    <version>${version.s2i.fp}</version>
                                     <inherit-packages>false</inherit-packages>
                                     <inherit-configs>false</inherit-configs>
                                 </feature-pack>
