@@ -45,16 +45,16 @@ create_jgroups_elytron_encrypt_sym_cli() {
     testXpathExpression "${xpath}" "result" "protocolTypes"
     index=0
     if [ ${result} -eq 0 ]; then
-      protocolTypes=$(splitAttributesStringIntoLinks "${protocolTypes}" "type")
+      protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
       arr=(${protocolTypes})
-      
+
       while read -r protocolType; do
         if [ "${protocolType}" = "pbcast.NAKACK2" ]; then
           break
         fi
         ((index=index+1))
       done <<< "${protocolTypes}"
-     
+
       if [ ${index} -eq ${#arr[@]} ]; then
         echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
         missingNAKACK2="true"
@@ -107,7 +107,7 @@ create_jgroups_encrypt_asym_cli() {
       testXpathExpression "${xpath}" "result" "protocolTypes"
       index=0
       if [ ${result} -eq 0 ]; then
-        protocolTypes=$(splitAttributesStringIntoLinks "${protocolTypes}" "type")
+        protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
         arr=($protocolTypes)
 
         while read -r protocolType; do
@@ -172,16 +172,16 @@ create_jgroups_elytron_legacy_cli() {
     testXpathExpression "${xpath}" "result" "protocolTypes"
     index=0
     if [ ${result} -eq 0 ]; then
-      protocolTypes=$(splitAttributesStringIntoLinks "${protocolTypes}" "type")
+      protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
       arr=(${protocolTypes})
-      
+
       while read -r protocolType; do
         if [ "${protocolType}" = "pbcast.NAKACK2" ]; then
           break
         fi
         ((index=index+1))
       done <<< "${protocolTypes}"
-     
+
       if [ ${index} -eq ${#arr[@]} ]; then
         echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
         missingNAKACK2="true"
@@ -308,9 +308,9 @@ configure_jgroups_encryption() {
         validate_keystore_and_create "xml"
       elif [ "${key_store_conf_mode}" = "cli" ]; then
         validate_keystore_and_create "cli"
-        
-        # This if-check is here to cover the following case: User has strictly defined that he wants only replacement via xml markers (CONFIG_ADJUSTMENT_MODE=xml), 
-        # we have the Elytron subsystem but we do not have the Keystore marker, in that case, then replace the protocol using the "legacy" style, 
+
+        # This if-check is here to cover the following case: User has strictly defined that he wants only replacement via xml markers (CONFIG_ADJUSTMENT_MODE=xml),
+        # we have the Elytron subsystem but we do not have the Keystore marker, in that case, then replace the protocol using the "legacy" style,
         # which means include the key store in the JGroups protocol itself.
       elif [ "${CONFIG_ADJUSTMENT_MODE,,}" = "xml" ]; then
         validate_keystore_and_create_legacy "xml"
@@ -357,7 +357,7 @@ configure_jgroups_encryption() {
   elif [ "${key_store_conf_mode}" = "cli" ]; then
     echo "${key_store}" >> ${CLI_SCRIPT_FILE}
   fi
-  
+
   if [ "${encrypt_conf_mode}" = "xml" ]; then
     sed -i "s|<!-- ##JGROUPS_ENCRYPT## -->|${jgroups_encrypt}|g" "$CONFIG_FILE"
   elif [ "${encrypt_conf_mode}" = "cli" ]; then

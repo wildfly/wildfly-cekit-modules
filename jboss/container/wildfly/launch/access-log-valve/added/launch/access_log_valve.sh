@@ -79,7 +79,7 @@ function configure_access_log_valve() {
         return
       fi
 
-      serverNames=$(splitAttributesStringIntoLinks "${serverNames}" "name")
+      serverNames=$(splitAttributesStringIntoLines "${serverNames}" "name")
       while read -r serverName; do
         add_cli_commands_for_server_hosts "${serverName}"
       done <<< "${serverNames}"
@@ -101,7 +101,7 @@ function add_cli_commands_for_server_hosts() {
     return
   fi
 
-  hostNames=$(splitAttributesStringIntoLinks "${hostNames}" "name")
+  hostNames=$(splitAttributesStringIntoLines "${hostNames}" "name")
   while read -r hostName; do
     add_cli_commands_for_host "${serverName}" "${hostName}"
   done <<< "${hostNames}"
@@ -137,7 +137,7 @@ function add_cli_commands_for_host() {
     testXpathExpression "${xpath}" "pathRet" "existingPattern"
     local nonMatching
     if [ "${pathRet}" -eq 0 ]; then
-      existingPattern=$(splitAttributesStringIntoLinks "${existingPattern}" "pattern")
+      existingPattern=$(splitAttributesStringIntoLines "${existingPattern}" "pattern")
       local pattern=$(getPattern "read-xml")
       while read -r value; do
         if [ "${value}" != "${pattern}" ]; then
