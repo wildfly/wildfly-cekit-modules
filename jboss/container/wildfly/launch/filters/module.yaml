@@ -1,0 +1,7 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.filters
+version: '1.0'
+description: Configures the response header filters
+execute:
+  - script: configure.sh
+    user: '185'
