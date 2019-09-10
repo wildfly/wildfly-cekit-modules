@@ -159,7 +159,7 @@ function processErrorsAndWarnings() {
 # "server-one
 # server-two
 # server-three"
-function splitAttributesStringIntoLinks() {
+function splitAttributesStringIntoLines() {
   local input="${1}"
   local attribute_name="${2}"
 
@@ -223,7 +223,7 @@ function exec_cli_scripts() {
     eval ${JBOSS_HOME}/bin/jboss-cli.sh "--file=${CLI_SCRIPT_FILE_FOR_EMBEDDED}" "--properties=${CLI_SCRIPT_PROPERTY_FILE}" "&>${CLI_SCRIPT_OUTPUT_FILE}"
     cli_result=$?
     end=$(date +%s%3N)
-    
+
     if [ "${SCRIPT_DEBUG}" == "true" ] ; then
       cat "${CLI_SCRIPT_OUTPUT_FILE}"
     fi
