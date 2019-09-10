@@ -9,7 +9,14 @@ prepareEnv() {
 }
 
 configure() {
-  configure_jgroups_encryption
+  xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]\""
+  local ret_jgroups
+  testXpathExpression "${xpath}" "ret_jgroups"
+  if [ "${ret_jgroups}" -eq 0 ]; then
+    configure_jgroups_encryption
+  else
+    log_info "Clustering feature is not enabled, no jgroups subsystem present in server configuration."
+  fi
 }
 
 configureEnv() {
