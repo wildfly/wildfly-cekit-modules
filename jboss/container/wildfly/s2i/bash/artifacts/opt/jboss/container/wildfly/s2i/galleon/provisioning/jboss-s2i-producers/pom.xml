@@ -69,7 +69,7 @@
                                     <channels>
                                         <channel>
                                             <name>current</name>
-                                            <version-range>[17,)</version-range>
+                                            <version-range>[${version.s2i.fp}]</version-range>
                                         </channel>
                                     </channels>
                                 </producer>

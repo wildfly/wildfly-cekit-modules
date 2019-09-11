@@ -42,7 +42,6 @@
         <version.org.jboss.galleon>${env.GALLEON_VERSION}</version.org.jboss.galleon>
     </properties>
     <modules>
-        <module>extend_config</module>
         <module>generic_layers</module>
         <module>generic_provisioning</module>
         <module>jboss-s2i-universe</module>
