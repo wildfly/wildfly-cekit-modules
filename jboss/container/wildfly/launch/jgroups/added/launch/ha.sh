@@ -13,7 +13,12 @@ prepareEnv() {
 }
 
 configure() {
-  configure_ha
+  xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]\""
+  local ret_jgroups
+  testXpathExpression "${xpath}" "ret_jgroups"
+  if [ "${ret_jgroups}" -eq 0 ]; then
+    configure_ha
+  fi
 }
 
 preConfigure() {

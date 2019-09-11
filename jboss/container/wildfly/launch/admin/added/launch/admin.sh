@@ -46,5 +46,14 @@ function configure_administration() {
       end-if
 EOF
     fi
+  else
+    # required by probe, server must start unsecured if no admin user set.
+    if [ "${mode}" = "cli" ]; then
+      cat << EOF >> "${CLI_SCRIPT_FILE}"
+        if (outcome == success && result != undefined) of /core-service=management/management-interface=http-interface:read-attribute(name=http-authentication-factory)
+          /core-service=management/management-interface=http-interface:write-attribute(name=http-authentication-factory)
+        end-if
+EOF
+    fi
   fi
 }

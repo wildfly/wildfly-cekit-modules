@@ -29,8 +29,6 @@ envs:
   description: Mandatory. Name of the built feature-pack producer.
 - name: S2I_FP_VERSION
   description: "Mandatory, version of s2i galleon feature-pack"
-- name: GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS
-  description: "Used during s2i to provision a custom galleon server. Comma separated list of layers to extend the default config."
 - name: GALLEON_PROVISION_SERVER
   description: "Used during s2i to provision a custom galleon server. Name of a galleon built-in configuration."
 - name: GALLEON_PROVISION_LAYERS

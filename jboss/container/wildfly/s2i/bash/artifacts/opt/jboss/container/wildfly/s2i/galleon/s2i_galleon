@@ -17,22 +17,6 @@ function galleon_patch_generic_config() {
    fi
 }
 
-function galleon_patch_extend_default_config() {
-   if [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
-     for layer in $(echo $GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS | sed "s/,/ /g"); do
-       if [[ "$layer" =~ ^-.* ]]; then
-         layer="${layer:1}"
-         layers="$layers<exclude name=\"$layer\"/>"
-       else
-         layers="$layers<include name=\"$layer\"/>"
-       fi
-     done
-     if [ -n "$layers" ]; then
-       sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_EXTEND_CONFIG_DEFINITION/config.xml
-     fi
-   fi
-}
-
 function galleon_dump_repo_file_list() {
     targetFile=$1
     pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
@@ -173,12 +157,8 @@ function galleon_provision_server() {
       nb=$((nb+1))
     fi
 
-    if [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
-      nb=$((nb+1))
-    fi
-
     if [ $nb -gt 1 ]; then
-      echo "Error, GALLEON_PROVISION_SERVER, GALLEON_PROVISION_LAYERS or GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS can't be used at the same time."
+      echo "Error, GALLEON_PROVISION_SERVER or GALLEON_PROVISION_LAYERS can't be used at the same time."
       exit 1
     fi
 
@@ -187,12 +167,6 @@ function galleon_provision_server() {
       GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
       if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
         echo "Galleon provisioning of layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
-      fi
-    elif [ -n "$GALLEON_PROVISION_DEFAULT_CONFIG_LAYERS" ]; then
-      galleon_patch_extend_default_config
-      GALLEON_DESCRIPTION_LOCATION="$GALLEON_EXTEND_CONFIG_DEFINITION"
-      if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-        echo "Galleon provisioning of extended default configuration with layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
       fi
     fi
     
