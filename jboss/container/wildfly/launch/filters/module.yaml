@@ -5,3 +5,7 @@ description: Configures the response header filters
 execute:
   - script: configure.sh
     user: '185'
+
+envs:
+  - name: "FILTERS"
+    description: "Comma separated list of filter names. For each filter the following env vars must be set: <filter>_FILTER_REF_NAME, <filter>_FILTER_RESPONSE_HEADER_NAME, <filter>_FILTER_RESPONSE_HEADER_VALUE."

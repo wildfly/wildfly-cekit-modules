@@ -6,6 +6,6 @@ execute:
   - script: configure.sh
     user: '185'
 envs:
-  - name: "PORT_OFFSET"
-    example: "100"
-    description: If defined changes the port offset.
+  - name: "AUTO_DEPLOY_EXPLODED"
+    description: Controls whether exploded deployment content should be automatically deployed.
+    example: "true"
