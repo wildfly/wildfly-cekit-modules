@@ -106,10 +106,6 @@ function inject_internal_datasources() {
   # Find all databases in the $DB_SERVICE_PREFIX_MAPPING separated by ","
   IFS=',' read -a db_backends <<< $DB_SERVICE_PREFIX_MAPPING
 
-  if [ -z "$TIMER_SERVICE_DATA_STORE" ]; then
-    inject_default_timer_service
-  fi
-
   local defaultDatasourceJndi
 
   if [ "${#db_backends[@]}" -eq "0" ]; then
@@ -124,7 +120,7 @@ function inject_internal_datasources() {
       fi
     fi
 
-    if [ -z "$defaultDatasourceJndi" ] && [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
+    if [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
       defaultDatasourceJndi="java:jboss/datasources/ExampleDS"
     fi
   else
@@ -154,12 +150,34 @@ function inject_internal_datasources() {
           defaultDatasourceJndi="$jndi"
         elif [ -n "${EE_DEFAULT_DATASOURCE}" -a "${EE_DEFAULT_DATASOURCE}" = "${service_name}" ]; then
           defaultDatasourceJndi="$jndi"
+
+          # We will use this file for validation later, so create it to indicate we found a match
+          touch "${EE_DEFAULT_DATASOURCE_FILE}"
         fi
       fi
     done
   fi
 
-  writeEEDefaultDatasource
+  # Add things referencing our datasources to the other subsystems now that we have added all the datasources
+  writeEEDefaultDatasource defaultDatasourceJndi
+
+  if [ -z "${TIMER_SERVICE_DATA_STORE}" ]; then
+    inject_default_timer_service
+  else
+    # Add the CLI commands from file
+    if [ -s "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
+      cat "${TIMER_SERVICE_DATA_STORE_FILE}" >> "${CLI_SCRIPT_FILE}"
+    fi
+  fi
+
+  if [ -z "${DEFAULT_JOB_REPOSITORY}" ]; then
+    inject_hardcoded_default_job_repository
+  else
+    # Add the CLI commands from file, unless it just contains the marker from the xml marker case
+    if [ -s "${DEFAULT_JOB_REPOSITORY_FILE}" ]; then
+      cat "${DEFAULT_JOB_REPOSITORY_FILE}" >> "${CLI_SCRIPT_FILE}"
+    fi
+  fi
 }
 
 function writeEEDefaultDatasource() {
@@ -329,6 +347,10 @@ function generate_datasource_common() {
     if [ -n "${ENABLE_GENERATE_DEFAULT_DATASOURCE}" ] && [ "${ENABLE_GENERATE_DEFAULT_DATASOURCE^^}" = "TRUE" ]; then
       service_name="ExampleDS"
       driver="hsql"
+      pool_name="ExampleDS"
+      if [ -n "$DB_POOL" ]; then
+        pool_name="$DB_POOL"
+      fi
     else
       return
     fi
@@ -337,6 +359,11 @@ function generate_datasource_common() {
   if [ -n "$TIMER_SERVICE_DATA_STORE" -a "$TIMER_SERVICE_DATA_STORE" = "${service_name}" ]; then
     inject_timer_service ${pool_name} ${jndi_name} ${driver} ${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1}
   fi
+  if [ -n "$DEFAULT_JOB_REPOSITORY" -a "$DEFAULT_JOB_REPOSITORY" = "${service_name}" ]; then
+    inject_job_repository "${pool_name}"
+    inject_default_job_repository "${pool_name}"
+  fi
+
 
   if [ "${dsConfMode}" = "xml" ]; then
     # Only do this replacement if we are replacing an xml marker
@@ -660,6 +687,9 @@ function inject_default_timer_service() {
                   </data-stores>\
               </timer-service>"
     sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+
+    # We will use this file for validation later, so write here that we found a match
+    touch "${TIMER_SERVICE_DATA_STORE_FILE}"
   elif [ "$confMode" = "cli" ]; then
     local hasEjb3Subsystem
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
@@ -676,7 +706,10 @@ function inject_default_timer_service() {
           run-batch
         end-if
       "
-      echo "${cli}" >> ${CLI_SCRIPT_FILE}
+      # Since this is happening as part of the datasource generation, in a subshell, and these
+      # commands need to happen AFTER the datasource has been added, write the CLI commands out
+      # to a temp file that we will read later
+      echo "${cli}" >> "${TIMER_SERVICE_DATA_STORE_FILE}"
     fi
   fi
 }
@@ -701,6 +734,9 @@ function inject_timer_service() {
                   </data-stores>\
               </timer-service>"
     sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+
+    # We will use this file for validation later, so write here that we found a match
+    touch "${TIMER_SERVICE_DATA_STORE_FILE}"
   elif [ "$confMode" = "cli" ]; then
     local hasEjb3Subsystem
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
@@ -744,7 +780,10 @@ function inject_timer_service() {
     cli="${cli}
       ${timerResource}:write-attribute(name=default-data-store, value=${datastore_name})
     "
-    echo "${cli}" >> ${CLI_SCRIPT_FILE}
+    # Since this is happening as part of the datasource generation, in a subshell, and these
+    # commands need to happen AFTER the datasource has been added, write the CLI commands out
+    # to a temp file that we will read later
+    echo "${cli}" >> "${TIMER_SERVICE_DATA_STORE_FILE}"
   fi
 }
 
@@ -944,4 +983,88 @@ function inject_datasource() {
 function get_jndi_name() {
   local prefix=$1
   echo $(find_env "${prefix}_JNDI" "java:jboss/datasources/${service,,}")
+}
+
+function inject_hardcoded_default_job_repository() {
+  inject_default_job_repository "in-memory" "hardcoded"
+}
+
+# Arguments:
+# $1 - default job repository name
+function inject_default_job_repository() {
+  local hardcoded="${2}"
+  local dsConfMode
+  getConfigurationMode "<!-- ##DEFAULT_JOB_REPOSITORY## -->" "dsConfMode"
+  if [ "${dsConfMode}" = "xml" ]; then
+    local defaultjobrepo="     <default-job-repository name=\"${1}\"/>"
+    sed -i "s|<!-- ##DEFAULT_JOB_REPOSITORY## -->|${defaultjobrepo%$'\n'}|" $CONFIG_FILE
+
+    # We will use this file for validation later, so create it to indicate we found a match
+    touch "${DEFAULT_JOB_REPOSITORY_FILE}"
+  elif [ "${dsConfMode}" = "cli" ]; then
+
+    local resourceAddr="/subsystem=batch-jberet"
+    if [ -z "${hardcoded}" ] ; then
+      # We only need to do something when the user has explicitly set a default job repository.
+      # This is because the base configuration needs to have a job repository set up for CLI
+      # replacement to work as the CLI embedded server will not even boot if it is not there.
+      # (in the xml marker replacement it works differently as we replace the marker with the xml
+      # for the default repo).
+      # The hardcoded default-job-repository should only be set if there is a batch-jberet
+      # subsystem. If the user specified the DEFAULT_JOB_REPOSITORY variable, and there is no
+      # batch-jberet subsystem, this will give an error in inject_job_repository() so there is
+      # no need to do that again here.
+      local cli="
+      if (outcome == success) of ${resourceAddr}:read-resource
+        ${resourceAddr}:write-attribute(name=default-job-repository, value=${1})
+      end-if
+      "
+
+      # Since this is happening as part of the datasource generation, in a subshell, and these
+      # commands need to happen AFTER the datasource has been added, write the CLI commands out
+      # to a temp file that we will read later
+      echo "${cli}" >> "${DEFAULT_JOB_REPOSITORY_FILE}"
+    fi
+  fi
+}
+
+# Arguments:
+# $1 - job repository name
+function inject_job_repository() {
+  local dsConfMode
+  getConfigurationMode "<!-- ##JOB_REPOSITORY## -->" "dsConfMode"
+  if [ "${dsConfMode}" = "xml" ]; then
+    local jobrepo="     <job-repository name=\"${1}\">\
+        <jdbc data-source=\"${1}\"/>\
+      </job-repository>\
+      <!-- ##JOB_REPOSITORY## -->"
+
+    sed -i "s|<!-- ##JOB_REPOSITORY## -->|${jobrepo%$'\n'}|" $CONFIG_FILE
+
+    # We will use this file for validation later, so create it to indicate we found a match
+    touch "${DEFAULT_JOB_REPOSITORY_FILE}"
+  elif [ "${dsConfMode}" = "cli" ]; then
+    local subsystemAddr="/subsystem=batch-jberet"
+    local resourceAddr="${subsystemAddr}/jdbc-job-repository=${1}"
+    local cli="
+      if (outcome != success) of ${subsystemAddr}:read-resource
+        echo You have set the DEFAULT_JOB_REPOSITORY environment variables to configure a default-job-repository pointing to the '${DEFAULT_JOB_REPOSITORY}' datasource. Fix your configuration to contain a batch-jberet subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      if (outcome == success) of ${resourceAddr}:read-resource
+        batch
+        ${resourceAddr}:remove
+        ${resourceAddr}:add(data-source=${1})
+        run-batch
+      else
+        ${resourceAddr}:add(data-source=${1})
+      end-if
+    "
+    # Since this is happening as part of the datasource generation, in a subshell, and these
+    # commands need to happen AFTER the datasource has been added, write the CLI commands out
+    # to a temp file that we will read later
+    echo "${cli}" >> "${DEFAULT_JOB_REPOSITORY_FILE}"
+  fi
+
 }
