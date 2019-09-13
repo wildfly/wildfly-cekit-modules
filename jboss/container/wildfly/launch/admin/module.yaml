@@ -6,6 +6,7 @@ execute:
   - script: configure.sh
     user: '185'
 envs:
-  - name: "AUTO_DEPLOY_EXPLODED"
-    description: Controls whether exploded deployment content should be automatically deployed.
-    example: "true"
+  - name: "ADMIN_USERNAME"
+    description: Admin user name. Used to secure http management interface.
+  - name: "ADMIN_PASSWORD"
+    description: Admin user password.
