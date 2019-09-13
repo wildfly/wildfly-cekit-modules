@@ -7,3 +7,8 @@ description: Adjusts the logger category
 execute:
 - script: configure.sh
   user: '185'
+  
+envs:
+  - name: "LOGGER_CATEGORIES"
+    example: "com.my.package:TRACE,com.my.other.package:ALL"
+    description: Comma separated list of <logger-name>:<level>

@@ -10,8 +10,9 @@ function configure_deployment_scanner() {
   if [[ -n "$JAVA_OPTS_APPEND" ]] && [[ $JAVA_OPTS_APPEND == *"Xdebug"* ]]; then
     sed -i "s|##AUTO_DEPLOY_EXPLODED##|true|" "$CONFIG_FILE"
     auto_deploy_exploded=true
-  elif [ -n "$AUTO_DEPLOY_EXPLODED" ]; then
-    auto_deploy_exploded="${AUTO_DEPLOY_EXPLODED,,}"
+  elif [ -n "$AUTO_DEPLOY_EXPLODED" ] || [ -n "$OPENSHIFT_AUTO_DEPLOY_EXPLODED" ]; then
+    auto_deploy_exploded="${AUTO_DEPLOY_EXPLODED:-${OPENSHIFT_AUTO_DEPLOY_EXPLODED}}"
+    auto_deploy_exploded=${auto_deploy_exploded,,}
     explicitly_set=true
   else
     auto_deploy_exploded="false"
