@@ -67,7 +67,7 @@ function configure_cli_keycloak() {
     local ret_saml
     testXpathExpression "${xpath}" "ret_saml"
 
-    app_sec_domain=${SSO_SECURITY_DOMAIN:-other}
+    app_sec_domain=${SSO_SECURITY_DOMAIN:-keycloak}
     id=$(date +%s)
 
     if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
@@ -329,7 +329,7 @@ configure_ejb() {
   if [ "${ret}" -eq 0 ]; then
     cli="$cli
 if (outcome != success) of /subsystem=ejb3/application-security-domain=$security_domain:read-resource
-    /subsystem=ejb3/application-security-domain=other:add(security-domain=KeycloakDomain-$id)
+    /subsystem=ejb3/application-security-domain=$security_domain:add(security-domain=KeycloakDomain-$id)
 else
     echo ejb3 already contains $security_domain application security domain. Fix your configuration or set SSO_SECURITY_DOMAIN env variable. >> \${error_file}
     quit
