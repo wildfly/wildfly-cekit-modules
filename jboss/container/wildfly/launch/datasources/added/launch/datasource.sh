@@ -1,4 +1,23 @@
+#!/bin/sh
+
 source $JBOSS_HOME/bin/launch/datasource-common.sh
+
+function preConfigure() {
+  # Since inject_datasources_common ends up executing in a sub-shell for where I want
+  # to grab the value, use temp files to store what was used
+  initTempFiles
+
+  # Remove the files if they exist
+  if [ -s "${DEFAULT_JOB_REPOSITORY_FILE}" ]; then
+    rm "${DEFAULT_JOB_REPOSITORY_FILE}"
+  fi
+  if [ -s "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
+    rm "${TIMER_SERVICE_DATA_STORE_FILE}"
+  fi
+  if [ -s "${EE_DEFAULT_DATASOURCE_FILE}" ]; then
+    rm "${EE_DEFAULT_DATASOURCE_FILE}"
+  fi
+}
 
 function prepareEnv() {
   clearDatasourcesEnv
@@ -12,7 +31,7 @@ function configure() {
 function configureEnv() {
   inject_external_datasources
 
-  # TODO - Don't think this is being used any more? The real action seems to be in tx-datasource.sh
+  # TODO - I don't think this is being used any more? The real action seems to be in tx-datasource.sh
   if [ -n "$JDBC_STORE_JNDI_NAME" ]; then
     local jdbcStore="<jdbc-store datasource-jndi-name=\"${JDBC_STORE_JNDI_NAME}\"/>"
     sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
@@ -20,28 +39,27 @@ function configureEnv() {
 
 }
 
-function inject_datasources() {
-  # Since inject_datasources_common ends up executing in a sub-shell for where I want
-  # to grab the value, use a temp file
-  DEFAULT_JOB_REPOSITORY_FILE_NAME="$(mktemp /tmp/default-job-repo.XXXXXX)"
-
-  inject_datasources_common
-
-  local default_job_repository_pool_name
-  while IFS= read -r line
-  do
-    default_job_repository_pool_name="${line}"
-  done < "${DEFAULT_JOB_REPOSITORY_FILE_NAME}"
-
-  if [ -n "${default_job_repository_pool_name}" ]; then
-    inject_job_repository "${default_job_repository_pool_name}"
-    inject_default_job_repository "${default_job_repository_pool_name}"
-  else
-    inject_hardcoded_default_job_repository
+function finalVerification() {
+  initTempFiles
+  if [ -n "${DEFAULT_JOB_REPOSITORY}" ] && [ ! -f "${DEFAULT_JOB_REPOSITORY_FILE}" ]; then
+    echo "The list of configured datasources does not contain a datasource matching the default job repository datasource specified with DEFAULT_JOB_REPOSITORY='${DEFAULT_JOB_REPOSITORY}'." >> "${CLI_SCRIPT_ERROR_FILE}"
   fi
+  if [ -n "${TIMER_SERVICE_DATA_STORE}" ] && [ ! -f "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
+    echo "The list of configured datasources does not contain a datasource matching the timer-service datastore datasource specified with TIMER_SERVICE_DATA_STORE='${TIMER_SERVICE_DATA_STORE}'." >> "${CLI_SCRIPT_ERROR_FILE}"
+  fi
+  if [ -n "${EE_DEFAULT_DATASOURCE}" ] && [ ! -f "${EE_DEFAULT_DATASOURCE_FILE}" ]; then
+    echo "The list of configured datasources does not contain a datasource matching the ee default-bindings datasource specified with EE_DEFAULT_DATASOURCE='${EE_DEFAULT_DATASOURCE}'." >> "${CLI_SCRIPT_ERROR_FILE}"
+  fi
+}
 
-  rm "${DEFAULT_JOB_REPOSITORY_FILE_NAME}"
-  unset DEFAULT_JOB_REPOSITORY_FILE_NAME
+function initTempFiles() {
+  DEFAULT_JOB_REPOSITORY_FILE="/tmp/ds-default-job-repo"
+  TIMER_SERVICE_DATA_STORE_FILE="/tmp/ds-timer-service-data-store"
+  EE_DEFAULT_DATASOURCE_FILE="/tmp/ds-ee-default-datastore"
+}
+
+function inject_datasources() {
+  inject_datasources_common
 }
 
 function generate_datasource() {
@@ -61,89 +79,4 @@ function generate_datasource() {
   local url="${14}"
 
   generate_datasource_common "${1}" "${2}" "${3}" "${4}" "${5}" "${6}" "${7}" "${8}" "${9}" "${10}" "${11}" "${12}" "${13}" "${14}"
-
-  if [ -z "$service_name" ]; then
-    service_name="ExampleDS"
-    pool_name="ExampleDS"
-    if [ -n "$DB_POOL" ]; then
-      pool_name="$DB_POOL"
-    fi
-  fi
-
-  if [ -n ${DEFAULT_JOB_REPOSITORY_FILE_NAME} ]; then
-    # $DEFAULT_JOB_REPOSITORY_FILE_NAME will only be set for internal datasources
-    if [ -n "$DEFAULT_JOB_REPOSITORY" -a "$DEFAULT_JOB_REPOSITORY" = "${service_name}" ]; then
-      echo "${pool_name}" >> "${DEFAULT_JOB_REPOSITORY_FILE_NAME}"
-    fi
-  fi
-}
-
-function inject_hardcoded_default_job_repository() {
-  inject_default_job_repository "in-memory" "hardcoded"
-}
-
-# Arguments:
-# $1 - default job repository name
-function inject_default_job_repository() {
-  local hardcoded="${2}"
-  local dsConfMode
-  getConfigurationMode "<!-- ##DEFAULT_JOB_REPOSITORY## -->" "dsConfMode"
-  if [ "${dsConfMode}" = "xml" ]; then
-    local defaultjobrepo="     <default-job-repository name=\"${1}\"/>"
-    sed -i "s|<!-- ##DEFAULT_JOB_REPOSITORY## -->|${defaultjobrepo%$'\n'}|" $CONFIG_FILE
-  elif [ "${dsConfMode}" = "cli" ]; then
-
-    local resourceAddr="/subsystem=batch-jberet"
-    if [ -z "${hardcoded}" ] ; then
-      # We only need to do something when the user has explicitly set a default job repository.
-      # This is because the base configuration needs to have a job repository set up for CLI
-      # replacement to work as the CLI embedded server will not even boot if it is not there.
-      # (in the xml marker replacement it works differently as we replace the marker with the xml
-      # for the default repo).
-      # The hardcoded default-job-repository should only be set if there is a batch-jberet
-      # subsystem. If the user specified the DEFAULT_JOB_REPOSITORY variable, and there is no
-      # batch-jberet subsystem, this will give an error in inject_job_repository() so there is
-      # no need to do that again here.
-      echo "
-      if (outcome == success) of ${resourceAddr}:read-resource
-        ${resourceAddr}:write-attribute(name=default-job-repository, value=${1})
-      end-if
-      " >> ${CLI_SCRIPT_FILE}
-    fi
-  fi
-}
-
-# Arguments:
-# $1 - job repository name
-function inject_job_repository() {
-  local dsConfMode
-  getConfigurationMode "<!-- ##JOB_REPOSITORY## -->" "dsConfMode"
-  if [ "${dsConfMode}" = "xml" ]; then
-    local jobrepo="     <job-repository name=\"${1}\">\
-        <jdbc data-source=\"${1}\"/>\
-      </job-repository>\
-      <!-- ##JOB_REPOSITORY## -->"
-
-    sed -i "s|<!-- ##JOB_REPOSITORY## -->|${jobrepo%$'\n'}|" $CONFIG_FILE
-  elif [ "${dsConfMode}" = "cli" ]; then
-    local subsystemAddr="/subsystem=batch-jberet"
-    local resourceAddr="${subsystemAddr}/jdbc-job-repository=${1}"
-    local jobrepo="
-      if (outcome != success) of ${subsystemAddr}:read-resource
-        echo You have set the DEFAULT_JOB_REPOSITORY environment variables to configure a default-job-repository pointing to the '${DEFAULT_JOB_REPOSITORY}' datasource. Fix your configuration to contain a batch-jberet subsystem for this to happen. >> \${error_file}
-        exit
-      end-if
-
-      if (outcome == success) of ${resourceAddr}:read-resource
-        batch
-        ${resourceAddr}:remove
-        ${resourceAddr}:add(data-source=${1})
-        run-batch
-      else
-        ${resourceAddr}:add(data-source=${1})
-      end-if
-    "
-    echo "${jobrepo}" >> ${CLI_SCRIPT_FILE}
-  fi
-
 }

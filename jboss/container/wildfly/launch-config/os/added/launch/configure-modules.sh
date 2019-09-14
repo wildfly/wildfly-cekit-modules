@@ -42,6 +42,9 @@
 # postConfigureEnv: simliar to postConfigure, except that it is invoked for each
 #                   env file.
 #
+# finalVerification: called after everything else. Modules can use this to check
+#                    information from both the non-env and env cases.
+#
 # The reason the configuration API is duplicated for an Env, is that some
 # modules may not support env files, or may require configuration of "singleton"
 # type entries, which should only be processed once.
@@ -57,6 +60,8 @@ function prepareModule() {
   unset -f preConfigureEnv
   unset -f configureEnv
   unset -f postConfigureEnv
+
+  unset -f finalVerification
 }
 
 # Execute a particular function from a module
@@ -110,3 +115,4 @@ executeModules preConfigure
 executeModules configure
 processEnvFiles
 executeModules postConfigure
+executeModules finalVerification
