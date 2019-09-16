@@ -5,8 +5,10 @@ if [ "${SCRIPT_DEBUG}" = "true" ] ; then
     echo "Script debugging is enabled, allowing bash commands and their arguments to be printed as they are executed"
 fi
 
+source $JBOSS_HOME/bin/launch/launch-common.sh
+
 SERVER_CONFIG=${WILDFLY_SERVER_CONFIGURATION:-standalone.xml}
-CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
+export CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
 LOGGING_FILE=$JBOSS_HOME/standalone/configuration/logging.properties
 
 # CONFIG_ADJUSTMENT_MODE is the mode used to do the environment variable replacement.
@@ -21,22 +23,22 @@ LOGGING_FILE=$JBOSS_HOME/standalone/configuration/logging.properties
 # Handling of the meanings of this is done by the launch scripts doing the config adjustment.
 # Consumers of this script are expected to set this value.
 if [ -z "${CONFIG_ADJUSTMENT_MODE}" ]; then
-  CONFIG_ADJUSTMENT_MODE="xml_cli"
+  export CONFIG_ADJUSTMENT_MODE="xml_cli"
 fi
 if [ -n "${CONFIG_IS_FINAL}" ] && [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
-    CONFIG_ADJUSTMENT_MODE="none"
+    export CONFIG_ADJUSTMENT_MODE="none"
 fi
 
 # This is the cli file generated
-CLI_SCRIPT_FILE=/tmp/cli-script.cli
+export CLI_SCRIPT_FILE=/tmp/cli-script.cli
 # This is the file used to log errors by the CLI execution
-CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
+export CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
 # The property file used to pass variables to jboss-cli.sh
-CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
+export CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
 # An output file for warning
-CLI_WARNING_FILE=/tmp/cli-warning.log
+export CLI_WARNING_FILE=/tmp/cli-warning.log
 # This is the cli process output file
-CLI_SCRIPT_OUTPUT_FILE=/tmp/cli-script-output.cli
+export CLI_SCRIPT_OUTPUT_FILE=/tmp/cli-script-output.cli
 
 # The CLI file that could have been used in S2I phase to define dirvers
 S2I_CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
@@ -68,71 +70,6 @@ fi
 echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > "${CLI_SCRIPT_PROPERTY_FILE}"
 echo "warning_file=${CLI_WARNING_FILE}" >> "${CLI_SCRIPT_PROPERTY_FILE}"
 
-# Takes the following parameters:
-# - $1      - the xml marker to test for
-# - $2      - the variable which will hold the result
-# The result holding variable, $2, will be populated with one of the following
-# three values:
-# - ""      - no configuration should be done
-# - "xml"   - configuration should happen via marker replacement
-# - "cli"   - configuration should happen via cli commands
-#
-function getConfigurationMode() {
-  local marker="${1}"
-  unset -v "$2" || echo "Invalid identifier: $2" >&2
-
-  local attemptXml="false"
-  local viaCli="false"
-  if [ "${CONFIG_ADJUSTMENT_MODE,,}" = "xml" ]; then
-    attemptXml="true"
-  elif  [ "${CONFIG_ADJUSTMENT_MODE,,}" = "cli" ]; then
-    viaCli="true"
-  elif  [ "${CONFIG_ADJUSTMENT_MODE,,}" = "xml_cli" ]; then
-    attemptXml="true"
-    viaCli="true"
-  elif [ "${CONFIG_ADJUSTMENT_MODE,,}" != "none" ]; then
-    echo "Bad CONFIG_ADJUSTMENT_MODE \'${CONFIG_ADJUSTMENT_MODE}\'"
-    exit 1
-  fi
-
-  local configVia=""
-  if [ "${attemptXml}" = "true" ]; then
-    if grep -Fq "${marker}" $CONFIG_FILE; then
-        configVia="xml"
-    fi
-  fi
-
-  if [ -z "${configVia}" ]; then
-    if [ "${viaCli}" = "true" ]; then
-        configVia="cli"
-    fi
-  fi
-
-  printf -v "$2" '%s' "${configVia}"
-}
-
-# Test an XpathExpression against server config file and returns
-# the xmllint exit code
-#
-# Parameters:
-# - $1      - the xpath expression to use
-# - $2      - the variable which will hold the exit code
-# - $3      - an optional variable to hold the output of the xpath command
-#
-function testXpathExpression() {
-  local xpath="$1"
-  unset -v "$2" || echo "Invalid identifier: $2" >&2
-
-  local output
-  output=$(eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 2>/dev/null)
-
-  printf -v "$2" '%s' "$?"
-
-  if [ -n "$3" ]; then
-    unset -v "$3" && printf -v "$3" '%s' "${output}"
-  fi
-}
-
 function processErrorsAndWarnings() {
   if [ -s "${CLI_WARNING_FILE}" ]; then
     while IFS= read -r line
@@ -148,24 +85,6 @@ function processErrorsAndWarnings() {
     done < "${CLI_SCRIPT_ERROR_FILE}"
     exit 1
   fi
-}
-
-# An XPath expression e.g getting all name attributes for all the servers in the undertow subsystem
-# will return a variable with all the attributes with their names on one line, e.g
-#     'name="server-one" name="server-two" name="server-three"'
-# Call this with ($input is the string above)
-#     convertAttributesToValueOnEachLine "$input" "name"
-# to convert this to :
-# "server-one
-# server-two
-# server-three"
-function splitAttributesStringIntoLines() {
-  local input="${1}"
-  local attribute_name="${2}"
-
-  local temp
-  temp=$(echo $input | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
-  echo "${temp}"
 }
 
 function exec_cli_scripts() {
