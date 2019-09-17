@@ -26,6 +26,9 @@
 #
 # postConfigure:    invoked after all configuration has been completed.
 #
+# delayedPostConfigure:    invoked after all configuration has been fully 
+#                          completed (CLI script executed).
+#
 # prepareEnv:       invoked prior to processing env files.  Modules should
 #                   use this to prepare the environment before processing
 #                   configuration from a file, e.g. by unset'ing variables
@@ -55,6 +58,7 @@ function prepareModule() {
   unset -f preConfigure
   unset -f configure
   unset -f postConfigure
+  unset -f delayedPostConfigure
 
   unset -f prepareEnv
   unset -f preConfigureEnv

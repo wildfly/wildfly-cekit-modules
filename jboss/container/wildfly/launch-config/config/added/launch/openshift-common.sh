@@ -29,36 +29,45 @@ if [ -n "${CONFIG_IS_FINAL}" ] && [ "${CONFIG_IS_FINAL^^}" = "TRUE" ]; then
     export CONFIG_ADJUSTMENT_MODE="none"
 fi
 
-# This is the cli file generated
-export CLI_SCRIPT_FILE=/tmp/cli-script.cli
-# This is the file used to log errors by the CLI execution
-export CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error.cli
-# The property file used to pass variables to jboss-cli.sh
-export CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property.cli
-# An output file for warning
-export CLI_WARNING_FILE=/tmp/cli-warning.log
-# This is the cli process output file
-export CLI_SCRIPT_OUTPUT_FILE=/tmp/cli-script-output.cli
+function createCliExecutionContext() {
+  systime=$(date +%s)
+  # This is the cli file generated
+  export CLI_SCRIPT_FILE=/tmp/cli-script-$systime.cli
+  # This is the file used to log errors by the CLI execution
+  export CLI_SCRIPT_ERROR_FILE=/tmp/cli-script-error-$systime.cli
+  # The property file used to pass variables to jboss-cli.sh
+  export CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property-$systime.cli
+  # An output file for warning
+  export CLI_WARNING_FILE=/tmp/cli-warning-$systime.log
+  # This is the cli process output file
+  export CLI_SCRIPT_OUTPUT_FILE=/tmp/cli-script-output-$systime.cli
+
+  # Ensure we start with clean files
+  if [ -s "${CLI_SCRIPT_FILE}" ]; then
+    echo -n "" > "${CLI_SCRIPT_FILE}"
+  fi
+  if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
+    echo -n "" > "${CLI_SCRIPT_ERROR_FILE}"
+  fi
+  if [ -s "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
+    echo -n "" > "${CLI_SCRIPT_PROPERTY_FILE}"
+  fi
+  if [ -s "${CLI_WARNING_FILE}" ]; then
+    echo -n "" > "${CLI_WARNING_FILE}"
+  fi
+  if [ -s "${CLI_SCRIPT_OUTPUT_FILE}" ]; then
+    echo -n "" > "${CLI_SCRIPT_OUTPUT_FILE}"
+  fi
+
+  echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > "${CLI_SCRIPT_PROPERTY_FILE}"
+  echo "warning_file=${CLI_WARNING_FILE}" >> "${CLI_SCRIPT_PROPERTY_FILE}"
+}
+
+createCliExecutionContext
 
 # The CLI file that could have been used in S2I phase to define dirvers
 S2I_CLI_DRIVERS_FILE=${JBOSS_HOME}/bin/launch/drivers.cli
 
-# Ensure we start with clean files
-if [ -s "${CLI_SCRIPT_FILE}" ]; then
-  echo -n "" > "${CLI_SCRIPT_FILE}"
-fi
-if [ -s "${CLI_SCRIPT_ERROR_FILE}" ]; then
-  echo -n "" > "${CLI_SCRIPT_ERROR_FILE}"
-fi
-if [ -s "${CLI_SCRIPT_PROPERTY_FILE}" ]; then
-  echo -n "" > "${CLI_SCRIPT_PROPERTY_FILE}"
-fi
-if [ -s "${CLI_WARNING_FILE}" ]; then
-  echo -n "" > "${CLI_WARNING_FILE}"
-fi
-if [ -s "${CLI_SCRIPT_OUTPUT_FILE}" ]; then
-  echo -n "" > "${CLI_SCRIPT_OUTPUT_FILE}"
-fi
 if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" ]; then
 # If we have content in S2I_CLI_DRIVERS_FILE and we are not in pure CLI mode, then
 # the CLI operations generated in S2I will be processed at runtime
@@ -66,9 +75,6 @@ if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" 
 else
   echo -n "" > "${S2I_CLI_DRIVERS_FILE}"
 fi
-
-echo "error_file=${CLI_SCRIPT_ERROR_FILE}" > "${CLI_SCRIPT_PROPERTY_FILE}"
-echo "warning_file=${CLI_WARNING_FILE}" >> "${CLI_SCRIPT_PROPERTY_FILE}"
 
 function processErrorsAndWarnings() {
   if [ -s "${CLI_WARNING_FILE}" ]; then
