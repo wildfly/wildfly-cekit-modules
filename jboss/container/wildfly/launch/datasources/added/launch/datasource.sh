@@ -20,15 +20,18 @@ function preConfigure() {
 }
 
 function prepareEnv() {
+  initTempFiles
   clearDatasourcesEnv
   clearTxDatasourceEnv
 }
 
 function configure() {
+  initTempFiles
   inject_datasources
 }
 
 function configureEnv() {
+  initTempFiles
   inject_external_datasources
 
   # TODO - I don't think this is being used any more? The real action seems to be in tx-datasource.sh
