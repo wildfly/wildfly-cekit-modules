@@ -160,16 +160,10 @@ function inject_internal_datasources() {
 
 
   # Add things referencing our datasources to the other subsystems now that we have added all the datasources
+  # For backward compatibility do the TIMER_SERVICE_DATA_STORE handling in finalVerification() so it also
+  # works with 'external' datasources
+  # Some more rework will be needed to do the same for the EE default datasource and the default job repository
   writeEEDefaultDatasource defaultDatasourceJndi
-
-  if [ -z "${TIMER_SERVICE_DATA_STORE}" ]; then
-    inject_default_timer_service
-  fi
-  # Add the CLI commands from file
-  if [ -s "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
-    # This will either be the one from the TIMER_SERVICE_DATA_STORE match, or the default one
-    cat "${TIMER_SERVICE_DATA_STORE_FILE}" >> "${CLI_SCRIPT_FILE}"
-  fi
 
   if [ -z "${DEFAULT_JOB_REPOSITORY}" ]; then
     inject_hardcoded_default_job_repository
