@@ -49,6 +49,7 @@ create_jgroups_elytron_encrypt_sym_cli() {
   local missingNAKACK2="false"
   local stacks=(tcp udp)
 
+
   for stack in "${stacks[@]}"; do
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol']/@type\""
     testXpathExpression "${xpath}" "result" "protocolTypes"
