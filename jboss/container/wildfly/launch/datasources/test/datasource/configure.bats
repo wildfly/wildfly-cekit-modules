@@ -319,6 +319,7 @@ load common
     TEST_XA_CONNECTION_PROPERTY_PortNumber="50000"
     TEST_XA_CONNECTION_PROPERTY_DatabaseName="ibmdb2db"
 
+    initTempFiles
     run inject_datasources
 
     expected="WARN Missing configuration for XA datasource TEST. Either TEST_XA_CONNECTION_PROPERTY_URL or TEST_XA_CONNECTION_PROPERTY_ServerName, and TEST_XA_CONNECTION_PROPERTY_PortNumber, and TEST_XA_CONNECTION_PROPERTY_DatabaseName is required. Datasource will not be configured."
