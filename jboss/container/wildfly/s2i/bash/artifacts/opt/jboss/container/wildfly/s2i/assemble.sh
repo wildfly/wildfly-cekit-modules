@@ -51,10 +51,6 @@ replace_default_settings_with_s2i
 # invoke the build
 maven_s2i_build
 
-# At this point the settings are no more valid to start a server although by default wildfly and CLI will
-# use these settings. Replace s2i with startup one.
-replace_default_settings_with_startup
-
 copy_server_s2i_output
 
 galleon_cleanup

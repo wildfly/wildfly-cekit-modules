@@ -8,6 +8,9 @@ function s2i_core_env_init_hook() {
 
 # add support for copying modules
 function s2i_core_copy_artifacts_hook() {
+  # At this point the settings are no more valid to start a server or use CLI.
+  # Replace s2i with startup one. Required by extension scripts.
+  replace_default_settings_with_startup
   wildfly_s2i_copy_modules $*
   wildfly_s2i_copy_cfg $*
 }

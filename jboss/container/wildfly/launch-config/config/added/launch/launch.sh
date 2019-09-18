@@ -40,4 +40,11 @@ function configure_server() {
   # The scripts will add the operations in a special file, invoke the embedded server if it is necessary
   # and run the CLI scripts
   exec_cli_scripts "${CLI_SCRIPT_FILE}"
+
+  # run the delayed postinstall of modules
+  createCliExecutionContext
+  executeModules delayedPostConfigure
+
+  # re-run CLI scipts just in case a delayed postinstall updated it
+  exec_cli_scripts "${CLI_SCRIPT_FILE}"
 }
