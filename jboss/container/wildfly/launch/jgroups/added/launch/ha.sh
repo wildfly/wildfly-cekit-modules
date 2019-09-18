@@ -130,48 +130,56 @@ generate_jgroups_auth_config() {
 
 generate_jgroups_auth_config_cli() {
     local config
+    local protocolTypes
+    local xpath
+    local result
+    local index
+    local protocolType
+    local missingGMS="false"
     config="
       if (outcome != success) of /subsystem=jgroups:read-resource
-            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> "${CONFIG_ERROR_FILE}"
+            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> \${error_file}
             quit
       end-if
 "
-    local stacks=(tcp udp)
-    for stack in "${stacks[@]}"; do
-      local protocolTypes
-      local xpath
-      local result
-      local index
-      local protocolType
-      local missingGMS="false"
-      local stacks=(tcp udp)
-      xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
-      testXpathExpression "${xpath}" "result" "protocolTypes"
-      index=0
-      if [ ${result} -eq 0 ]; then
-        protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
-        arr=(${protocolTypes})
+    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
+    local stackNames
+    testXpathExpression "${xpath}" "result" "stackNames"
 
-        while read -r protocolType; do
-          if [ "${protocolType}" = "pbcast.GMS" ]; then
-            break
+    if [ ${result} -ne 0 ]; then
+      echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure AUTH protocol but your configuration does not contain any stacks in the JGroups subsystem. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
+      return
+    else
+      stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
+      while read -r stack; do
+
+        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
+        testXpathExpression "${xpath}" "result" "protocolTypes"
+        index=0
+        if [ ${result} -eq 0 ]; then
+          protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
+          arr=(${protocolTypes})
+
+          while read -r protocolType; do
+            if [ "${protocolType}" = "pbcast.GMS" ]; then
+              break
+            fi
+            ((index=index+1))
+          done <<< "${protocolTypes}"
+
+          if [ ${index} -eq ${#arr[@]} ]; then
+            echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure AUTH protocol but GMS protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.GMS protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+            missingGMS="true"
+            continue
           fi
-          ((index=index+1))
-        done <<< "${protocolTypes}"
-
-        if [ ${index} -eq ${#arr[@]} ]; then
-          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.GMS protocol in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
-          missingGMS="true"
-          continue
         fi
-      fi
 
-      op=("/subsystem=jgroups/stack=$stack/protocol=AUTH:add(add-index=${index})"
-          "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
-      )
-      config="${config} $(configure_protocol_cli_helper "$stack" "AUTH" "${op[@]}")"
-    done
-
+        op=("/subsystem=jgroups/stack=$stack/protocol=AUTH:add(add-index=${index})"
+            "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
+        )
+        config="${config} $(configure_protocol_cli_helper "$stack" "AUTH" "${op[@]}")"
+      done <<< "${stackNames}"
+  fi
 
   if [ "${missingGMS}" = "false" ]; then
     echo "${config}"

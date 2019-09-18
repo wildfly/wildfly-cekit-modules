@@ -312,8 +312,19 @@ normalize_spaces_new_lines() {
 
 @test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT " {
   expected=$(cat <<EOF
-       if (outcome != success) of /subsystem=jgroups/stack=tcp:read-resource
-           /subsystem=jgroups/stack=tcp:add()
+       if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
+           echo Cannot configure jgroups 'ASYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
+           batch
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=4)
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="true")
+          run-batch
        end-if
 
        if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
@@ -328,24 +339,6 @@ normalize_spaces_new_lines() {
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="true")
-          run-batch
-       end-if
-       if (outcome != success) of /subsystem=jgroups/stack=udp:read-resource
-           /subsystem=jgroups/stack=udp:add()
-       end-if
-
-       if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
-           echo Cannot configure jgroups 'ASYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
-           quit
-       end-if
-
-       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
-           batch
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=4)
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="true")
           run-batch
        end-if
 EOF
@@ -373,8 +366,15 @@ EOF
          echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
        end-if
 
-       if (outcome != success) of /subsystem=jgroups/stack=tcp:read-resource
-           /subsystem=jgroups/stack=tcp:add()
+       if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
+           echo Cannot configure jgroups 'SYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
+           batch
+               /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:add(add-index=4, key-store="encrypt_keystore", key-alias="encrypt_name", key-credential-reference={clear-text="encrypt_password"})
+          run-batch
        end-if
 
        if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="SYM_ENCRYPT":read-resource
@@ -385,20 +385,6 @@ EOF
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="SYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT:add(add-index=4, key-store="encrypt_keystore", key-alias="encrypt_name", key-credential-reference={clear-text="encrypt_password"})
-          run-batch
-       end-if
-       if (outcome != success) of /subsystem=jgroups/stack=udp:read-resource
-           /subsystem=jgroups/stack=udp:add()
-       end-if
-
-       if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
-           echo Cannot configure jgroups 'SYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
-           quit
-       end-if
-
-       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
-           batch
-               /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:add(add-index=4, key-store="encrypt_keystore", key-alias="encrypt_name", key-credential-reference={clear-text="encrypt_password"})
           run-batch
        end-if
 EOF
@@ -424,8 +410,21 @@ EOF
 
 @test "Configure CLI JGROUPS_PROTOCOL=SYM_ENCRYPT - Without Elytron" {
   expected=$(cat <<EOF
-        if (outcome != success) of /subsystem=jgroups/stack=tcp:read-resource
-            /subsystem=jgroups/stack=tcp:add()
+        if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
+            echo Cannot configure jgroups 'SYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+            quit
+        end-if
+
+        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
+            batch
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:add(add-index=10)
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=encrypt_entire_message:add(value=true)
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=keystore_name:add(value="keystore_dir/encrypt_keystore")
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=store_password:add(value="encrypt_password")
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=alias:add(value="encrypt_name")
+          run-batch
         end-if
 
         if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="SYM_ENCRYPT":read-resource
@@ -444,26 +443,7 @@ EOF
                 /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=alias:add(value="encrypt_name")
           run-batch
         end-if
-        if (outcome != success) of /subsystem=jgroups/stack=udp:read-resource
-            /subsystem=jgroups/stack=udp:add()
-        end-if
 
-        if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
-            echo Cannot configure jgroups 'SYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
-            quit
-        end-if
-
-        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
-            batch
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:add(add-index=10)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=encrypt_entire_message:add(value=true)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=keystore_name:add(value="keystore_dir/encrypt_keystore")
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=store_password:add(value="encrypt_password")
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=alias:add(value="encrypt_name")
-          run-batch
-        end-if
 EOF
 )
   cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
