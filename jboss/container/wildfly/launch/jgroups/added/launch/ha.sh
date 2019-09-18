@@ -145,7 +145,7 @@ generate_jgroups_auth_config_cli() {
       local protocolType
       local missingGMS="false"
       local stacks=(tcp udp)
-      xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol']/@type\""
+      xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
       testXpathExpression "${xpath}" "result" "protocolTypes"
       index=0
       if [ ${result} -eq 0 ]; then

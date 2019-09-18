@@ -51,7 +51,7 @@ create_jgroups_elytron_encrypt_sym_cli() {
 
 
   for stack in "${stacks[@]}"; do
-    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol']/@type\""
+    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
     testXpathExpression "${xpath}" "result" "protocolTypes"
     index=0
     if [ ${result} -eq 0 ]; then
