@@ -20,15 +20,18 @@ function preConfigure() {
 }
 
 function prepareEnv() {
+  initTempFiles
   clearDatasourcesEnv
   clearTxDatasourceEnv
 }
 
 function configure() {
+  initTempFiles
   inject_datasources
 }
 
 function configureEnv() {
+  initTempFiles
   inject_external_datasources
 
   # TODO - I don't think this is being used any more? The real action seems to be in tx-datasource.sh
@@ -49,6 +52,17 @@ function finalVerification() {
   fi
   if [ -n "${EE_DEFAULT_DATASOURCE}" ] && [ ! -f "${EE_DEFAULT_DATASOURCE_FILE}" ]; then
     echo "The list of configured datasources does not contain a datasource matching the ee default-bindings datasource specified with EE_DEFAULT_DATASOURCE='${EE_DEFAULT_DATASOURCE}'." >> "${CLI_SCRIPT_ERROR_FILE}"
+  fi
+
+  # Handle timer service here for backward compatibility since this can both be added in the 'internal' and 'external' cases.
+  # The default job repository and ee default datasource are currently added for the 'internal' case only
+  if [ -z "${TIMER_SERVICE_DATA_STORE}" ]; then
+    inject_default_timer_service
+  fi
+  # Add the CLI commands from file
+  if [ -s "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
+    # This will either be the one from the TIMER_SERVICE_DATA_STORE match, or the default one
+    cat "${TIMER_SERVICE_DATA_STORE_FILE}" >> "${CLI_SCRIPT_FILE}"
   fi
 }
 
