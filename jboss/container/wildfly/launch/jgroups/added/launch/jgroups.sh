@@ -1,3 +1,5 @@
+#!/bin/sh
+
 source $JBOSS_HOME/bin/launch/jgroups_common.sh
 
 prepareEnv() {

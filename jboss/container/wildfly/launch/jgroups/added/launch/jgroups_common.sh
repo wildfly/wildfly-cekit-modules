@@ -1,10 +1,11 @@
+#!/bin/sh
 configure_protocol_cli_helper() {
   local params=("${@}")
   local stack=${params[0]}
   local protocol=${params[1]}
   local result
   IFS= read -rd '' result <<- EOF
-    
+
     if (outcome != success) of /subsystem=jgroups/stack=${stack}:read-resource
         /subsystem=jgroups/stack=${stack}:add()
     end-if
