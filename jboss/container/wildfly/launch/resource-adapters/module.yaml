@@ -6,3 +6,20 @@ description: Installs the $JBOSS_HOME/bin/launch files to adjust the resource-ad
 execute:
 - script: configure.sh
   user: '185'
+
+envs:
+  - name: "RESOURCE_ADAPTERS"
+    description: >
+      Comma-separated list of resource adapter env variable prefixes. These prefixes are then appended to all env variables for that resource adapter. 
+      PREFIX_ID: The identifier of the resource adapter as specified in the server configuration file.
+      PREFIX_ARCHIVE: The resource adapter archive.
+      PREFIX_MODULE_SLOT: The slot subdirectory, which contains the module.xml configuration file and any required JAR files.
+      PREFIX_MODULE_ID: The JBoss Module ID where the object factory Java class can be loaded from.
+      PREFIX_CONNECTION_CLASS: The fully qualified class name of a managed connection factory or admin object.
+      PREFIX_CONNECTION_JNDI: The JNDI name for the connection factory.
+      PREFIX_PROPERTY_ParentDirectory: Directory where the data files are stored.
+      PREFIX_PROPERTY_AllowParentPaths: Set AllowParentPaths to false to disallow .. in paths. This prevents requesting files that are not contained in the parent directory.
+      PREFIX_POOL_MAX_SIZE: The maximum number of connections for a pool. No more connections will be created in each sub-pool.
+      PREFIX_POOL_MIN_SIZE: The minimum number of connections for a pool.
+      PREFIX_POOL_PREFILL: Specifies if the pool should be prefilled. Changing this value requires a server restart.
+      PREFIX_POOL_FLUSH_STRATEGY: How the pool should be flushed in case of an error. Valid values are: FailingConnectionOnly (default), IdleConnections, and EntirePool.
