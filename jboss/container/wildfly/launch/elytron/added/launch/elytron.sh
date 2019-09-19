@@ -1,5 +1,11 @@
 # only processes a single environment as the placeholder is not preserved
 prepareEnv() {
+
+  unset ELYTRON_SECDOMAIN_NAME
+  unset ELYTRON_SECDOMAIN_USERS_PROPERTIES
+  unset ELYTRON_SECDOMAIN_ROLES_PROPERTIES
+  unset ELYTRON_SECDOMAIN_CORE_REALM
+
   unset HTTPS_NAME
   unset HTTPS_PASSWORD
   unset HTTPS_KEY_PASSWORD
@@ -329,6 +335,37 @@ configure_security_domains() {
     configure_http_application_security_domains
     configure_ejb_application_security_domains
   fi
+  if [ -n "${ELYTRON_SECDOMAIN_NAME}" ]; then
+    validate_elytron_security_domains_env
+    if [ -z "${ELYTRON_SECDOMAIN_CORE_REALM}" ]; then
+      elytron_sec_domain="${ELYTRON_SECDOMAIN_NAME}"
+      configure_elytron_realm application-properties-"${ELYTRON_SECDOMAIN_NAME}"
+      configure_elytron_only_security_domain "${ELYTRON_SECDOMAIN_NAME}" "application-properties-${ELYTRON_SECDOMAIN_NAME}"
+    else
+      elytron_sec_domain="ApplicationDomain"
+    fi
+    configure_undertow_security_domain "${ELYTRON_SECDOMAIN_NAME}" "$elytron_sec_domain"
+    configure_ejb_security_domain "${ELYTRON_SECDOMAIN_NAME}" "$elytron_sec_domain"
+  fi
+}
+
+validate_elytron_security_domains_env() {
+  if [ -n "${ELYTRON_SECDOMAIN_CORE_REALM}" ]; then
+    if [ -n "${ELYTRON_SECDOMAIN_USERS_PROPERTIES}" ] || [ -n "${ELYTRON_SECDOMAIN_ROLES_PROPERTIES}" ]; then
+      log_error "When configuring an ELYTRON_SECDOMAIN, ELYTRON_SECDOMAIN_USERS_PROPERTIES and ELYTRON_SECDOMAIN_ROLES_PROPERTIES can't be used with ELYTRON_SECDOMAIN_CORE_REALM."
+      exit 1
+    fi
+  else
+    if [ -z "${ELYTRON_SECDOMAIN_USERS_PROPERTIES}" ] && [ -z "${ELYTRON_SECDOMAIN_ROLES_PROPERTIES}" ]; then
+      log_error "When configuring an ELYTRON_SECDOMAIN, you must set ELYTRON_SECDOMAIN_CORE_REALM or ELYTRON_SECDOMAIN_USERS_PROPERTIES and ELYTRON_SECDOMAIN_ROLES_PROPERTIES."
+      exit 1
+    else
+      if [ -z "${ELYTRON_SECDOMAIN_USERS_PROPERTIES}" ] || [ -z "${ELYTRON_SECDOMAIN_ROLES_PROPERTIES}" ]; then
+        log_error "When configuring an ELYTRON_SECDOMAIN, you must set both ELYTRON_SECDOMAIN_USERS_PROPERTIES and ELYTRON_SECDOMAIN_ROLES_PROPERTIES."
+        exit 1
+      fi
+    fi
+  fi
 }
 
 configure_elytron_integration() {
@@ -446,4 +483,62 @@ configure_ejb_application_security_domains() {
     end-if
 EOF
   fi
+}
+
+configure_elytron_realm() {
+
+  users_properties_arg="users-properties={path=${ELYTRON_SECDOMAIN_USERS_PROPERTIES}"
+  if [ "${ELYTRON_SECDOMAIN_USERS_PROPERTIES:0:1}" != "/" ]; then
+    users_properties_arg="$users_properties_arg, relative-to=jboss.server.config.dir"
+  fi
+  users_properties_arg="$users_properties_arg, plain-text=true, digest-realm-name=\"Application Security\"}"
+
+  roles_properties_arg="groups-properties={path=${ELYTRON_SECDOMAIN_ROLES_PROPERTIES}"
+  if [ "${ELYTRON_SECDOMAIN_ROLES_PROPERTIES:0:1}" != "/" ]; then
+    roles_properties_arg="$roles_properties_arg, relative-to=jboss.server.config.dir"
+  fi
+  roles_properties_arg="$roles_properties_arg}"
+
+  cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome == success) of /subsystem=elytron/properties-realm=$1:read-resource
+      echo ELYTRON_SEC_DOMAIN environment variable value conflicts with an existing elytron properties-realm, server can't be configured. >> \${error_file}
+      exit
+    else
+      /subsystem=elytron/properties-realm=$1:add($users_properties_arg, $roles_properties_arg, groups-attribute=Roles)
+    end-if
+EOF
+}
+
+configure_elytron_only_security_domain() {
+  cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome == success) of /subsystem=elytron/security-domain=$1:read-resource
+      echo ELYTRON_SEC_DOMAIN environment variable value conflicts with an existing elytron security domain, server can't be configured. >> \${error_file}
+      exit
+    else
+      /subsystem=elytron/security-domain=$1:add(realms=[{realm=$2}], default-realm=$2, permission-mapper=default-permission-mapper)
+    end-if
+EOF
+}
+
+configure_undertow_security_domain() {
+    cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome != success) of /subsystem=undertow:read-resource
+      echo You have set an ELYTRON_SEC_DOMAIN environment variables to configure an application-security-domain. Fix your configuration to contain undertow subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+    if (outcome == success) of /subsystem=undertow/application-security-domain=$1:read-resource
+      echo ELYTRON_SEC_DOMAIN environment variable value conflicts with an existing undertow security domain, server can't be configured. >> \${error_file}
+      exit
+    else
+      /subsystem=undertow/application-security-domain=$1:add(security-domain=$2)
+    end-if
+EOF
+}
+
+configure_ejb_security_domain() {
+    cat << EOF >> ${CLI_SCRIPT_FILE}
+    if (outcome == success) of /subsystem=ejb3:read-resource
+      /subsystem=ejb3/application-security-domain=$1:add(security-domain=$2)
+    end-if
+EOF
 }

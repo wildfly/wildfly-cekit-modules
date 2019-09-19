@@ -264,6 +264,23 @@ function add_connection_definitions() {
 
       conn_def_addr="${ra_addr}/connection-definitions=${pool_name}"
       conn_def_add="${conn_def_addr}:add(class-name=\"${ra_class}\", jndi-name=\"${ra_jndi}\", enabled=\"true\", use-java-context=\"true\""
+      
+      local xpathSec="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
+      local secRet
+      testXpathExpression "${xpathSec}" "secRet"
+      local xpathEl="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:wildfly:elytron:')]\""
+      local elytronRet
+      testXpathExpression "${xpathEl}" "elytronRet"
+      
+      # no legacy security case
+      if [ "${secRet}" -ne 0 ]; then
+        if [ "${elytronRet}" -ne 0 ]; then
+          log_error "Elytron subsystem is not present. resource-adapter connection-definition can't be added. Fix your configuration."
+          exit 1
+        fi
+        conn_def_add="${conn_def_add}, elytron-enabled=true, recovery-elytron-enabled=true"
+      fi
+    
       if [ -n "${tracking}" ]; then
         # monitor applications, look for unclosed resources.
         conn_def_add="${conn_def_add}, tracking=\"${tracking}\""

@@ -9,6 +9,14 @@ envs:
     - name: "CONFIGURE_ELYTRON_SSL"
       example: "true"
       description: "Use Elytron to configure TLS and associated configuration elements."
+    - name: ELYTRON_SECDOMAIN_NAME
+      description: "Elytron application security domain to configure undertow and ejb3."
+    - name: ELYTRON_SECDOMAIN_USERS_PROPERTIES
+      description: "Absolute or relative to jboss.server.config.dir path to properties file that contains users and passwords."
+    - name:  ELYTRON_SECDOMAIN_ROLES_PROPERTIES
+      description: "Absolute or relative to jboss.server.config.dir path to properties file that contains users to roles mapping."
+    - name: ELYTRON_SECDOMAIN_CORE_REALM
+      description: "If set to true, the default elytron security domain will be used. The users and roles are retrieved from the server default files." 
     - name: "HTTPS_PASSWORD"
       example: "mypassword"
       description: "If defined along with HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE, sets the password to open the keystore."
