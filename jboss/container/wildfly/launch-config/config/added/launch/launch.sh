@@ -37,6 +37,9 @@ function configure_server() {
   # Sources the configure-modules, it also will invoke all the modules configured in the CONFIGURE_SCRIPTS array
   source $JBOSS_HOME/bin/launch/configure-modules.sh
 
+  # Process any errors and warnings generated while running the launch configuration scripts
+  processErrorsAndWarnings
+
   # The scripts will add the operations in a special file, invoke the embedded server if it is necessary
   # and run the CLI scripts
   exec_cli_scripts "${CLI_SCRIPT_FILE}"
