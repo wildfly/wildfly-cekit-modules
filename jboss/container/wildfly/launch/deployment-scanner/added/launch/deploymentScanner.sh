@@ -31,7 +31,7 @@ function configure_deployment_scanner() {
     local ssRet
     testXpathExpression "${xpath}" "ssRet"
     if [ "${ssRet}" -ne 0 ]; then
-      echo "You have set environment variables to set auto-deploy-exploded for the deployment scanner. Fix your configuration to contain the deployment-scanner subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+      echo "You have set environment variables to set auto-deploy-exploded for the deployment scanner. Fix your configuration to contain the deployment-scanner subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
       return
     fi
 
@@ -40,7 +40,7 @@ function configure_deployment_scanner() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:deployment-scanner:')]/*[local-name()='deployment-scanner']\""
     testXpathExpression "${xpath}" "scannersRet"
     if [ "${scannersRet}" -ne 0 ]; then
-      echo "You have set environment variables to set auto-deploy-exploded for the deployment scanner. Fix your configuration to contain at least one deployment-scanner in the deployment-scanner subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+      echo "You have set environment variables to set auto-deploy-exploded for the deployment scanner. Fix your configuration to contain at least one deployment-scanner in the deployment-scanner subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
       return
     fi
 

@@ -191,7 +191,7 @@ checkUndertowSubsystem() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]\""
     testXpathExpression "${xpath}" "ssRet"
     if [ "${ssRet}" -ne 0 ]; then
-      echo "You have set environment variables to add undertow filters. Fix your configuration to contain the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+      echo "You have set environment variables to add undertow filters. Fix your configuration to contain the undertow subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
       error_in_base_config="true"
       return
     fi
@@ -208,7 +208,7 @@ checkUndertowSubsystemWithHostsAndServers() {
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
   testXpathExpression "${xpath}" "snRet"
   if [ "${snRet}" -ne 0 ]; then
-    echo "You have set environment variables to add undertow filters. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+    echo "You have set environment variables to add undertow filters. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
     error_in_base_config="true"
     return
   fi
@@ -218,7 +218,7 @@ checkUndertowSubsystemWithHostsAndServers() {
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='host']/@name\""
   testXpathExpression "${xpath}" "hRet"
   if [ "${hRet}" -ne 0 ]; then
-    echo "You have set environment variables to add undertow filters. Fix your configuration to contain at least one host in the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+    echo "You have set environment variables to add undertow filters. Fix your configuration to contain at least one host in the undertow subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
     error_in_base_config="true"
     return
   fi

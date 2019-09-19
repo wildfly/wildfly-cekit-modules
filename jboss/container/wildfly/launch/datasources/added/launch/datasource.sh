@@ -45,13 +45,13 @@ function configureEnv() {
 function finalVerification() {
   initTempFiles
   if [ -n "${DEFAULT_JOB_REPOSITORY}" ] && [ ! -f "${DEFAULT_JOB_REPOSITORY_FILE}" ]; then
-    echo "The list of configured datasources does not contain a datasource matching the default job repository datasource specified with DEFAULT_JOB_REPOSITORY='${DEFAULT_JOB_REPOSITORY}'." >> "${CONFIG_ERROR_FILE}"
+    echo "The list of configured datasources does not contain a datasource matching the default job repository datasource specified with DEFAULT_JOB_REPOSITORY='${DEFAULT_JOB_REPOSITORY}'." >> "${CLI_SCRIPT_ERROR_FILE}"
   fi
   if [ -n "${TIMER_SERVICE_DATA_STORE}" ] && [ ! -f "${TIMER_SERVICE_DATA_STORE_FILE}" ]; then
-    echo "The list of configured datasources does not contain a datasource matching the timer-service datastore datasource specified with TIMER_SERVICE_DATA_STORE='${TIMER_SERVICE_DATA_STORE}'." >> "${CONFIG_ERROR_FILE}"
+    echo "The list of configured datasources does not contain a datasource matching the timer-service datastore datasource specified with TIMER_SERVICE_DATA_STORE='${TIMER_SERVICE_DATA_STORE}'." >> "${CLI_SCRIPT_ERROR_FILE}"
   fi
   if [ -n "${EE_DEFAULT_DATASOURCE}" ] && [ ! -f "${EE_DEFAULT_DATASOURCE_FILE}" ]; then
-    echo "The list of configured datasources does not contain a datasource matching the ee default-bindings datasource specified with EE_DEFAULT_DATASOURCE='${EE_DEFAULT_DATASOURCE}'." >> "${CONFIG_ERROR_FILE}"
+    echo "The list of configured datasources does not contain a datasource matching the ee default-bindings datasource specified with EE_DEFAULT_DATASOURCE='${EE_DEFAULT_DATASOURCE}'." >> "${CLI_SCRIPT_ERROR_FILE}"
   fi
 
   # Handle timer service here for backward compatibility since this can both be added in the 'internal' and 'external' cases.
