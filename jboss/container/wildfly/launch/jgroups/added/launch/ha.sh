@@ -138,7 +138,7 @@ generate_jgroups_auth_config_cli() {
     local missingGMS="false"
     config="
       if (outcome != success) of /subsystem=jgroups:read-resource
-            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> \${error_file}
+            echo You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen. >> \${error_file}
             quit
       end-if
 "
