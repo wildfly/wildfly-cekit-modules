@@ -198,6 +198,14 @@ function generate_remote_artemis_socket_binding() {
          </outbound-socket-binding>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
 }
 
+# $1 - name - messaging-remote-throughput
+# $2 - remote hostname
+# $3 - remote port
+# <!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->
+function generate_remote_artemis_socket_binding_cli() {
+    :
+}
+
 # Arguments:
 # $1 - physical name
 # $2 - jndi name
@@ -214,6 +222,24 @@ function generate_object_config() {
                             <config-property name=\"PhysicalName\">$1</config-property>
                         </admin-object>"
   echo $ao
+}
+
+# Arguments:
+# $1 - physical name
+# $2 - jndi name
+# $3 - class
+# $4 - resource adapter name
+function generate_object_config_cli() {
+  log_info "generating CLI object config for $1"
+
+  local cli_operations
+  IFS= read -rd '' cli_operations << EOF
+
+  /subsystem=resource-adapters/resource-adapter="${4}"/admin-objects="${1}":add(class-name="${3}", jndi-name="${2}", use-java-context=true)
+  /subsystem=resource-adapters/resource-adapter="${4}"/admin-objects="${1}"/config-properties=PhysicalName:add(value="${1}")
+EOF
+
+  echo "${cli_operations}"
 }
 
 # Arguments:
@@ -249,6 +275,11 @@ function generate_resource_adapter() {
     export EJB_RESOURCE_ADAPTER_NAME="${ra_id}"
   fi
 
+  local ra_tracking
+  if [ -n "${13}" ]; then
+    ra_tracking="tracking=\"${13}\""
+  fi
+
   case "${10}" in
     "amq")
       prefix=$8
@@ -261,7 +292,7 @@ function generate_resource_adapter() {
                     <config-property name=\"ServerUrl\">tcp://$6:$7?jms.rmIdFromConnectionId=true</config-property>
                     <connection-definitions>
                         <connection-definition
-                              "${13}"
+                              "${ra_tracking}"
                               class-name=\"org.apache.activemq.ra.ActiveMQManagedConnectionFactory\"
                               jndi-name=\"$2\"
                               enabled=\"true\"
@@ -331,6 +362,109 @@ function generate_resource_adapter() {
   echo $ra | sed ':a;N;$!ba;s|\n|\\n|g'
 }
 
+# Arguments:
+# $1 - service name
+# $2 - connection factory jndi name
+# $3 - broker username
+# $4 - broker password
+# $5 - protocol
+# $6 - broker host
+# $7 - broker port
+# $8 - prefix
+# $9 - archive
+# $10 - driver
+# $11 - queue names
+# $12 - topic names
+# $13 - ra tracking
+# $14 - resource counter, incremented for each broker, starting at 0
+function generate_resource_adapter_cli() {
+  log_info "Generating CLI resource adapter configuration for service: $1 (${10})" >&2
+  IFS=',' read -a queues <<< ${11}
+  IFS=',' read -a topics <<< ${12}
+
+  local cli_operations=""
+
+  local ra_id=""
+  # this preserves the expected behavior of the first RA, and doesn't append a number. Any additional RAs will have -count appended.
+  if [ "${14}" -eq "0" ]; then
+    ra_id="${9}"
+  else
+    ra_id="${9}-${14}"
+  fi
+
+  # if we don't declare a EJB_RESOURCE_ADAPTER_NAME, then just use the first one
+  if [ -z "${EJB_RESOURCE_ADAPTER_NAME}" ]; then
+    export EJB_RESOURCE_ADAPTER_NAME="${ra_id}"
+  fi
+
+  local ra_tracking
+  if [ -n "${13}" ]; then
+    ra_tracking="tracking=\"${13}\", "
+  fi
+
+  case "${10}" in
+    "amq")
+    IFS= read -rd '' cli_operations <<- EOF
+
+      if (outcome != success) of /subsystem=resource-adapters:read-resource
+        echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${1}' under '${8}' prefix. Fix your configuration to contain resource adapters subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      /subsystem=resource-adapters/resource-adapter=${ra_id}:add(archive=$9, transaction-support=XATransaction)
+      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=UserName:add(value="${3}")
+      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=Password:add(value="${4}")
+      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=ServerUrl:add(value="tcp://${6}:${7}?jms.rmIdFromConnectionId=true")
+      /subsystem=resource-adapters/resource-adapter=${ra_id}/connection-definitions="${1}-ConnectionFactory":add(${ra_tracking}\
+class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="${2}", enabled=true, min-pool-size=1, max-pool-size=20, \
+pool-prefill=false, same-rm-override=false, recovery-username="${3}", recovery-password="${4}")
+EOF
+    # backwards-compatability flag per CLOUD-329
+    simple_def_phys_dest=$(echo "${MQ_SIMPLE_DEFAULT_PHYSICAL_DESTINATION}" | tr [:upper:] [:lower:])
+
+    if [ "${#queues[@]}" -ne "0" ]; then
+      for queue in ${queues[@]}; do
+        queue_env=${prefix}_QUEUE_${queue^^}
+        queue_env=${queue_env//[-\.]/_}
+
+        if [ "${simple_def_phys_dest}" = "true" ]; then
+          physical=$(find_env "${queue_env}_PHYSICAL" "$queue")
+        else
+          physical=$(find_env "${queue_env}_PHYSICAL" "queue/$queue")
+        fi
+        jndi=$(find_env "${queue_env}_JNDI" "java:/queue/$queue")
+        class="org.apache.activemq.command.ActiveMQQueue"
+
+        cli_operations="${cli_operations}$(generate_object_config_cli "${physical}" "${jndi}" "${class}" "${ra_id}")"
+      done
+    fi
+
+    if [ "${#topics[@]}" -ne "0" ]; then
+      for topic in ${topics[@]}; do
+        topic_env=${prefix}_TOPIC_${topic^^}
+        topic_env=${topic_env//[-\.]/_}
+
+        if [ "${simple_def_phys_dest}" = "true" ]; then
+          physical=$(find_env "${topic_env}_PHYSICAL" "$topic")
+        else
+          physical=$(find_env "${topic_env}_PHYSICAL" "topic/$topic")
+        fi
+        jndi=$(find_env "${topic_env}_JNDI" "java:/topic/$topic")
+        class="org.apache.activemq.command.ActiveMQTopic"
+
+        cli_operations="${cli_operations}$(generate_object_config_cli "${physical}" "${jndi}" "${class}" "${ra_id}")"
+      done
+    fi
+
+    ;;
+  "amq7")
+      :
+    ;;
+  esac
+
+  echo "${cli_operations}"
+}
+
 # Finds the name of the broker services and generates resource adapters
 # based on this info
 function inject_brokers() {
@@ -344,6 +478,32 @@ function inject_brokers() {
   has_default_cnx_factory=false
 
   defaultJmsConnectionFactoryJndi="$DEFAULT_JMS_CONNECTION_FACTORY"
+
+  local resource_adapters_mode
+  getConfigurationMode "<!-- ##RESOURCE_ADAPTERS## -->" "resource_adapters_mode"
+
+  local amq_messaging_socket_binding_mode
+  getConfigurationMode "<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->" "amq_messaging_socket_binding_mode"
+
+  local messaging_subsystem_config_mode
+  getConfigurationMode "<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->" "messaging_subsystem_config_mode"
+
+  local amg_remote_context_config_mode
+  getConfigurationMode "<!-- ##AMQ_REMOTE_CONTEXT## -->" "amg_remote_context_config_mode"
+
+  local default_jms_config_mode
+  getConfigurationMode "##DEFAULT_JMS##" "default_jms_config_mode"
+
+  local has_ee_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]\""
+  testXpathExpression "${xpath}" "has_ee_subsystem"
+
+  local has_resource_adapters
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:resource-adapters:')]\""
+  testXpathExpression "${xpath}" "has_resource_adapters"
+
+
+
 
   if [ "${#brokers[@]}" -eq "0" ] ; then
     if [ -z "$defaultJmsConnectionFactoryJndi" ]; then
@@ -378,22 +538,23 @@ function inject_brokers() {
       protocol_env=${protocol_env^^}
 
       # remap for AMQ7 config vars, AMQ7 gets looked up as AMQ
+      local host_var="${service}_${protocol_env}_SERVICE_HOST"
+      local port_var="${service}_${protocol_env}_SERVICE_PORT"
       if [ "$type" = "AMQ7" ] ; then
-        host=$(find_env "${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_HOST")
-        port=$(find_env "${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_PORT")
-      else
-        host=$(find_env "${service}_${protocol_env}_SERVICE_HOST")
-        port=$(find_env "${service}_${protocol_env}_SERVICE_PORT")
+        host_var="${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_HOST"
+        port_var="${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_PORT"
       fi
+      host=$(find_env "${host_var}")
+      port=$(find_env "${port_var}")
 
       if [ -z $host ] || [ -z $port ]; then
         log_warning "There is a problem with your service configuration!"
-        log_warning "You provided following MQ mapping (via MQ_SERVICE_PREFIX_MAPPING environment variable): $brokers. To configure resource adapters we expect ${service}_${protocol_env}_SERVICE_HOST and ${service}_${protocol_env}_SERVICE_PORT to be set."
+        log_warning "You provided following MQ mapping (via MQ_SERVICE_PREFIX_MAPPING environment variable): $brokers. To configure resource adapters we expect ${host_var} and ${port_var} to be set."
         log_warning
         log_warning "Current values:"
         log_warning
-        log_warning "${service}_${protocol_env}_SERVICE_HOST: $host"
-        log_warning "${service}_${protocol_env}_SERVICE_PORT: $port"
+        log_warning "${host_var}: $host"
+        log_warning "${port_var}: $port"
         log_warning
         log_warning "Please make sure you provided correct service name and prefix in the mapping. Additionally please check that you do not set portalIP to None in the $service_name service. Headless services are not supported at this time."
         log_warning
@@ -417,16 +578,25 @@ function inject_brokers() {
       topics=$(find_env "${prefix}_TOPICS")
 
       tracking=$(find_env "${prefix}_TRACKING")
-      if [ -n "${tracking}" ]; then
-         ra_tracking="tracking=\"${tracking}\""
-      fi
+
+      # TODO: validate MQ_USERNAME="mq_username" and  MQ_PASSWORD="mq_password" ????
 
       case "$type" in
         "AMQ")
+          # This is the legacy AMQ configuration. In this case we only configure the resource adapters subsystem adding activemq-rar.rar
           driver="amq"
+
+          # the name of the archive is fixed, so, it looks like we can only configure one AMQ broker
           archive="activemq-rar.rar"
-          ra=$(generate_resource_adapter ${service_name} ${jndi} ${username} ${password} ${protocol} ${host} ${port} ${prefix} ${archive} ${driver} "${queues}" "${topics}" "${ra_tracking}" ${counter})
-          sed -i "s|<!-- ##RESOURCE_ADAPTERS## -->|${ra%$'\n'}<!-- ##RESOURCE_ADAPTERS## -->|" $CONFIG_FILE
+
+          if [ "${resource_adapters_mode}" = "xml" ]; then
+            ra=$(generate_resource_adapter ${service_name} ${jndi} ${username} ${password} ${protocol} ${host} ${port} ${prefix} ${archive} ${driver} "${queues}" "${topics}" "${tracking}" ${counter})
+            sed -i "s|<!-- ##RESOURCE_ADAPTERS## -->|${ra%$'\n'}<!-- ##RESOURCE_ADAPTERS## -->|" $CONFIG_FILE
+          elif [ "${resource_adapters_mode}" = "cli" ]; then
+            ra=$(generate_resource_adapter_cli ${service_name} ${jndi} ${username} ${password} ${protocol} ${host} ${port} ${prefix} ${archive} ${driver} "${queues}" "${topics}" "${tracking}" ${counter})
+            echo "${ra}" >> "${CLI_SCRIPT_FILE}"
+          fi
+
           REMOTE_AMQ_BROKER=true
           REMOTE_AMQ6=true
           ;;
@@ -435,6 +605,7 @@ function inject_brokers() {
          archive=""
          REMOTE_AMQ_BROKER=true
          REMOTE_AMQ7=true
+
          if [ "$subsystem_added" != "true" ] ; then
              activemq_subsystem=$(sed -e ':a;N;$!ba;s|\n|\\n|g' <"${ACTIVEMQ_SUBSYSTEM_FILE}")
              sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|" $CONFIG_FILE
@@ -450,8 +621,22 @@ function inject_brokers() {
          connector=$(generate_remote_artemis_remote_connector ${socket_binding_name})
          sed -i "s|<!-- ##AMQ_REMOTE_CONNECTOR## -->|${connector%$'\n'}<!-- ##AMQ_REMOTE_CONNECTOR## -->|" $CONFIG_FILE
 
+
+        if [ "${amq_messaging_socket_binding_mode}" = "xml" ]; then
+          :
+        elif [ "${amq_messaging_socket_binding_mode}" = "cli" ]; then
+          :
+        fi
+
          socket_binding=$(generate_remote_artemis_socket_binding ${socket_binding_name} ${host} ${port})
          sed -i "s|<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|${socket_binding%$'\n'}<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|" $CONFIG_FILE
+
+         # Naming subsystem
+         if [ "${amg_remote_context}" = "xml" ]; then
+          :
+        elif [ "${amg_remote_context}" = "cli" ]; then
+          :
+        fi
 
          naming=$(generate_remote_artemis_naming "remoteContext" ${host} ${port})
          sed -i "s|<!-- ##AMQ_REMOTE_CONTEXT## -->|${naming%$'\n'}<!-- ##AMQ_REMOTE_CONTEXT## -->|" $CONFIG_FILE
