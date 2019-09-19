@@ -55,7 +55,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]\""
       testXpathExpression "${xpath}" "subsystemRet"
       if [ "${subsystemRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
         return
       fi
 
@@ -66,7 +66,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
       testXpathExpression "${xpath}" "serverNamesRet" "serverNames"
       if [ "${serverNamesRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
         return
       fi
 
@@ -75,7 +75,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='host']\""
       testXpathExpression "${xpath}" "hostsRet"
       if [ "${hostsRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
         return
       fi
 
@@ -97,7 +97,7 @@ function add_cli_commands_for_server_hosts() {
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host']/@name\""
   testXpathExpression "${xpath}" "ret" "hostNames"
   if [ "${ret}" -ne 0 ]; then
-    echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. This is not added to the undertow server '${serverName}' since it has no hosts." >> ${CLI_WARNING_FILE}
+    echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. This is not added to the undertow server '${serverName}' since it has no hosts." >> ${CONFIG_WARNING_FILE}
     return
   fi
 
@@ -149,7 +149,7 @@ function add_cli_commands_for_host() {
     fi
 
     if [ "${nonMatching}" == "1" ]; then
-      echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration." >> ${CLI_SCRIPT_ERROR_FILE}
+      echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration." >> ${CONFIG_ERROR_FILE}
       return
     fi
   else

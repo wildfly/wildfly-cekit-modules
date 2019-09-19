@@ -63,7 +63,7 @@ create_jgroups_elytron_encrypt_sym_cli() {
       done <<< "${protocolTypes}"
 
       if [ ${index} -eq ${#arr[@]} ]; then
-        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
+        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
         missingNAKACK2="true"
         continue
       fi
@@ -125,7 +125,7 @@ create_jgroups_encrypt_asym_cli() {
         done <<< "${protocolTypes}"
 
         if [ ${index} -eq ${#arr[@]} ]; then
-          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
+          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
           missingNAKACK2="true"
           continue
         fi
@@ -190,7 +190,7 @@ create_jgroups_elytron_legacy_cli() {
       done <<< "${protocolTypes}"
 
       if [ ${index} -eq ${#arr[@]} ]; then
-        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
+        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
         missingNAKACK2="true"
         continue
       fi

@@ -180,7 +180,7 @@ EOF
       if [ "${line}" = "${expected}" ]; then
         break;
       fi
-  done < "$CLI_SCRIPT_ERROR_FILE"
+  done < "$CONFIG_ERROR_FILE"
   echo "${line}"
   [ "${line}" = "${expected}" ]
 }
