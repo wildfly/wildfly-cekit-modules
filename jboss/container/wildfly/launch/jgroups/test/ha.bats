@@ -274,3 +274,71 @@ EOF
   [ "${result}" = "${expected}" ]
 }
 
+@test "Test HA configuration file - AUTH insert order" {
+  expected=$(cat <<EOF
+        if (outcome != success) of /subsystem=jgroups:read-resource
+               echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen." >> \${error_file}
+               quit
+         end-if
+
+       if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="AUTH":read-resource
+           echo Cannot configure jgroups 'AUTH' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="AUTH":read-resource
+           batch
+               /subsystem=jgroups/stack=udp/protocol=AUTH:add(add-index=6)
+               /subsystem=jgroups/stack=udp/protocol=AUTH/token=digest:add(algorithm=SHA-512, shared-secret-reference={clear-text=cluster_password})
+          run-batch
+       end-if
+
+       if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="AUTH":read-resource
+           echo Cannot configure jgroups 'AUTH' protocol under 'tcp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="AUTH":read-resource
+           batch
+               /subsystem=jgroups/stack=tcp/protocol=AUTH:add(add-index=0)
+               /subsystem=jgroups/stack=tcp/protocol=AUTH/token=digest:add(algorithm=SHA-512, shared-secret-reference={clear-text=cluster_password})
+          run-batch
+       end-if
+EOF
+)
+
+  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-auth-gms.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+
+  CONF_AUTH_MODE="cli"
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  JGROUPS_ENCRYPT_SECRET="encrypt_secret"
+  JGROUPS_ENCRYPT_NAME="encrypt_name"
+  JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
+  JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"
+  JGROUPS_ENCRYPT_KEYSTORE_DIR="keystore_dir"
+  JGROUPS_CLUSTER_PASSWORD="cluster_password"
+
+  run configure_ha
+
+  output=$(cat "${CLI_SCRIPT_FILE}")
+
+  normalize_spaces_new_lines
+  echo "${output}" > /tmp/output.txt
+  echo "${expected}" > /tmp/expected.txt
+
+  [ "${output}" = "${expected}" ]
+
+}
+
+
+## test based on CLI operations
+normalize_spaces_new_lines() {
+    echo "output=${output}<<"
+  echo "expected=${expected}<<"
+  output=$(printf '%s\n' "$output" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
+  expected=$(printf '%s\n' "$expected" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
+
+  #echo "output=${output}<<"
+  #echo "expected=${expected}<<"
+}
