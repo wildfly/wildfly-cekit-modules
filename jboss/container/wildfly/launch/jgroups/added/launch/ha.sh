@@ -122,7 +122,7 @@ generate_jgroups_auth_config() {
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
     config="
       if (outcome != success) of /subsystem=jgroups:read-resource
-            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> "${CONFIG_ERROR_FILE}"
+            echo \"You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure JGroups authentication protocol. Fix your configuration to contain JGgroups subsystem for this to happen.\" >> "${CLI_SCRIPT_ERROR_FILE}"
             quit
       end-if
 "
