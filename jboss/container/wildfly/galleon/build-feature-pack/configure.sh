@@ -26,24 +26,31 @@ if [ -z "$GALLEON_FP_COMMON_PKG_NAME" ]; then
   exit 1
 fi
 
-# Download offliner runtime
-curl -v -L http://repo.maven.apache.org/maven2/com/redhat/red/offliner/offliner/$OFFLINER_VERSION/offliner-$OFFLINER_VERSION.jar > /tmp/offliner.jar
+ZIPPED_REPO="/tmp/artifacts/maven-repo.zip"
+if [ -f "${ZIPPED_REPO}" ]; then
+  echo "Found zipped repository, installing it."
+  unzip ${ZIPPED_REPO} -d /tmp
+  mv /tmp/repository "$GALLEON_LOCAL_MAVEN_REPO"
+else
+  # Download offliner runtime
+  curl -v -L http://repo.maven.apache.org/maven2/com/redhat/red/offliner/offliner/$OFFLINER_VERSION/offliner-$OFFLINER_VERSION.jar > /tmp/offliner.jar
 
-# Download offliner file
-curl -v -L $WILDFLY_DIST_MAVEN_LOCATION/$WILDFLY_VERSION/wildfly-dist-$WILDFLY_VERSION-artifact-list.txt > /tmp/offliner.txt
+  # Download offliner file
+  curl -v -L $WILDFLY_DIST_MAVEN_LOCATION/$WILDFLY_VERSION/wildfly-dist-$WILDFLY_VERSION-artifact-list.txt > /tmp/offliner.txt
 
-# Populate maven repo, in case we have errors (occur when using locally built WildFly, no md5 nor sha files), cd to /tmp where error.logs is written.
-cd /tmp
-java -jar /tmp/offliner.jar $OFFLINER_URLS \
-/tmp/offliner.txt --dir $GALLEON_LOCAL_MAVEN_REPO > /dev/null
-if [ -f ./errors.log ]; then
-  echo ERRORS WHILE RETRIEVING ARTIFACTS. Offliner file is invalid or you are using a SNAPSHOT BUILD
-  echo Offliner errors:
-  cat ./errors.log
+  # Populate maven repo, in case we have errors (occur when using locally built WildFly, no md5 nor sha files), cd to /tmp where error.logs is written.
+  cd /tmp
+  java -jar /tmp/offliner.jar $OFFLINER_URLS \
+  /tmp/offliner.txt --dir $GALLEON_LOCAL_MAVEN_REPO > /dev/null
+  if [ -f ./errors.log ]; then
+    echo ERRORS WHILE RETRIEVING ARTIFACTS. Offliner file is invalid or you are using a SNAPSHOT BUILD
+    echo Offliner errors:
+    cat ./errors.log
+  fi
+  cd ..
+
+  rm /tmp/offliner.jar && rm /tmp/offliner.txt
 fi
-cd ..
-
-rm /tmp/offliner.jar && rm /tmp/offliner.txt
 
 if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
   # required to have maven enabled.
