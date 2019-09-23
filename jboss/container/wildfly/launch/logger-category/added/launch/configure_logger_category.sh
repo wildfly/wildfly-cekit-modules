@@ -46,7 +46,7 @@ add_logger_category() {
               local ret
               testXpathExpression "${xpath}" "ret"
               if [ "${ret}" -ne 0 ]; then
-                echo "You have set LOGGER_CATEGORIES to configure a logger. Fix your configuration to contain the logging subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+                echo "You have set LOGGER_CATEGORIES to configure a logger. Fix your configuration to contain the logging subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
               fi
         fi
 

@@ -105,7 +105,7 @@ function configureHttpsCli() {
     local ssRet
     testXpathExpression "${xpath}" "ssRet"
     if [ "${ssRet}" -ne 0 ]; then
-      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain the undertow subsystem for this to happen." >> "${CLI_SCRIPT_ERROR_FILE}"
+      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
       return
     fi
 
@@ -115,7 +115,7 @@ function configureHttpsCli() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
     testXpathExpression "${xpath}" "serverNamesRet"
     if [ "${serverNamesRet}" -ne 0 ]; then
-      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CLI_SCRIPT_ERROR_FILE}
+      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
       return
     fi
 
@@ -124,7 +124,7 @@ function configureHttpsCli() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='https-listener']/@name\""
     testXpathExpression "${xpath}" "httpsListenersRet"
     if [ "${httpsListenersRet}" -eq 0 ]; then
-      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add https-listeners to your undertow servers, however at least one of these already contains an https-listener. Fix your configuration." >> "${CLI_SCRIPT_ERROR_FILE}"
+      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add https-listeners to your undertow servers, however at least one of these already contains an https-listener. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
       return
     fi
 
