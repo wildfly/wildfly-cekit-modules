@@ -209,14 +209,22 @@ generate_generic_ping_config() {
       testXpathExpression "${xpath}" "ret"
 
       if [ $ret -eq 0 ]; then
-        local stacks=(tcp udp)
-        for stack in "${stacks[@]}"; do
-          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
-          if [ "${socket_binding}x" != "x" ]; then
-            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
-          fi
-          config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}")"
-        done
+        # No need to log a warning if the jgroups subsystem does not exist, since we will only call this code if it is there (in configure())
+
+        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
+        local stackNames
+        testXpathExpression "${xpath}" "result" "stackNames"
+
+        if [ ${result} -eq 0 ]; then
+          stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
+          while read -r stack; do
+            local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
+            if [ "${socket_binding}x" != "x" ]; then
+              op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
+            fi
+            config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}")"
+          done <<< "${stackNames}"
+        fi
       fi
     fi
 
@@ -257,22 +265,30 @@ generate_dns_ping_config() {
       testXpathExpression "${xpath}" "ret"
 
       if [ $ret -eq 0 ]; then
-        local stacks=(tcp udp)
-        for stack in "${stacks[@]}"; do
-          local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
-          if [ "${socket_binding}x" != "x" ]; then
-            op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
-          fi
+        # No need to log a warning if the jgroups subsystem does not exist, since we will only call this code if it is there (in configure())
 
-          local op_prop1=""
-          local op_prop2=""
-          if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
-            op_prop1="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
-            op_prop2="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
-          fi
+        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
+        local stackNames
+        testXpathExpression "${xpath}" "result" "stackNames"
 
-          config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
-        done
+        if [ ${result} -eq 0 ]; then
+          stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
+          while read -r stack; do
+            local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
+            if [ "${socket_binding}x" != "x" ]; then
+              op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
+            fi
+
+            local op_prop1=""
+            local op_prop2=""
+            if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
+              op_prop1="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
+              op_prop2="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
+            fi
+
+            config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
+          done <<< "${stackNames}"
+        fi
       fi
     fi
 
