@@ -12,7 +12,7 @@ function copy_server_s2i_output() {
     fi
   else
     if [ "x$S2I_COPY_SERVER" == "xtrue" ]; then
-      log_info "Server not copied to $WILDFLY_S2I_OUTPUT_DIR, provisioned server is bound to local repository and can't be used in chained build."
+      log_info "Server not copied to $WILDFLY_S2I_OUTPUT_DIR, provisioned server is bound to local repository and can't be used in chained build. You can use galleon env variables to provision a server that can then be used in chained build."
     fi
   fi
 }
