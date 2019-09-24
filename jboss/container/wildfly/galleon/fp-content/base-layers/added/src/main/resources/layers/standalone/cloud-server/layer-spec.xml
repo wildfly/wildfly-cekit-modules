@@ -4,5 +4,6 @@
         <layer name="cloud-profile"/>
         <layer name="core-server"/>
     </dependencies>
+    <feature-group name="undertow-elytron-security"/>
 </layer-spec>
 
