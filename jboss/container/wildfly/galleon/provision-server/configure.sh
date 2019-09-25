@@ -7,6 +7,9 @@ ARTIFACTS_DIR=${SCRIPT_DIR}/artifacts
 # Copy settings used by server at startup.
 pushd ${ARTIFACTS_DIR}
 cp settings-startup.xml $HOME/.m2/
+# Fallback required by JBoss Modules when "user.home" returns junk.
+mkdir -p $HOME/.m2/conf
+cp settings-startup.xml $HOME/.m2/conf/settings.xml
 popd
 
 # Construct the settings in use by galleon.
