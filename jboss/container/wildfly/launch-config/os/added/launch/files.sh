@@ -17,8 +17,7 @@ function getfiles_from_module_artifacts {
 function get_maven_artifacts_jar {
   moduleFile=$1
   incomplete=$2
-  artifacts="$(xmllint --xpath "//*[local-name()='module']/*[local-name()='resources']/*[local-name()='artifact']/@name" $moduleFile)"
-  #echo "$artifacts"
+  artifacts="$(xmllint --xpath "//*[local-name()='module']/*[local-name()='resources']/*[local-name()='artifact']/@name" $moduleFile 2>/dev/null)"
 
   read -ra ARR <<< "$artifacts"
   for i in "${ARR[@]}"; do
