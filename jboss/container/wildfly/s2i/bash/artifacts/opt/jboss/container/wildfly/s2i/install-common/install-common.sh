@@ -86,7 +86,7 @@ function configure_drivers(){
         elif [ "${configMode}" = "cli" ]; then
           drivers="${drivers}
             if (outcome == success) of /subsystem=datasources/jdbc-driver=${driver_name}:read-resource
-              echo \"Cannot add the drive with name ${driver_name}. There is a drive with the same name already configured.\" >> \${error_file}
+              echo \"Cannot add the driver with name ${driver_name}. There is a driver with the same name already configured.\" >> \${error_file}
               quit
             else
               /subsystem=datasources/jdbc-driver=${driver_name}:add(driver-name=\"${driver_name}\", driver-module-name=\"${driver_module}\""
