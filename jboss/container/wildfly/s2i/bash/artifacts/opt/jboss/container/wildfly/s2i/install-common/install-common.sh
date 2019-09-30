@@ -106,9 +106,13 @@ function configure_drivers(){
         if [ "${configMode}" = "xml" ]; then
           sed -i "s|<!-- ##DRIVERS## -->|${drivers}<!-- ##DRIVERS## -->|" $CONFIG_FILE
         elif [ "${configMode}" = "cli" ]; then
-          echo "${drivers}" > ${S2I_CLI_DRIVERS_FILE}
           if [ "${CONFIG_ADJUSTMENT_MODE,,}" = "cli" ]; then
+            # CLI execution to add current driver(s)
+            echo "${drivers}" > ${S2I_CLI_DRIVERS_FILE}
             exec_cli_scripts "${S2I_CLI_DRIVERS_FILE}"
+          else
+            # append to CLI script for delayed CLI execution at server launch
+            echo "${drivers}" >> ${S2I_CLI_DRIVERS_FILE}
           fi
         fi
       fi
