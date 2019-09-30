@@ -74,24 +74,41 @@ function configure_artemis_address() {
     IP_ADDR=${JBOSS_MESSAGING_HOST:-`hostname -i`}
     JBOSS_MESSAGING_ARGS="${JBOSS_MESSAGING_ARGS} -Djboss.messaging.host=${IP_ADDR}"
 }
+# /subsystem=messaging-activemq/server=default/jms-queue=queue_name:add(entries=[])
 
+# Arguments:
+# $1 - mode - xml or cli
+# $2 - server name - Relevant only on cli mode
 function configure_mq_destinations() {
+  declare conf_mode="${1}" server_name="${2}"
+
   IFS=',' read -a queues <<< ${MQ_QUEUES:-$HORNETQ_QUEUES}
   IFS=',' read -a topics <<< ${MQ_TOPICS:-$HORNETQ_TOPICS}
 
-  destinations=""
+  local destinations=""
   if [ "${#queues[@]}" -ne "0" -o "${#topics[@]}" -ne "0" ]; then
     if [ "${#queues[@]}" -ne "0" ]; then
       for queue in ${queues[@]}; do
-        destinations="${destinations}<jms-queue name=\"${queue}\" entries=\"/queue/${queue}\"/>"
+        if [ "${conf_mode}" = "xml" ]; then
+          destinations="${destinations}<jms-queue name=\"${queue}\" entries=\"/queue/${queue}\"/>"
+        elif [ "${conf_mode}" = "cli" ]; then
+          destinations="${destinations}
+                        /subsystem=messaging-activemq/server=\"${server_name}\"/jms-queue=\"${queue}\":add(entries=[\"/queue/${queue}\"])"
+        fi
       done
     fi
     if [ "${#topics[@]}" -ne "0" ]; then
       for topic in ${topics[@]}; do
-        destinations="${destinations}<jms-topic name=\"${topic}\" entries=\"/topic/${topic}\"/>"
+        if [ "${conf_mode}" = "xml" ]; then
+          destinations="${destinations}<jms-topic name=\"${topic}\" entries=\"/topic/${topic}\"/>"
+        elif [ "${conf_mode}" = "cli" ]; then
+          destinations="${destinations}
+                        /subsystem=messaging-activemq/server=\"${server_name}\"/jms-topic=\"${topic}\":add(entries=[\"/topic/${topic}\"])"
+        fi
       done
     fi
   fi
+
   echo "${destinations}"
 }
 
@@ -105,27 +122,67 @@ function configure_mq() {
   if [ "$REMOTE_AMQ_BROKER" != "true" ] ; then
     configure_mq_cluster_password
 
-    destinations=$(configure_mq_destinations)
+    local messaging_subsystem_config_mode
+    getConfigurationMode "<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->" "messaging_subsystem_config_mode"
 
-    # We need the broker if they configured destinations or didn't explicitly disable the broker AND there's a point to doing it because the marker exists
-    if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && grep -q '<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->' ${CONFIG_FILE}; then
+    destinations=$(configure_mq_destinations "${messaging_subsystem_config_mode}" "default")
 
-      log_warning "Configuration of an embedded messaging broker within the appserver is enabled but is not recommended. Support for such a configuration will be removed in a future release."
-      if [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]; then
-        log_info "If you are not configuring messaging destinations, to disable configuring an embedded messaging broker set the DISABLE_EMBEDDED_JMS_BROKER environment variable to true."
+    # We need the broker if they configured destinations or didn't explicitly disable the broker
+    # In previous releases this check was relying on destinations, DISABLE_EMBEDDED_JMS_BROKER value and the presense of the <!-- ##MESSAGING_SUBSYSTEM_CONFIG## --> marker.
+    # If the marker was in the config AND there are destinations OR embeded is not explicitely disabled, then the embedded was added.
+    # In the new configuration we cannot rely on marker precense since it is not supplied by default, and not supplying it does not mean
+    # we don't want the embedded server configuration.
+    # If we do not want the embeded server added when there are no destinations, then DISABLE_EMBEDDED_JMS_BROKER should be explicitely set to always.
+    if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
+      local error_message_text
+      if [ -n "${destinations}" ]; then
+        error_message_text="You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables"
+      else
+        error_message_text="The embedded server broker is going to be added to your server configuration because it has not been explicitely disabled via DISABLE_EMBEDDED_JMS_BROKER."
       fi
 
-      activemq_subsystem=$(sed -e "s|<!-- ##DESTINATIONS## -->|${destinations}|" <"${ACTIVEMQ_SUBSYSTEM_FILE}" | sed ':a;N;$!ba;s|\n|\\n|g')
+      local subsystemAdded=false
+      if [ "${messaging_subsystem_config_mode}" = "xml" ]; then
+        activemq_subsystem=$(sed -e "s|<!-- ##DESTINATIONS## -->|${destinations}|" <"${ACTIVEMQ_SUBSYSTEM_FILE}" | sed ':a;N;$!ba;s|\n|\\n|g')
+        sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}|" "${CONFIG_FILE}"
+        subsystemAdded=true
+      elif [ "${messaging_subsystem_config_mode}" = "cli" ]; then
+        activemq_subsystem=$(add_messaging_default_server_cli "${error_message_text}" "${REMOTE_AMQ_BROKER}" "${destinations}")
+        echo "${activemq_subsystem}" >> "${CLI_SCRIPT_FILE}"
+        subsystemAdded=true
+      fi
 
-      sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}|" "${CONFIG_FILE}"
+      if [ "${subsystemAdded}" = "true" ]; then
+        echo "Configuration of an embedded messaging broker within the appserver is enabled but is not recommended. Support for such a configuration will be removed in a future release." >> "${CONFIG_WARNING_FILE}"
+        if [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]; then
+          echo "If you are not configuring messaging destinations, to disable configuring an embedded messaging broker set the DISABLE_EMBEDDED_JMS_BROKER environment variable to true." >> "${CONFIG_WARNING_FILE}"
+        fi
+      fi
+
+      local messaging_ports_config_mode
+      getConfigurationMode "<!-- ##MESSAGING_PORTS## -->" "messaging_ports_config_mode"
+
+      if [ "${messaging_ports_config_mode}" = "xml" ]; then
+        sed -i 's|<!-- ##MESSAGING_PORTS## -->|<socket-binding name="messaging" port="5445"/><socket-binding name="messaging-throughput" port="5455"/>|' "${CONFIG_FILE}"
+      elif [ "${messaging_ports_config_mode}" = "cli" ]; then
+        local cli_operations
+        IFS= read -rd '' cli_operations << EOF
+        if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=messaging:read-resource
+          echo ${error_message_text}. Fix your configuration to not contain a socket-binding named 'messaging' for this to happen. >> \${error_file}
+          exit
+        end-if
+
+        if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=messaging-throughput:read-resource
+          echo ${error_message_text}. Fix your configuration to not contain a socket-binding named 'messaging-throughput' for this to happen. >> \${error_file}
+          exit
+        end-if
+
+        /socket-binding-group=standard-sockets/socket-binding=messaging:add(port=5445)
+        /socket-binding-group=standard-sockets/socket-binding=messaging-throughput:add(port=5455)
+EOF
+      echo "${cli_operations}" >> "${CLI_SCRIPT_FILE}"
+      fi
     fi
-
-    #Handle the messaging socket-binding separately just in case its marker is present but the subsystem one is not
-    if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && grep -q '<!-- ##MESSAGING_PORTS## -->' ${CONFIG_FILE}; then
-      # We don't warn about this as socket-bindings are pretty harmless
-      sed -i 's|<!-- ##MESSAGING_PORTS## -->|<socket-binding name="messaging" port="5445"/><socket-binding name="messaging-throughput" port="5455"/>|' "${CONFIG_FILE}"
-    fi
-
   fi
 }
 
@@ -149,6 +206,12 @@ function generate_remote_artemis_remote_connector() {
     echo "<remote-connector name=\"netty-remote-throughput\" socket-binding=\"${1}\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
 }
 
+# $1 - name - messaging-remote-throughput
+# $2 - server name
+function generate_remote_artemis_remote_connector_cli() {
+    echo "/subsystem=messaging-activemq/server=${2}/remote-connector=netty-remote-throughput:add(socket-binding=\"${1}\")"
+}
+
 # Arguments:
 # $1 - remote context name - default remoteContext
 # $2 - remote host
@@ -165,6 +228,31 @@ function generate_remote_artemis_naming() {
           <!-- ##AMQ_LOOKUP_OBJECTS## --></bindings>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
 }
 
+# Arguments:
+# $1 - remote context name - default remoteContext
+# $2 - remote host
+# $3 - remote port - 61616
+function generate_remote_artemis_naming_cli() {
+  local cli_operations
+  IFS= read -rd '' cli_operations << EOF
+
+    if (outcome != success) of /subsystem=naming:read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix. Fix your configuration to contain naming subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of /subsystem=naming/binding="java:global/${1}":read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix. Fix your configuration to not contain a naming binding with name 'java:global/${remote_context_name}' for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    /subsystem=naming/binding="java:global/${1}":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://${2}:${1}", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
+EOF
+
+    echo "${cli_operations}"
+}
+
+
 # $1 - factory name - activemq-ra-remote
 # $2 - username
 # $3 - password
@@ -174,11 +262,29 @@ function generate_remote_artemis_connection_factory() {
     echo "<pooled-connection-factory user=\"${2}\" password=\"${3}\" name=\"${1}\" entries=\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\" connectors=\"netty-remote-throughput\" transaction=\"xa\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
 }
 
+# $1 - factory name - activemq-ra-remote
+# $2 - username
+# $3 - password
+# $4 - default connection factory - java:jboss/DefaultJMSConnectionFactory
+# $5 - server name
+function generate_remote_artemis_connection_factory_cli() {
+  echo "/subsystem=messaging-activemq/server=${5}/pooled-connection-factory=\"${1}\":add(user=\"${2}\", password=\"${3}\", entries=[\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\"], connectors=[\"netty-remote-throughput\"], transaction=xa)"
+}
+
 # $1 object type - queue / topic
 # $2 object name - MyQueue / MyTopic
 # <!-- ##AMQ7_CONFIG_PROPERTIES## -->
 function generate_remote_artemis_property() {
-    echo "<property name=\"${1}.${2}\" value=\"${2}\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
+  declare queue_topic="${1}" object_name="${2}"
+  echo "<property name=\"${queue_topic}.${object_name}\" value=\"${object_name}\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
+}
+
+# $1 remote context name
+# $2 object type - queue / topic
+# $3 object name - MyQueue / MyTopic
+function generate_remote_artemis_property_cli() {
+  declare remote_context="${1}" queue_topic="${2}" object_name="${3}"
+  echo "/subsystem=naming/binding=\"java:global/${remote_context}\":map-put(name=environment, key=\"${queue_topic}.${object_name}\", value=\"${object_name}\")"
 }
 
 # $1 - remote context - remoteContext
@@ -186,6 +292,12 @@ function generate_remote_artemis_property() {
 # <!-- ##AMQ_LOOKUP_OBJECTS## -->
 function generate_remote_artemis_lookup() {
     echo "<lookup name=\"java:/${2}\" lookup=\"java:global/${1}/${2}\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
+}
+
+# $1 - remote context - remoteContext
+# $2 - object name - MyQueue / MyTopic etc
+function generate_remote_artemis_lookup_cli() {
+    echo "/subsystem=naming/binding=\"java:/${2}\":add(binding-type=lookup, lookup=\"java:global/${1}/${2}\")"
 }
 
 # $1 - name - messaging-remote-throughput
@@ -201,9 +313,19 @@ function generate_remote_artemis_socket_binding() {
 # $1 - name - messaging-remote-throughput
 # $2 - remote hostname
 # $3 - remote port
-# <!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->
 function generate_remote_artemis_socket_binding_cli() {
-    :
+  local cli_operations
+  IFS= read -rd '' cli_operations << EOF
+
+  if (outcome == success) of /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="${1}":read-resource
+    echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix. Fix your configuration to not contain a remote-destination-outbound-socket-binding named '${1}' for this to happen. >> \${error_file}
+    exit
+  end-if
+
+  /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="${1}":add(host="${2}", port="${3}")
+EOF
+
+    echo "${cli_operations}"
 }
 
 # Arguments:
@@ -230,7 +352,7 @@ function generate_object_config() {
 # $3 - class
 # $4 - resource adapter name
 function generate_object_config_cli() {
-  log_info "generating CLI object config for $1"
+  log_info "generating CLI object config for $1"  >&2
 
   local cli_operations
   IFS= read -rd '' cli_operations << EOF
@@ -502,9 +624,6 @@ function inject_brokers() {
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:resource-adapters:')]\""
   testXpathExpression "${xpath}" "has_resource_adapters"
 
-
-
-
   if [ "${#brokers[@]}" -eq "0" ] ; then
     if [ -z "$defaultJmsConnectionFactoryJndi" ]; then
         defaultJmsConnectionFactoryJndi="java:jboss/DefaultJMSConnectionFactory"
@@ -537,10 +656,11 @@ function inject_brokers() {
       protocol_env=${protocol//[-+.]/_}
       protocol_env=${protocol_env^^}
 
-      # remap for AMQ7 config vars, AMQ7 gets looked up as AMQ
+      # These environment entries are auto generated by Opensift processing the services configured in the image templates.
       local host_var="${service}_${protocol_env}_SERVICE_HOST"
       local port_var="${service}_${protocol_env}_SERVICE_PORT"
       if [ "$type" = "AMQ7" ] ; then
+        # remap for AMQ7 config vars, AMQ7 gets looked up as AMQ
         host_var="${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_HOST"
         port_var="${service/%AMQ7/AMQ}_${protocol_env}_SERVICE_PORT"
       fi
@@ -579,15 +699,24 @@ function inject_brokers() {
 
       tracking=$(find_env "${prefix}_TRACKING")
 
-      # TODO: validate MQ_USERNAME="mq_username" and  MQ_PASSWORD="mq_password" ????
+      if [ -z "${username}" ] || [ -z "${password}" ]; then
+        log_warning "There is a problem with your service configuration!"
+        log_warning "You provided following MQ mapping (via MQ_SERVICE_PREFIX_MAPPING environment variable): $brokers. To configure resource adapters we expect ${prefix}_USERNAME and ${prefix}_PASSWORD to be set."
+        log_warning
+        log_warning "The ${type,,} broker for $prefix service WILL NOT be configured."
+        continue
+      fi
 
+      local driver
+      local archive
       case "$type" in
         "AMQ")
           # This is the legacy AMQ configuration. In this case we only configure the resource adapters subsystem adding activemq-rar.rar
+          # It is possible configure more than one
           driver="amq"
-
-          # the name of the archive is fixed, so, it looks like we can only configure one AMQ broker
           archive="activemq-rar.rar"
+          REMOTE_AMQ_BROKER=true
+          REMOTE_AMQ6=true
 
           if [ "${resource_adapters_mode}" = "xml" ]; then
             ra=$(generate_resource_adapter ${service_name} ${jndi} ${username} ${password} ${protocol} ${host} ${port} ${prefix} ${archive} ${driver} "${queues}" "${topics}" "${tracking}" ${counter})
@@ -597,78 +726,139 @@ function inject_brokers() {
             echo "${ra}" >> "${CLI_SCRIPT_FILE}"
           fi
 
-          REMOTE_AMQ_BROKER=true
-          REMOTE_AMQ6=true
           ;;
         "AMQ7")
-         driver="amq7"
-         archive=""
-         REMOTE_AMQ_BROKER=true
-         REMOTE_AMQ7=true
+          # Currently it is not supported multi AMQ7 broker support
+          if [ "${REMOTE_AMQ7}" = "true" ]; then
+            echo "You provided more than one AMQ7 brokers configuration (via MQ_SERVICE_PREFIX_MAPPING environment variable): $brokers. However, multi AMQ7 broker support is not yet supported. " >> "${CONFIG_ERROR_FILE}"
+            continue
+          fi
 
-         if [ "$subsystem_added" != "true" ] ; then
-             activemq_subsystem=$(sed -e ':a;N;$!ba;s|\n|\\n|g' <"${ACTIVEMQ_SUBSYSTEM_FILE}")
-             sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|" $CONFIG_FILE
-             subsystem_added=true
-             # make sure the default connection factory isn't set on another cnx factory
-             sed -i "s|java:jboss/DefaultJMSConnectionFactory||g" $CONFIG_FILE
-             # this will be on the remote ConnectionFactory, so rename the local one until the embedded broker is dropped.
-             sed -i "s|java:/JmsXA|java:/JmsXALocal|" $CONFIG_FILE
-         fi
+          driver="amq7"
+          archive=""
+          REMOTE_AMQ_BROKER=true
+          REMOTE_AMQ7=true
 
-         # this should be configurable - see CLOUD-2225 for multi broker support
-         socket_binding_name="messaging-remote-throughput"
-         connector=$(generate_remote_artemis_remote_connector ${socket_binding_name})
-         sed -i "s|<!-- ##AMQ_REMOTE_CONNECTOR## -->|${connector%$'\n'}<!-- ##AMQ_REMOTE_CONNECTOR## -->|" $CONFIG_FILE
+          # Insert default messaging subsystem configuration.
+          # The default XML template (activemq-subsystem.xml) includes the following markers:
+          # <!-- ##AMQ_REMOTE_CONNECTOR## -->, <!-- ##DESTINATIONS## -->, <!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->
+          if [ "$subsystem_added" != "true" ] ; then
+              if [ "${messaging_subsystem_config_mode}" = "xml" ]; then
+                add_messaging_default_server
+                subsystem_added=true
+              elif [ "${messaging_subsystem_config_mode}" = "cli" ]; then
+                local default_server=$(add_messaging_default_server_cli "You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix" "${REMOTE_AMQ_BROKER}")
+                echo "${default_server}" >> "${CLI_SCRIPT_FILE}"
+                subsystem_added=true
+              fi
+          fi
+
+          # socket binding used by remote connectors
+          # this should be configurable - see CLOUD-2225 for multi broker support
+          local socket_binding_name="messaging-remote-throughput"
+
+          if [ "${amq_messaging_socket_binding_mode}" = "xml" ]; then
+
+            socket_binding=$(generate_remote_artemis_socket_binding "${socket_binding_name}" "${host}" "${port}")
+            sed -i "s|<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|${socket_binding%$'\n'}<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|" $CONFIG_FILE
+          elif [ "${amq_messaging_socket_binding_mode}" = "cli" ]; then
+            socket_binding=$(generate_remote_artemis_socket_binding_cli "${socket_binding_name}" "${host}" "${port}")
+            echo "${socket_binding}" >> "${CLI_SCRIPT_FILE}"
+          fi
 
 
-        if [ "${amq_messaging_socket_binding_mode}" = "xml" ]; then
-          :
-        elif [ "${amq_messaging_socket_binding_mode}" = "cli" ]; then
-          :
-        fi
+          local amq_remote_connector_mode
+          getConfigurationMode "<!-- ##AMQ_REMOTE_CONNECTOR## -->" "amq_remote_connector_mode"
 
-         socket_binding=$(generate_remote_artemis_socket_binding ${socket_binding_name} ${host} ${port})
-         sed -i "s|<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|${socket_binding%$'\n'}<!-- ##AMQ_MESSAGING_SOCKET_BINDING## -->|" $CONFIG_FILE
+          local connector
+          if [ "${amq_remote_connector_mode}" = "xml" ]; then
+            connector=$(generate_remote_artemis_remote_connector "${socket_binding_name}")
+            sed -i "s|<!-- ##AMQ_REMOTE_CONNECTOR## -->|${connector%$'\n'}<!-- ##AMQ_REMOTE_CONNECTOR## -->|" $CONFIG_FILE
+          elif [ "${amq_remote_connector_mode}" = "cli" ] && [ "${subsystem_added}" = "true" ]; then
+            connector=$(generate_remote_artemis_remote_connector_cli "${socket_binding_name}" "default")
+            echo "${connector}" >> "${CLI_SCRIPT_FILE}"
+          fi
 
-         # Naming subsystem
-         if [ "${amg_remote_context}" = "xml" ]; then
-          :
-        elif [ "${amg_remote_context}" = "cli" ]; then
-          :
-        fi
 
-         naming=$(generate_remote_artemis_naming "remoteContext" ${host} ${port})
-         sed -i "s|<!-- ##AMQ_REMOTE_CONTEXT## -->|${naming%$'\n'}<!-- ##AMQ_REMOTE_CONTEXT## -->|" $CONFIG_FILE
+          # this name should also be configurable (CLOUD-2225)
+          local cnx_factory_name="activemq-ra-remote"
+          EJB_RESOURCE_ADAPTER_NAME=${cnx_factory_name}.rar
 
-         # this name should also be configurable (CLOUD-2225)
-         cnx_factory_name="activemq-ra-remote"
-         EJB_RESOURCE_ADAPTER_NAME=${cnx_factory_name}.rar
+          local amq_pooled_connection_factory_mode
+          getConfigurationMode "<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->" "amq_pooled_connection_factory_mode"
 
-         cnx_factory=$(generate_remote_artemis_connection_factory ${cnx_factory_name} ${username} ${password} ${jndi})
-         sed -i "s|<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|${cnx_factory%$'\n'}<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|" $CONFIG_FILE
+          if [ "${amq_pooled_connection_factory_mode}" = "xml" ]; then
+            cnx_factory=$(generate_remote_artemis_connection_factory "${cnx_factory_name}" "${username}" "${password}" "${jndi}")
+            sed -i "s|<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|${cnx_factory%$'\n'}<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|" $CONFIG_FILE
+          elif [ "${amq_pooled_connection_factory_mode}" = "cli" ] && [ "${subsystem_added}" = "true" ]; then
+            cnx_factory=$(generate_remote_artemis_connection_factory_cli "${cnx_factory_name}" "${username}" "${password}" "${jndi}" "default")
+            echo "${cnx_factory}" >> "${CLI_SCRIPT_FILE}"
+          fi
 
-         IFS=',' read -a amq7_queues <<< ${queues:-}
-         if [ "${#amq7_queues[@]}" -ne "0" ]; then
-            for q in ${amq7_queues[@]}; do
-                prop=$(generate_remote_artemis_property "queue" ${q})
-                sed -i "s|<!-- ##AMQ7_CONFIG_PROPERTIES## -->|${prop%$'\n'}<!-- ##AMQ7_CONFIG_PROPERTIES## -->|" $CONFIG_FILE
 
-                lookup=$(generate_remote_artemis_lookup "remoteContext" ${q})
-                sed -i "s|<!-- ##AMQ_LOOKUP_OBJECTS## -->|${lookup%$'\n'}<!-- ##AMQ_LOOKUP_OBJECTS## -->|" $CONFIG_FILE
-            done
-         fi
+          # Naming subsystem
+          # It adds the following markers:
+          # <!-- ##AMQ7_CONFIG_PROPERTIES## -->
+          # <!-- ##AMQ_LOOKUP_OBJECTS## -->
+          local remote_context_name="remoteContext"
+          if [ "${amg_remote_context_config_mode}" = "xml" ]; then
+            naming=$(generate_remote_artemis_naming "${remote_context_name}" "${host}" "${port}")
+            sed -i "s|<!-- ##AMQ_REMOTE_CONTEXT## -->|${naming%$'\n'}<!-- ##AMQ_REMOTE_CONTEXT## -->|" $CONFIG_FILE
+          elif [ "${amg_remote_context_config_mode}" = "cli" ]; then
+            naming=$(generate_remote_artemis_naming_cli "${remote_context_name}" "${host}" "${port}")
+            echo "${naming}" >> "${CLI_SCRIPT_FILE}"
+          fi
 
-         IFS=',' read -a amq7_topics <<< ${topics:-}
-         if [ "${#amq7_topics[@]}" -ne "0" ]; then
-            for t in ${amq7_topics[@]}; do
-                prop=$(generate_remote_artemis_property "topic" ${t})
-                sed -i "s|<!-- ##AMQ7_CONFIG_PROPERTIES## -->|${prop%$'\n'}<!-- ##AMQ7_CONFIG_PROPERTIES## -->|" $CONFIG_FILE
+          local amq7_config_properties_mode
+          getConfigurationMode "<!-- ##AMQ7_CONFIG_PROPERTIES## -->" "amq7_config_properties_mode"
 
-                lookup=$(generate_remote_artemis_lookup "remoteContext" ${t})
-                sed -i "s|<!-- ##AMQ_LOOKUP_OBJECTS## -->|${lookup%$'\n'}<!-- ##AMQ_LOOKUP_OBJECTS## -->|" $CONFIG_FILE
-            done
-         fi
+          local amq_lookup_objects_mode
+          getConfigurationMode "<!-- ##AMQ_LOOKUP_OBJECTS## -->" "amq_lookup_objects_mode"
+
+          local lookup
+          local prop
+          IFS=',' read -a amq7_queues <<< ${queues:-}
+          if [ "${#amq7_queues[@]}" -ne "0" ]; then
+              for q in ${amq7_queues[@]}; do
+                if [ "${amq7_config_properties_mode}" = "xml" ]; then
+                  prop=$(generate_remote_artemis_property "queue" ${q})
+                  sed -i "s|<!-- ##AMQ7_CONFIG_PROPERTIES## -->|${prop%$'\n'}<!-- ##AMQ7_CONFIG_PROPERTIES## -->|" $CONFIG_FILE
+                elif [ "${amq7_config_properties_mode}" = "cli" ]; then
+                  prop=$(generate_remote_artemis_property_cli "${remote_context_name}" "queue" ${q})
+                  echo "${prop}" >> "${CLI_SCRIPT_FILE}"
+                fi
+
+                if [ "${amq_lookup_objects_mode}" = "xml" ]; then
+                  lookup=$(generate_remote_artemis_lookup "${remote_context_name}" ${q})
+                  sed -i "s|<!-- ##AMQ_LOOKUP_OBJECTS## -->|${lookup%$'\n'}<!-- ##AMQ_LOOKUP_OBJECTS## -->|" $CONFIG_FILE
+                elif [ "${amq_lookup_objects_mode}" = "cli" ]; then
+                  lookup=$(generate_remote_artemis_lookup_cli "${remote_context_name}" ${q})
+                  echo "${lookup}" >> "${CLI_SCRIPT_FILE}"
+                fi
+              done
+          fi
+
+          IFS=',' read -a amq7_topics <<< ${topics:-}
+          if [ "${#amq7_topics[@]}" -ne "0" ]; then
+              for t in ${amq7_topics[@]}; do
+                if [ "${amq7_config_properties_mode}" = "xml" ]; then
+                  prop=$(generate_remote_artemis_property "topic" ${t})
+                  sed -i "s|<!-- ##AMQ7_CONFIG_PROPERTIES## -->|${prop%$'\n'}<!-- ##AMQ7_CONFIG_PROPERTIES## -->|" $CONFIG_FILE
+                elif [ "${amq7_config_properties_mode}" = "cli" ]; then
+                  prop=$(generate_remote_artemis_property_cli "${remote_context_name}" "topic" ${t})
+                  echo "${prop}" >> "${CLI_SCRIPT_FILE}"
+                fi
+
+                if [ "${amq_lookup_objects_mode}" = "xml" ]; then
+                  lookup=$(generate_remote_artemis_lookup "${remote_context_name}" ${t})
+                  sed -i "s|<!-- ##AMQ_LOOKUP_OBJECTS## -->|${lookup%$'\n'}<!-- ##AMQ_LOOKUP_OBJECTS## -->|" $CONFIG_FILE
+                elif [ "${amq_lookup_objects_mode}" = "cli" ]; then
+                  lookup=$(generate_remote_artemis_lookup_cli "${remote_context_name}" ${t})
+                  echo "${lookup}" >> "${CLI_SCRIPT_FILE}"
+                fi
+              done
+          fi
+
          ;;
       esac
 
@@ -690,17 +880,28 @@ function inject_brokers() {
     defaultJms="jms-connection-factory=\"$defaultJmsConnectionFactoryJndi\""
   fi
 
-  if [ "$REMOTE_AMQ_BROKER" = "true" ] || [ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]
-  then
-    # new format
-    sed -i "s|jms-connection-factory=\"##DEFAULT_JMS##\"|${defaultJms}|" $CONFIG_FILE
-    # legacy format, bare ##DEFAULT_JMS##
-    sed -i "s|##DEFAULT_JMS##|${defaultJms}|" $CONFIG_FILE
-  else
-    # new format
-    sed -i "s|jms-connection-factory=\"##DEFAULT_JMS##\"||" $CONFIG_FILE
-    # legacy format, bare ##DEFAULT_JMS##
-    sed -i "s|##DEFAULT_JMS##||" $CONFIG_FILE
+  if [ "${has_ee_subsystem}" -eq 0 ]; then
+    if [ "${default_jms_config_mode}" = "xml" ]; then
+      if [ "$REMOTE_AMQ_BROKER" = "true" ] || ([ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ];
+      then
+        # new format
+        sed -i "s|jms-connection-factory=\"##DEFAULT_JMS##\"|${defaultJms}|" $CONFIG_FILE
+        # legacy format, bare ##DEFAULT_JMS##
+        sed -i "s|##DEFAULT_JMS##|${defaultJms}|" $CONFIG_FILE
+      else
+        # new format
+        sed -i "s|jms-connection-factory=\"##DEFAULT_JMS##\"||" $CONFIG_FILE
+        # legacy format, bare ##DEFAULT_JMS##
+        sed -i "s|##DEFAULT_JMS##||" $CONFIG_FILE
+      fi
+    elif [ "${default_jms_config_mode}" = "cli" ]; then
+      if [ "$REMOTE_AMQ_BROKER" = "true" ] || ([ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
+        # TODO: shoud we add it by default, what to do if there is one already defined ?
+        echo "/subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value=\"${defaultJmsConnectionFactoryJndi}\")" >> "${CLI_SCRIPT_FILE}"
+      else
+        echo "/subsystem=ee/service=default-bindings:undefine-attribute(name=jms-connection-factory)" >> "${CLI_SCRIPT_FILE}"
+      fi
+    fi
   fi
 
 }
@@ -712,4 +913,76 @@ disable_unused_rar() {
   if [ -e "${base_rar}" ] && [ ! -e "${base_rar}.dodeploy" ] && ! grep -q -E "activemq-rar\.rar" $CONFIG_FILE; then
     touch "$JBOSS_HOME/standalone/deployments/activemq-rar.rar.skipdeploy"
   fi
+}
+
+add_messaging_default_server() {
+  local activemq_subsystem=$(sed -e ':a;N;$!ba;s|\n|\\n|g' <"${ACTIVEMQ_SUBSYSTEM_FILE}")
+  sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|" $CONFIG_FILE
+  # make sure the default connection factory isn't set on another cnx factory
+  sed -i "s|java:jboss/DefaultJMSConnectionFactory||g" $CONFIG_FILE
+  # this will be on the remote ConnectionFactory, so rename the local one until the embedded broker is dropped.
+  sed -i "s|java:/JmsXA|java:/JmsXALocal|" $CONFIG_FILE
+}
+
+# Arguments:
+# $1 - error message text describing the source
+# $2 - remote broker flag
+# $3 - destinations - Optional
+add_messaging_default_server_cli() {
+  declare error_message_text="${1}" remote_broker_flag="${2}"  destinations="${3}"
+
+  local cli_operations
+  IFS= read -rd '' cli_operations << EOF
+
+  if (outcome != success) of /subsystem=messaging-activemq:read-resource
+    echo ${error_message_text}. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
+    exit
+  end-if
+
+  if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
+    echo ${error_message_text}. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
+    exit
+  end-if
+
+  /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
+EOF
+
+  if [ -n "${destinations}" ]; then
+    cli_operations="${cli_operations}
+                    ${destinations}"
+  fi
+
+  IFS= read -rd '' tmp_operations << EOF
+
+    /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
+    /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
+
+    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
+    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
+
+    /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+    /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+
+    /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
+    /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
+
+    /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
+    /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
+
+    /subsystem=messaging-activemq/server=default/security-setting=#:add()
+    /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
+
+    /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+EOF
+  cli_operations="${cli_operations}${tmp_operations}"
+
+  if [ "${remote_broker_flag}" = "true" ]; then
+    cli_operations="${cli_operations}
+    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=[\"in-vm\"], entries=[\"java:/JmsXALocal\"])"
+  else
+    cli_operations="${cli_operations}
+    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=[\"in-vm\"], entries=[\"java:/JmsXA java:jboss/DefaultJMSConnectionFactory\"])"
+  fi
+
+  echo "${cli_operations}"
 }

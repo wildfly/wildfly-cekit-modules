@@ -2,7 +2,7 @@ export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
+rm -rf $JBOSS_HOME
 mkdir -p $JBOSS_HOME/bin/launch
 
 # copy scripts we are going to use
@@ -39,7 +39,7 @@ teardown() {
   fi
 }
 
-@test "Configure MQ config file with markers" {
+@test "Configure Embedded server broker -- with markers" {
     expected=$(cat $BATS_TEST_DIRNAME/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -52,16 +52,24 @@ teardown() {
     result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
+
     [ "${result}" = "${expected}" ]
 
-    echo "${lines[0]}" | grep "WARN Configuration of an embedded messaging broker"
+    local warn_lines=()
+    while IFS= read -r line
+    do
+      echo "LINE=${line}"
+      warn_lines+=("${line}")
+    done < "${CONFIG_WARNING_FILE}"
+
+    echo "${warn_lines[0]}" | grep "Configuration of an embedded messaging broker"
     [ $? -eq 0 ]
 
-    echo "${lines[1]}" | grep "INFO If you are not configuring messaging destinations"
+    echo "${warn_lines[1]}" | grep "If you are not configuring messaging destinations"
     [ $? -eq 0 ]
 }
 
-@test "Configure MQ config file without markers" {
+@test "Configure Embedded server broker -- without markers" {
     expected=$(echo "<test-content/>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo '<test-content/>' > ${CONFIG_FILE}
@@ -77,7 +85,7 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with markers, destinations and disabled" {
+@test "Configure Embedded server broker -- with markers, destinations and disabled" {
     expected=$(cat $BATS_TEST_DIRNAME/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -92,13 +100,20 @@ teardown() {
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
 
-    echo "${lines[0]}" | grep "WARN Configuration of an embedded messaging broker"
+    local warn_lines=()
+    while IFS= read -r line
+    do
+      echo "LINE=${line}"
+      warn_lines+=("${line}")
+    done < "${CONFIG_WARNING_FILE}"
+
+    echo "${warn_lines[0]}" | grep "Configuration of an embedded messaging broker"
     [ $? -eq 0 ]
 
-    [ "${lines[1]}" = "" ]
+    [ "${warn_lines[1]}" = "" ]
 }
 
-@test "Configure MQ config file with markers embedded disabled" {
+@test "Configure Embedded server broker -- with markers embedded disabled" {
     expected=$(echo "${INPUT_CONTENT}" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -113,7 +128,7 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with socket-binding marker only" {
+@test "Configure Embedded server broker -- with socket-binding marker only" {
     expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -127,7 +142,7 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with socket-binding marker only and destinations" {
+@test "Configure Embedded server broker -- with socket-binding marker only and destinations" {
     expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -143,7 +158,7 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with socket-binding marker only, destinations and disabled" {
+@test "Configure Embedded server broker -- with socket-binding marker only, destinations and disabled" {
     expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}"  | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -160,7 +175,8 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with socket-binding marker only embedded disabled" {
+@test "Configure Embedded server broker -- with socket-binding marker only embedded disabled" {
+    INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
     expected=$(echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
     echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
@@ -175,10 +191,12 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with markers embedded disabled and default JMSFactory to be removed" {
-    expected=$(echo "${INPUT_CONTENT}" | xmllint --format --noblanks -)
+@test "Configure Embedded server broker -- with markers embedded disabled and default JMSFactory to be removed" {
+    INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
+    expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${DEFAULT_JMS_FACTORY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run inject_brokers
@@ -190,10 +208,11 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
-@test "Configure MQ config file with markers embedded disabled, some destinations and default JMSFactory" {
-    expected=$(echo "${DEFAULT_JMS_FACTORY_OUTPUT_CONTENT}" | xmllint --format --noblanks -)
+@test "Configure Embedded server broker -- with markers embedded disabled, some destinations and default JMSFactory" {
+    INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
+    expected=$(echo "<root>${DEFAULT_JMS_FACTORY_OUTPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${DEFAULT_JMS_FACTORY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" > ${CONFIG_FILE}
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
@@ -207,85 +226,325 @@ teardown() {
     [ "${result}" = "${expected}" ]
 }
 
+@test "Configure legacy external broker -- Two AMQ brokers via Markers" {
+  CONFIG_ADJUSTMENT_MODE="xml"
+
+  MQ_SERVICE_PREFIX_MAPPING="messaging_bats_test-amq=TEST_MQ,messaging_bats_test_two-amq=TEST_MQ_TWO"
+
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST="hostone"
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT=1999
+  TEST_MQ_JNDI="mq_jndi_one"
+  TEST_MQ_USERNAME="mq_username_one"
+  TEST_MQ_PASSWORD="mq_password_one"
+  TEST_MQ_QUEUES="queue1_one,queue2_one"
+  TEST_MQ_TOPICS="topic1_one,topic2_one"
+  TEST_MQ_TRACKING="true"
+
+  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_HOST="hostonetwo"
+  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_PORT=2999
+  TEST_MQ_TWO_JNDI="mq_jndi_two"
+  TEST_MQ_TWO_USERNAME="mq_username_two"
+  TEST_MQ_TWO_PASSWORD="mq_password_two"
+  TEST_MQ_TWO_QUEUES="queue1_two,queue2_two"
+  TEST_MQ_TWO_TOPICS="topic1_two,topic2_two"
+
+  run inject_brokers
+  echo "CONSOLE: ${output}"
+
+  output=$(xmllint --noblanks --xpath "string(//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/*[local-name()='default-bindings']/@jms-connection-factory)" "${CONFIG_FILE}")
+  [ "${output}" = "${TEST_MQ_JNDI}" ]
+
+  expected=$(cat $BATS_TEST_DIRNAME/resource-adapters-for-two-amq-external-broker.xml | xmllint --format --noblanks -)
+  output=$(xmllint --noblanks --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:resource-adapters:')]/*" "${CONFIG_FILE}" | xmllint --format --noblanks -)
+
+  [ "${output}" = "${expected}" ]
+}
+
+@test "Configure External broker type AMQ7 -- One AMQ7 broker via Markers" {
+  CONFIG_ADJUSTMENT_MODE="xml"
+
+  MQ_SERVICE_PREFIX_MAPPING="messaging_bats_test-amq7=TEST_MQ"
+
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST="127.0.0.1"
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT=9999
+  TEST_MQ_JNDI="mq_jndi"
+  TEST_MQ_USERNAME="mq_username"
+  TEST_MQ_PASSWORD="mq_password"
+  TEST_MQ_QUEUES="queue1,queue2"
+  TEST_MQ_TOPICS="topic1,topic2"
+  TEST_MQ_TRACKING="true"
+
+  run inject_brokers
+  echo "CONSOLE: ${output}"
+
+  output=$(xmllint --noblanks --xpath "string(//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/*[local-name()='default-bindings']/@jms-connection-factory)" "${CONFIG_FILE}")
+  [ "${output}" = "${TEST_MQ_JNDI}" ]
+
+  output=$(xmllint --noblanks --xpath "//*[local-name()='socket-binding-group'][@name='standard-sockets']/*[local-name()='outbound-socket-binding'][@name='messaging-remote-throughput']" "${CONFIG_FILE}")
+  [ "${output}" = "<outbound-socket-binding name=\"messaging-remote-throughput\"><remote-destination host=\"${MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST}\" port=\"${MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT}\"/></outbound-socket-binding>" ]
+
+
+  expected=$(xmllint --xpath "//*[local-name()='server']" $BATS_TEST_DIRNAME/messaging-activemq-server-for-amq7-external-broker.xml | xmllint --format --noblanks -)
+  output=$(xmllint --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:messaging-activemq:')]/*" "${CONFIG_FILE}" | xmllint --format --noblanks -)
+  [ "${output}" = "${expected}" ]
+
+  expected=$(xmllint --xpath "//*[local-name()='bindings']" $BATS_TEST_DIRNAME/bindings-for-amq7-external-broker.xml | xmllint --format --noblanks -)
+  output=$(xmllint --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:naming:')]/*[local-name()='bindings']" "${CONFIG_FILE}" | xmllint --format --noblanks -)
+  [ "${output}" = "${expected}" ]
+}
+
+
 
 ## test based on CLI operations
 normalize_spaces_new_lines() {
-  echo "output=${output}<<"
-  echo "expected=${expected}<<"
   output=$(printf '%s\n' "$output" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
   expected=$(printf '%s\n' "$expected" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
 
-  #echo "output=${output}<<"
-  #echo "expected=${expected}<<"
+  echo "output=${output}<<"
+  echo "expected=${expected}<<"
 }
 
-@test "Configure via CLI two legacy brokers " {
+@test "Configure legacy external broker -- Two AMQ brokers via CLI" {
   expected=$(cat <<EOF
     if (outcome != success) of /subsystem=resource-adapters:read-resource
-      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq' under 'MQ' prefix. Fix your configuration to contain resource adapters subsystem for this to happen. >> \${error_file}
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq' under 'TEST_MQ' prefix. Fix your configuration to contain resource adapters subsystem for this to happen. >> \${error_file}
       exit
     end-if
 
     /subsystem=resource-adapters/resource-adapter=activemq-rar.rar:add(archive=activemq-rar.rar, transaction-support=XATransaction)
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=UserName:add(value="mq_username")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=Password:add(value="mq_password")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=ServerUrl:add(value="tcp://host:9999?jms.rmIdFromConnectionId=true")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/connection-definitions="messaging_bats_test-amq-ConnectionFactory":add(tracking="true", class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username", recovery-password="mq_password")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=UserName:add(value="mq_username_one")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=Password:add(value="mq_password_one")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=ServerUrl:add(value="tcp://hostone:1999?jms.rmIdFromConnectionId=true")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/connection-definitions="messaging_bats_test-amq-ConnectionFactory":add(tracking="true", class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_one", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_one", recovery-password="mq_password_one")
 
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1"/config-properties=PhysicalName:add(value="queue/queue1")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue2":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue2", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue2"/config-properties=PhysicalName:add(value="queue/queue2")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic1":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic1", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic1"/config-properties=PhysicalName:add(value="topic/topic1")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic2":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic2", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic2"/config-properties=PhysicalName:add(value="topic/topic2")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1_one":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1_one", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1_one"/config-properties=PhysicalName:add(value="queue/queue1_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue2_one":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue2_one", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue2_one"/config-properties=PhysicalName:add(value="queue/queue2_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic1_one":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic1_one", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic1_one"/config-properties=PhysicalName:add(value="topic/topic1_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic2_one":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic2_one", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="topic/topic2_one"/config-properties=PhysicalName:add(value="topic/topic2_one")
 
     if (outcome != success) of /subsystem=resource-adapters:read-resource
-      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test_two-amq' under 'MQT' prefix. Fix your configuration to contain resource adapters subsystem for this to happen. >> \${error_file}
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test_two-amq' under 'TEST_MQ_TWO' prefix. Fix your configuration to contain resource adapters subsystem for this to happen. >> \${error_file}
       exit
     end-if
 
     /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1:add(archive=activemq-rar.rar, transaction-support=XATransaction)
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=UserName:add(value="mq_username")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=Password:add(value="mq_password")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=ServerUrl:add(value="tcp://host:9999?jms.rmIdFromConnectionId=true")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/connection-definitions="messaging_bats_test_two-amq-ConnectionFactory":add(class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username", recovery-password="mq_password")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=UserName:add(value="mq_username_two")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=Password:add(value="mq_password_two")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=ServerUrl:add(value="tcp://hostonetwo:2999?jms.rmIdFromConnectionId=true")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/connection-definitions="messaging_bats_test_two-amq-ConnectionFactory":add(class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_two", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_two", recovery-password="mq_password_two")
 
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1"/config-properties=PhysicalName:add(value="queue/queue1")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue2":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue2", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue2"/config-properties=PhysicalName:add(value="queue/queue2")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic1":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic1", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic1"/config-properties=PhysicalName:add(value="topic/topic1")
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic2":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic2", use-java-context=true)
-    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic2"/config-properties=PhysicalName:add(value="topic/topic2")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1_two":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1_two", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1_two"/config-properties=PhysicalName:add(value="queue/queue1_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue2_two":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue2_two", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue2_two"/config-properties=PhysicalName:add(value="queue/queue2_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic1_two":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic1_two", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic1_two"/config-properties=PhysicalName:add(value="topic/topic1_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic2_two":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/topic/topic2_two", use-java-context=true)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="topic/topic2_two"/config-properties=PhysicalName:add(value="topic/topic2_two")
+    /subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value="mq_jndi_one")
 EOF
 )
   CONFIG_ADJUSTMENT_MODE="cli"
 
-  MQ_SERVICE_PREFIX_MAPPING="messaging_bats_test-amq=MQ,messaging_bats_test_two-amq=MQT"
+   MQ_SERVICE_PREFIX_MAPPING="messaging_bats_test-amq=TEST_MQ,messaging_bats_test_two-amq=TEST_MQ_TWO"
 
-  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST="host"
-  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT=9999
-  MQ_JNDI="mq_jndi"
-  MQ_USERNAME="mq_username"
-  MQ_PASSWORD="mq_password"
-  MQ_QUEUES="queue1,queue2"
-  MQ_TOPICS="topic1,topic2"
-  MQ_TRACKING="true"
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST="hostone"
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT=1999
+  TEST_MQ_JNDI="mq_jndi_one"
+  TEST_MQ_USERNAME="mq_username_one"
+  TEST_MQ_PASSWORD="mq_password_one"
+  TEST_MQ_QUEUES="queue1_one,queue2_one"
+  TEST_MQ_TOPICS="topic1_one,topic2_one"
+  TEST_MQ_TRACKING="true"
 
-  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_HOST="host"
-  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_PORT=9999
-  MQT_JNDI="mq_jndi"
-  MQT_USERNAME="mq_username"
-  MQT_PASSWORD="mq_password"
-  MQT_QUEUES="queue1,queue2"
-  MQT_TOPICS="topic1,topic2"
+  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_HOST="hostonetwo"
+  MESSAGING_BATS_TEST_TWO_AMQ_TCP_SERVICE_PORT=2999
+  TEST_MQ_TWO_JNDI="mq_jndi_two"
+  TEST_MQ_TWO_USERNAME="mq_username_two"
+  TEST_MQ_TWO_PASSWORD="mq_password_two"
+  TEST_MQ_TWO_QUEUES="queue1_two,queue2_two"
+  TEST_MQ_TWO_TOPICS="topic1_two,topic2_two"
 
   run inject_brokers
   echo "CONSOLE: ${output}"
   output=$(cat "${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
   [ "${output}" = "${expected}" ]
+}
+
+
+@test "Configure External broker type AMQ7 -- One AMQ7 broker via CLI" {
+   expected=$(cat <<EOF
+    if (outcome != success) of /subsystem=messaging-activemq:read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
+    /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
+    /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
+
+    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
+    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
+
+    /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+    /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+
+    /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
+    /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
+
+    /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
+    /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
+
+    /subsystem=messaging-activemq/server=default/security-setting=#:add()
+    /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
+
+    /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+
+    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXALocal"])
+
+    if (outcome == success) of /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="messaging-remote-throughput":read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to not contain a remote-destination-outbound-socket-binding named 'messaging-remote-throughput' for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="messaging-remote-throughput":add(host="127.0.0.1", port="9999")
+    /subsystem=messaging-activemq/server=default/remote-connector=netty-remote-throughput:add(socket-binding="messaging-remote-throughput")
+    /subsystem=messaging-activemq/server=default/pooled-connection-factory="activemq-ra-remote":add(user="mq_username", password="mq_password", entries=["java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA mq_jndi"], connectors=["netty-remote-throughput"], transaction=xa)
+
+    if (outcome != success) of /subsystem=naming:read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to contain naming subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    if (outcome == success) of /subsystem=naming/binding="java:global/remoteContext":read-resource
+      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to not contain a naming binding with name 'java:global/remoteContext' for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    /subsystem=naming/binding="java:global/remoteContext":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://127.0.0.1:remoteContext", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
+    /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="queue.queue1", value="queue1")
+    /subsystem=naming/binding="java:/queue1":add(binding-type=lookup, lookup="java:global/remoteContext/queue1")
+    /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="queue.queue2", value="queue2")
+    /subsystem=naming/binding="java:/queue2":add(binding-type=lookup, lookup="java:global/remoteContext/queue2")
+    /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="topic.topic1", value="topic1")
+    /subsystem=naming/binding="java:/topic1":add(binding-type=lookup, lookup="java:global/remoteContext/topic1")
+    /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="topic.topic2", value="topic2")
+    /subsystem=naming/binding="java:/topic2":add(binding-type=lookup, lookup="java:global/remoteContext/topic2")
+    /subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value="mq_jndi")
+EOF
+
+)
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  MQ_SERVICE_PREFIX_MAPPING="messaging_bats_test-amq7=TEST_MQ"
+
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST="127.0.0.1"
+  MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT=9999
+  TEST_MQ_JNDI="mq_jndi"
+  TEST_MQ_USERNAME="mq_username"
+  TEST_MQ_PASSWORD="mq_password"
+  TEST_MQ_QUEUES="queue1,queue2"
+  TEST_MQ_TOPICS="topic1,topic2"
+  TEST_MQ_TRACKING="true"
+
+  run inject_brokers
+  echo "CONSOLE: ${output}"
+  output=$(cat "${CLI_SCRIPT_FILE}")
+  normalize_spaces_new_lines
+  [ "${output}" = "${expected}" ]
+}
+
+@test "Configure Embedded server broker -- with CLI, with destinations but disabled" {
+    CONFIG_ADJUSTMENT_MODE="cli"
+
+    rm -f "${CONFIG_WARNING_FILE}"
+    rm -f "${CLI_SCRIPT_FILE}"
+
+    export MQ_CLUSTER_PASSWORD="somemqpassword"
+    export MQ_QUEUES="queue1,queue2"
+    export MQ_TOPICS="topic1,topic2"
+    ACTIVEMQ_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/activemq-subsystem.xml
+    export DISABLE_EMBEDDED_JMS_BROKER="always"
+    run configure_mq
+
+    [ ! -a "${CLI_SCRIPT_FILE}" ]
+    [ ! -a "${CONFIG_WARNING_FILE}" ]
+}
+
+@test "Configure Embedded server broker -- with CLI and destinations" {
+    expected=$(cat << EOF
+      if (outcome != success) of /subsystem=messaging-activemq:read-resource
+        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
+        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
+
+      /subsystem=messaging-activemq/server="default"/jms-queue="queue1":add(entries=["/queue/queue1"])
+      /subsystem=messaging-activemq/server="default"/jms-queue="queue2":add(entries=["/queue/queue2"])
+      /subsystem=messaging-activemq/server="default"/jms-topic="topic1":add(entries=["/topic/topic1"])
+      /subsystem=messaging-activemq/server="default"/jms-topic="topic2":add(entries=["/topic/topic2"])
+
+      /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
+      /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
+
+      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
+      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
+
+      /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+      /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+
+      /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
+      /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
+
+      /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
+      /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
+
+      /subsystem=messaging-activemq/server=default/security-setting=#:add()
+      /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
+
+      /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+
+      /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXA java:jboss/DefaultJMSConnectionFactory"])
+
+      if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=messaging:read-resource
+        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to not contain a socket-binding named 'messaging' for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=messaging-throughput:read-resource
+        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to not contain a socket-binding named 'messaging-throughput' for this to happen. >> \${error_file}
+        exit
+      end-if
+
+      /socket-binding-group=standard-sockets/socket-binding=messaging:add(port=5445)
+      /socket-binding-group=standard-sockets/socket-binding=messaging-throughput:add(port=5455)
+EOF
+)
+    CONFIG_ADJUSTMENT_MODE="cli"
+
+    export MQ_CLUSTER_PASSWORD="somemqpassword"
+    export MQ_QUEUES="queue1,queue2"
+    export MQ_TOPICS="topic1,topic2"
+    run configure_mq
+
+    echo "CONSOLE: ${output}"
+    output=$(cat "${CLI_SCRIPT_FILE}")
+    normalize_spaces_new_lines
+    [ "${output}" = "${expected}" ]
 }
