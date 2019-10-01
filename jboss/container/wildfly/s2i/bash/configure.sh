@@ -13,6 +13,17 @@ pushd ${ARTIFACTS_DIR}
 cp -pr * /
 popd
 
+# Construct the settings in use by galleon at provisioning and startup.
+mkdir -p $HOME/.m2/conf
+chown jboss:root $HOME/.m2/conf
+chmod ug+rwX $HOME/.m2/conf
+cp $HOME/.m2/settings.xml "$GALLEON_MAVEN_SETTINGS_XML"
+local_repo_xml="\n\
+  <localRepository>${GALLEON_LOCAL_MAVEN_REPO}</localRepository>"
+sed -i "s|<!-- ### configured local repository ### -->|${local_repo_xml}|" "$GALLEON_MAVEN_SETTINGS_XML"
+chown jboss:root $GALLEON_MAVEN_SETTINGS_XML
+chmod ug+rwX $GALLEON_MAVEN_SETTINGS_XML
+
 ln -s /opt/jboss/container/wildfly/s2i/install-common/install-common.sh /usr/local/s2i/install-common.sh
 chown -h jboss:root /usr/local/s2i/install-common.sh
 
@@ -49,8 +60,3 @@ galleon_profile="<profile>\n\
     </profile>\n\
 "
 sed -i "s|<\!-- ### configured profiles ### -->|$galleon_profile <\!-- ### configured profiles ### -->|" $HOME/.m2/settings.xml
-
-# Copy settings.xml to a safe location that will be set at assembly time.
-cp $HOME/.m2/settings.xml $HOME/.m2/settings-s2i.xml
-chown jboss:root $HOME/.m2/settings-s2i.xml
-chmod ug+rwX $HOME/.m2/settings-s2i.xml

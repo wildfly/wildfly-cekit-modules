@@ -90,6 +90,12 @@ function galleon_init_mvn_env() {
     if [ -n "$MAVEN_LOCAL_REPO" ]; then
       ORIGINAL_MAVEN_LOCAL_REPO=$MAVEN_LOCAL_REPO
     fi
+    if [ -n "$MAVEN_SETTINGS_XML" ]; then
+      ORIGINAL_MAVEN_SETTINGS_XML=$MAVEN_SETTINGS_XML
+    fi
+    # Set galleon settings prior to init maven.
+    # Doing so default settings.xml are untouched.
+    MAVEN_SETTINGS_XML=$GALLEON_MAVEN_SETTINGS_XML
     # Required for S2I_SOURCE_DIR to be initialized
     maven_s2i_init
     # reset part of the s2i maven initialization to adapt to galleon local repo
@@ -98,6 +104,8 @@ function galleon_init_mvn_env() {
     if [ -n "$ORIGINAL_MAVEN_ARGS" ]; then
       MAVEN_ARGS=$ORIGINAL_MAVEN_ARGS
     fi
+    # Add settings that Galleon plugin will use when generating config
+    MAVEN_ARGS="$MAVEN_ARGS -Djboss.modules.settings.xml.url=file://$GALLEON_MAVEN_SETTINGS_XML"
     maven_init_var_MAVEN_ARGS
 }
 
@@ -132,6 +140,12 @@ function galleon_reset_mvn_env() {
     unset MAVEN_LOCAL_REPO
     if [ -n "$ORIGINAL_MAVEN_LOCAL_REPO" ]; then
       MAVEN_LOCAL_REPO=$ORIGINAL_MAVEN_LOCAL_REPO
+    fi
+
+    # restore MAVEN_SETTINGS_XML
+    unset MAVEN_SETTINGS_XML
+    if [ -n "$ORIGINAL_MAVEN_SETTINGS_XML" ]; then
+      MAVEN_SETTINGS_XML=$ORIGINAL_MAVEN_SETTINGS_XML
     fi
 
     # reset args to be clean when consumed by s2i
