@@ -118,6 +118,7 @@ function configure_mq_cluster_password() {
   fi
 }
 
+# Configures by default the embedded broker only if a remote one has not been already added
 function configure_mq() {
   if [ "$REMOTE_AMQ_BROKER" != "true" ] ; then
     configure_mq_cluster_password
@@ -127,36 +128,38 @@ function configure_mq() {
 
     destinations=$(configure_mq_destinations "${messaging_subsystem_config_mode}" "default")
 
-    # We need the broker if they configured destinations or didn't explicitly disable the broker
-    # In previous releases this check was relying on destinations, DISABLE_EMBEDDED_JMS_BROKER value and the presense of the <!-- ##MESSAGING_SUBSYSTEM_CONFIG## --> marker.
-    # If the marker was in the config AND there are destinations OR embeded is not explicitely disabled, then the embedded was added.
-    # In the new configuration we cannot rely on marker precense since it is not supplied by default, and not supplying it does not mean
-    # we don't want the embedded server configuration.
-    # If we do not want the embeded server added when there are no destinations, then DISABLE_EMBEDDED_JMS_BROKER should be explicitely set to always.
-    if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
-      local error_message_text
-      if [ -n "${destinations}" ]; then
-        error_message_text="You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables"
-      else
-        error_message_text="The embedded server broker is going to be added to your server configuration because it has not been explicitely disabled via DISABLE_EMBEDDED_JMS_BROKER."
-      fi
+    local error_message_text
+    if [ -n "${destinations}" ]; then
+      error_message_text="You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables"
+    else
+      error_message_text="An embedded messaging broker is added by default, to disable configuring an embedded messaging broker set the DISABLE_EMBEDDED_JMS_BROKER environment variable to true"
+    fi
 
-      local subsystemAdded=false
-      if [ "${messaging_subsystem_config_mode}" = "xml" ]; then
+    local embeddedBroker="false"
+    if [ "${messaging_subsystem_config_mode}" = "xml" ]; then
+      # We need the broker if they configured destinations or didn't explicitly disable the broker AND there's a point to doing it because the marker exists
+      if ([ -n "${destinations}" ] || ([ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ] && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]) ) && grep -q '<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->' ${CONFIG_FILE}; then
         activemq_subsystem=$(sed -e "s|<!-- ##DESTINATIONS## -->|${destinations}|" <"${ACTIVEMQ_SUBSYSTEM_FILE}" | sed ':a;N;$!ba;s|\n|\\n|g')
         sed -i "s|<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->|${activemq_subsystem%$'\n'}|" "${CONFIG_FILE}"
-        subsystemAdded=true
-      elif [ "${messaging_subsystem_config_mode}" = "cli" ]; then
-        activemq_subsystem=$(add_messaging_default_server_cli "${error_message_text}" "${REMOTE_AMQ_BROKER}" "${destinations}")
-        echo "${activemq_subsystem}" >> "${CLI_SCRIPT_FILE}"
-        subsystemAdded=true
+        embeddedBroker="true"
       fi
+    elif [ "${messaging_subsystem_config_mode}" = "cli" ]; then
+      # We need the broker if there are destinations or it wasn't explicitly disabled.
+      # In the new configuration we cannot rely on marker precense since it is not supplied by default, and not supplying it does not mean
+      # we don't want the embedded server configuration.
+      # If we do not want the embeded server added when there are no destinations, then DISABLE_EMBEDDED_JMS_BROKER should be explicitely set to always.
+      if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
+        activemq_subsystem=$(add_messaging_default_server_cli "${error_message_text}" "${destinations}")
+        echo "${activemq_subsystem}" >> "${CLI_SCRIPT_FILE}"
+        embeddedBroker="true"
+      fi
+    fi
 
-      if [ "${subsystemAdded}" = "true" ]; then
-        echo "Configuration of an embedded messaging broker within the appserver is enabled but is not recommended. Support for such a configuration will be removed in a future release." >> "${CONFIG_WARNING_FILE}"
-        if [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]; then
-          echo "If you are not configuring messaging destinations, to disable configuring an embedded messaging broker set the DISABLE_EMBEDDED_JMS_BROKER environment variable to true." >> "${CONFIG_WARNING_FILE}"
-        fi
+    if [ "${embeddedBroker}" = "true" ]; then
+
+      echo "Configuration of an embedded messaging broker within the appserver is enabled but is not recommended. Support for such a configuration will be removed in a future release." >> "${CONFIG_WARNING_FILE}"
+      if [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]; then
+        echo "If you are not configuring messaging destinations, to disable configuring an embedded messaging broker set the DISABLE_EMBEDDED_JMS_BROKER environment variable to true." >> "${CONFIG_WARNING_FILE}"
       fi
 
       local messaging_ports_config_mode
@@ -207,9 +210,13 @@ function generate_remote_artemis_remote_connector() {
 }
 
 # $1 - name - messaging-remote-throughput
-# $2 - server name
+# $2 - server name Optional
 function generate_remote_artemis_remote_connector_cli() {
-    echo "/subsystem=messaging-activemq/server=${2}/remote-connector=netty-remote-throughput:add(socket-binding=\"${1}\")"
+    local resource="/subsystem=messaging-activemq"
+    if [ -n "${2}" ]; then
+        resource="${resource}/server=${2}"
+    fi
+    echo "${resource}/remote-connector=netty-remote-throughput:add(socket-binding=\"${1}\")"
 }
 
 # Arguments:
@@ -266,9 +273,14 @@ function generate_remote_artemis_connection_factory() {
 # $2 - username
 # $3 - password
 # $4 - default connection factory - java:jboss/DefaultJMSConnectionFactory
-# $5 - server name
+# $5 - server name Optional
 function generate_remote_artemis_connection_factory_cli() {
-  echo "/subsystem=messaging-activemq/server=${5}/pooled-connection-factory=\"${1}\":add(user=\"${2}\", password=\"${3}\", entries=[\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\"], connectors=[\"netty-remote-throughput\"], transaction=xa)"
+  local resource="/subsystem=messaging-activemq"
+  if [ -n "${5}" ]; then
+      resource="${resource}/server=${5}"
+  fi
+
+  echo "${resource}/pooled-connection-factory=\"${1}\":add(user=\"${2}\", password=\"${3}\", entries=[\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\"], connectors=[\"netty-remote-throughput\"], transaction=xa)"
 }
 
 # $1 object type - queue / topic
@@ -533,11 +545,11 @@ function generate_resource_adapter_cli() {
         exit
       end-if
 
-      /subsystem=resource-adapters/resource-adapter=${ra_id}:add(archive=$9, transaction-support=XATransaction)
-      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=UserName:add(value="${3}")
-      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=Password:add(value="${4}")
-      /subsystem=resource-adapters/resource-adapter=${ra_id}/config-properties=ServerUrl:add(value="tcp://${6}:${7}?jms.rmIdFromConnectionId=true")
-      /subsystem=resource-adapters/resource-adapter=${ra_id}/connection-definitions="${1}-ConnectionFactory":add(${ra_tracking}\
+      /subsystem=resource-adapters/resource-adapter="${ra_id}":add(archive=$9, transaction-support=XATransaction)
+      /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=UserName:add(value="${3}")
+      /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=Password:add(value="${4}")
+      /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=ServerUrl:add(value="tcp://${6}:${7}?jms.rmIdFromConnectionId=true")
+      /subsystem=resource-adapters/resource-adapter="${ra_id}"/connection-definitions="${1}-ConnectionFactory":add(${ra_tracking}\
 class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="${2}", enabled=true, min-pool-size=1, max-pool-size=20, \
 pool-prefill=false, same-rm-override=false, recovery-username="${3}", recovery-password="${4}")
 EOF
@@ -747,8 +759,15 @@ function inject_brokers() {
                 add_messaging_default_server
                 subsystem_added=true
               elif [ "${messaging_subsystem_config_mode}" = "cli" ]; then
-                local default_server=$(add_messaging_default_server_cli "You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix" "${REMOTE_AMQ_BROKER}")
-                echo "${default_server}" >> "${CLI_SCRIPT_FILE}"
+                local cli_operations
+                IFS= read -rd '' cli_operations << EOF
+
+                  if (outcome != success) of /subsystem=messaging-activemq:read-resource
+                    echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name '${service_name}' under '${prefix}' prefix. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
+                    exit
+                  end-if
+EOF
+                echo "${cli_operations}" >> "${CLI_SCRIPT_FILE}"
                 subsystem_added=true
               fi
           fi
@@ -775,7 +794,7 @@ function inject_brokers() {
             connector=$(generate_remote_artemis_remote_connector "${socket_binding_name}")
             sed -i "s|<!-- ##AMQ_REMOTE_CONNECTOR## -->|${connector%$'\n'}<!-- ##AMQ_REMOTE_CONNECTOR## -->|" $CONFIG_FILE
           elif [ "${amq_remote_connector_mode}" = "cli" ] && [ "${subsystem_added}" = "true" ]; then
-            connector=$(generate_remote_artemis_remote_connector_cli "${socket_binding_name}" "default")
+            connector=$(generate_remote_artemis_remote_connector_cli "${socket_binding_name}")
             echo "${connector}" >> "${CLI_SCRIPT_FILE}"
           fi
 
@@ -791,7 +810,7 @@ function inject_brokers() {
             cnx_factory=$(generate_remote_artemis_connection_factory "${cnx_factory_name}" "${username}" "${password}" "${jndi}")
             sed -i "s|<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|${cnx_factory%$'\n'}<!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->|" $CONFIG_FILE
           elif [ "${amq_pooled_connection_factory_mode}" = "cli" ] && [ "${subsystem_added}" = "true" ]; then
-            cnx_factory=$(generate_remote_artemis_connection_factory_cli "${cnx_factory_name}" "${username}" "${password}" "${jndi}" "default")
+            cnx_factory=$(generate_remote_artemis_connection_factory_cli "${cnx_factory_name}" "${username}" "${password}" "${jndi}")
             echo "${cnx_factory}" >> "${CLI_SCRIPT_FILE}"
           fi
 
@@ -896,7 +915,6 @@ function inject_brokers() {
       fi
     elif [ "${default_jms_config_mode}" = "cli" ]; then
       if [ "$REMOTE_AMQ_BROKER" = "true" ] || ([ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
-        # TODO: shoud we add it by default, what to do if there is one already defined ?
         echo "/subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value=\"${defaultJmsConnectionFactoryJndi}\")" >> "${CLI_SCRIPT_FILE}"
       else
         echo "/subsystem=ee/service=default-bindings:undefine-attribute(name=jms-connection-factory)" >> "${CLI_SCRIPT_FILE}"
@@ -924,27 +942,33 @@ add_messaging_default_server() {
   sed -i "s|java:/JmsXA|java:/JmsXALocal|" $CONFIG_FILE
 }
 
+
 # Arguments:
 # $1 - error message text describing the source
-# $2 - remote broker flag
-# $3 - destinations - Optional
+# $2 - destinations - Optional
 add_messaging_default_server_cli() {
-  declare error_message_text="${1}" remote_broker_flag="${2}"  destinations="${3}"
+  declare error_message_text="${1}" destinations="${2}"
 
   local cli_operations
   IFS= read -rd '' cli_operations << EOF
 
-  if (outcome != success) of /subsystem=messaging-activemq:read-resource
-    echo ${error_message_text}. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
-    exit
-  end-if
+    if (outcome != success) of /subsystem=remoting:read-resource
+      echo ${error_message_text}. Fix your configuration to contain Remoting subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
 
-  if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
-    echo ${error_message_text}. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
-    exit
-  end-if
+    if (outcome != success) of /subsystem=messaging-activemq:read-resource
+      echo ${error_message_text}. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
 
-  /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
+    if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
+      echo ${error_message_text}. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
+      exit
+    end-if
+
+    batch
+      /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
 EOF
 
   if [ -n "${destinations}" ]; then
@@ -954,35 +978,30 @@ EOF
 
   IFS= read -rd '' tmp_operations << EOF
 
-    /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
-    /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
+      /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
+      /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
 
-    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
-    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
+      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
+      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
 
-    /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
-    /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+      /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+      /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
 
-    /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
-    /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
+      /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
+      /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
 
-    /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
-    /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
+      /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
+      /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
 
-    /subsystem=messaging-activemq/server=default/security-setting=#:add()
-    /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
+      /subsystem=messaging-activemq/server=default/security-setting=#:add()
+      /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
 
-    /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+      /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+      /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXA java:jboss/DefaultJMSConnectionFactory"])
+
+    run-batch
 EOF
   cli_operations="${cli_operations}${tmp_operations}"
-
-  if [ "${remote_broker_flag}" = "true" ]; then
-    cli_operations="${cli_operations}
-    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=[\"in-vm\"], entries=[\"java:/JmsXALocal\"])"
-  else
-    cli_operations="${cli_operations}
-    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=[\"in-vm\"], entries=[\"java:/JmsXA java:jboss/DefaultJMSConnectionFactory\"])"
-  fi
 
   echo "${cli_operations}"
 }

@@ -311,11 +311,11 @@ normalize_spaces_new_lines() {
       exit
     end-if
 
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar:add(archive=activemq-rar.rar, transaction-support=XATransaction)
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=UserName:add(value="mq_username_one")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=Password:add(value="mq_password_one")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/config-properties=ServerUrl:add(value="tcp://hostone:1999?jms.rmIdFromConnectionId=true")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar/connection-definitions="messaging_bats_test-amq-ConnectionFactory":add(tracking="true", class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_one", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_one", recovery-password="mq_password_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar":add(archive=activemq-rar.rar, transaction-support=XATransaction)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/config-properties=UserName:add(value="mq_username_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/config-properties=Password:add(value="mq_password_one")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/config-properties=ServerUrl:add(value="tcp://hostone:1999?jms.rmIdFromConnectionId=true")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/connection-definitions="messaging_bats_test-amq-ConnectionFactory":add(tracking="true", class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_one", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_one", recovery-password="mq_password_one")
 
     /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1_one":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1_one", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter="activemq-rar.rar"/admin-objects="queue/queue1_one"/config-properties=PhysicalName:add(value="queue/queue1_one")
@@ -331,11 +331,11 @@ normalize_spaces_new_lines() {
       exit
     end-if
 
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1:add(archive=activemq-rar.rar, transaction-support=XATransaction)
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=UserName:add(value="mq_username_two")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=Password:add(value="mq_password_two")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/config-properties=ServerUrl:add(value="tcp://hostonetwo:2999?jms.rmIdFromConnectionId=true")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar.rar-1/connection-definitions="messaging_bats_test_two-amq-ConnectionFactory":add(class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_two", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_two", recovery-password="mq_password_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1":add(archive=activemq-rar.rar, transaction-support=XATransaction)
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/config-properties=UserName:add(value="mq_username_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/config-properties=Password:add(value="mq_password_two")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/config-properties=ServerUrl:add(value="tcp://hostonetwo:2999?jms.rmIdFromConnectionId=true")
+    /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/connection-definitions="messaging_bats_test_two-amq-ConnectionFactory":add(class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="mq_jndi_two", enabled=true, min-pool-size=1, max-pool-size=20, pool-prefill=false, same-rm-override=false, recovery-username="mq_username_two", recovery-password="mq_password_two")
 
     /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1_two":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/queue1_two", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter="activemq-rar.rar-1"/admin-objects="queue/queue1_two"/config-properties=PhysicalName:add(value="queue/queue1_two")
@@ -384,42 +384,14 @@ EOF
       exit
     end-if
 
-    if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
-      echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
-      exit
-    end-if
-
-    /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
-    /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
-    /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
-
-    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
-    /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
-
-    /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
-    /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
-
-    /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
-    /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
-
-    /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
-    /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
-
-    /subsystem=messaging-activemq/server=default/security-setting=#:add()
-    /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
-
-    /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
-
-    /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXALocal"])
-
     if (outcome == success) of /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="messaging-remote-throughput":read-resource
       echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to not contain a remote-destination-outbound-socket-binding named 'messaging-remote-throughput' for this to happen. >> \${error_file}
       exit
     end-if
 
     /socket-binding-group=standard-sockets/remote-destination-outbound-socket-binding="messaging-remote-throughput":add(host="127.0.0.1", port="9999")
-    /subsystem=messaging-activemq/server=default/remote-connector=netty-remote-throughput:add(socket-binding="messaging-remote-throughput")
-    /subsystem=messaging-activemq/server=default/pooled-connection-factory="activemq-ra-remote":add(user="mq_username", password="mq_password", entries=["java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA mq_jndi"], connectors=["netty-remote-throughput"], transaction=xa)
+    /subsystem=messaging-activemq/remote-connector=netty-remote-throughput:add(socket-binding="messaging-remote-throughput")
+    /subsystem=messaging-activemq/pooled-connection-factory="activemq-ra-remote":add(user="mq_username", password="mq_password", entries=["java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA mq_jndi"], connectors=["netty-remote-throughput"], transaction=xa)
 
     if (outcome != success) of /subsystem=naming:read-resource
       echo You have set MQ_SERVICE_PREFIX_MAPPING environment variable to configure the service name 'messaging_bats_test-amq7' under 'TEST_MQ' prefix. Fix your configuration to contain naming subsystem for this to happen. >> \${error_file}
@@ -483,6 +455,11 @@ EOF
 
 @test "Configure Embedded server broker -- with CLI and destinations" {
     expected=$(cat << EOF
+      if (outcome != success) of /subsystem=remoting:read-resource
+        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to contain Remoting subsystem for this to happen. >> \${error_file}
+        exit
+      end-if
+
       if (outcome != success) of /subsystem=messaging-activemq:read-resource
         echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
         exit
@@ -493,34 +470,36 @@ EOF
         exit
       end-if
 
-      /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
+      batch
+        /subsystem=messaging-activemq/server=default:add(journal-pool-files=10, statistics-enabled="\${wildfly.messaging-activemq.statistics-enabled:\${wildfly.statistics-enabled:false}}")
 
-      /subsystem=messaging-activemq/server="default"/jms-queue="queue1":add(entries=["/queue/queue1"])
-      /subsystem=messaging-activemq/server="default"/jms-queue="queue2":add(entries=["/queue/queue2"])
-      /subsystem=messaging-activemq/server="default"/jms-topic="topic1":add(entries=["/topic/topic1"])
-      /subsystem=messaging-activemq/server="default"/jms-topic="topic2":add(entries=["/topic/topic2"])
+        /subsystem=messaging-activemq/server="default"/jms-queue="queue1":add(entries=["/queue/queue1"])
+        /subsystem=messaging-activemq/server="default"/jms-queue="queue2":add(entries=["/queue/queue2"])
+        /subsystem=messaging-activemq/server="default"/jms-topic="topic1":add(entries=["/topic/topic1"])
+        /subsystem=messaging-activemq/server="default"/jms-topic="topic2":add(entries=["/topic/topic2"])
 
-      /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
-      /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
+        /subsystem=messaging-activemq/server=default/http-connector=http-connector:add(socket-binding=http-messaging, endpoint=http-acceptor)
+        /subsystem=messaging-activemq/server=default/http-connector=http-connector-throughput:add(socket-binding=http-messaging, endpoint=http-acceptor-throughput, params={"batch-delay"="50"})
 
-      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
-      /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
+        /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor:add(http-listener=default)
+        /subsystem=messaging-activemq/server=default/http-acceptor=http-acceptor-throughput:add(http-listener=default, params={batch-delay=50,direct-deliver=false})
 
-      /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
-      /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+        /subsystem=messaging-activemq/server=default/in-vm-connector=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
+        /subsystem=messaging-activemq/server=default/in-vm-acceptor=in-vm:add(server-id=0, params={"buffer-pooling"="false"})
 
-      /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
-      /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
+        /subsystem=messaging-activemq/server=default/jms-queue=ExpiryQueue:add(entries=["java:/jms/queue/ExpiryQueue"])
+        /subsystem=messaging-activemq/server=default/jms-queue=DLQ:add(entries=["java:/jms/queue/DLQ"])
 
-      /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
-      /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
+        /subsystem=messaging-activemq/server=default/connection-factory=InVmConnectionFactory:add(connectors=["in-vm"], entries=["java:/ConnectionFactory"])
+        /subsystem=messaging-activemq/server=default/connection-factory=RemoteConnectionFactory:add(connectors=["http-connector"], entries=["java:jboss/exported/jms/RemoteConnectionFactory"], reconnect-attempts=-1)
 
-      /subsystem=messaging-activemq/server=default/security-setting=#:add()
-      /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
+        /subsystem=messaging-activemq/server=default/security-setting=#:add()
+        /subsystem=messaging-activemq/server=default/security-setting=#/role=guest:add(delete-non-durable-queue=true, create-non-durable-queue=true, consume=true, send=true)
 
-      /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
+        /subsystem=messaging-activemq/server=default/address-setting=#:add(dead-letter-address=jms.queue.DLQ, expiry-address=jms.queue.ExpiryQueue, max-size-bytes=10485760L, page-size-bytes=2097152, message-counter-history-day-limit=10, redistribution-delay=1000L)
 
-      /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXA java:jboss/DefaultJMSConnectionFactory"])
+        /subsystem=messaging-activemq/server=default/pooled-connection-factory=activemq-ra:add(transaction=xa, connectors=["in-vm"], entries=["java:/JmsXA java:jboss/DefaultJMSConnectionFactory"])
+      run-batch
 
       if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=messaging:read-resource
         echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to not contain a socket-binding named 'messaging' for this to happen. >> \${error_file}
