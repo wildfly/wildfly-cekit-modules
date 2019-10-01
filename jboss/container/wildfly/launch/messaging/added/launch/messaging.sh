@@ -549,10 +549,33 @@ function generate_resource_adapter_cli() {
       /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=UserName:add(value="${3}")
       /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=Password:add(value="${4}")
       /subsystem=resource-adapters/resource-adapter="${ra_id}"/config-properties=ServerUrl:add(value="tcp://${6}:${7}?jms.rmIdFromConnectionId=true")
-      /subsystem=resource-adapters/resource-adapter="${ra_id}"/connection-definitions="${1}-ConnectionFactory":add(${ra_tracking}\
-class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name="${2}", enabled=true, min-pool-size=1, max-pool-size=20, \
-pool-prefill=false, same-rm-override=false, recovery-username="${3}", recovery-password="${4}")
 EOF
+
+      local connection_definition="/subsystem=resource-adapters/resource-adapter=\"${ra_id}\"/connection-definitions=\"${1}-ConnectionFactory\":add(${ra_tracking}\
+class-name=org.apache.activemq.ra.ActiveMQManagedConnectionFactory, jndi-name=\"${2}\", enabled=true, min-pool-size=1, max-pool-size=20, \
+pool-prefill=false, same-rm-override=false, recovery-username=\"${3}\", recovery-password=\"${4}\""
+
+
+    local has_security_subsystem
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
+    testXpathExpression "${xpath}" "has_security_subsystem"
+
+    local has_elytron_subsystem
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:wildfly:elytron:')]\""
+    testXpathExpression "${xpath}" "has_elytron_subsystem"
+
+    if [ "${has_security_subsystem}" -ne 0 ]; then
+      if [ "${has_elytron_subsystem}" -ne 0 ]; then
+        echo "${error_message_text}. Fix your configuration to contain Elytron subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+        return
+      fi
+      connection_definition="${connection_definition}, elytron-enabled=true, recovery-elytron-enabled=true"
+    fi
+    connection_definition="${connection_definition})"
+
+    cli_operations="${cli_operations}
+                    ${connection_definition}"
+
     # backwards-compatability flag per CLOUD-329
     simple_def_phys_dest=$(echo "${MQ_SIMPLE_DEFAULT_PHYSICAL_DESTINATION}" | tr [:upper:] [:lower:])
 
@@ -949,6 +972,21 @@ add_messaging_default_server() {
 add_messaging_default_server_cli() {
   declare error_message_text="${1}" destinations="${2}"
 
+  local has_security_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
+  testXpathExpression "${xpath}" "has_security_subsystem"
+
+  local has_elytron_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:wildfly:elytron:')]\""
+  testXpathExpression "${xpath}" "has_elytron_subsystem"
+
+  if [ "${has_security_subsystem}" -ne 0 ]; then
+    if [ "${has_elytron_subsystem}" -ne 0 ]; then
+      echo "${error_message_text}. Fix your configuration to contain Elytron subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+      return
+    fi
+  fi
+
   local cli_operations
   IFS= read -rd '' cli_operations << EOF
 
@@ -1002,6 +1040,11 @@ EOF
     run-batch
 EOF
   cli_operations="${cli_operations}${tmp_operations}"
+
+  if [ "${has_security_subsystem}" -ne 0 ]; then
+    cli_operations="${cli_operations}
+      /subsystem=messaging-activemq/server=default:write-attribute(name=elytron-domain, value=ApplicationDomain)"
+  fi
 
   echo "${cli_operations}"
 }
