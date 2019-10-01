@@ -99,7 +99,7 @@ function processErrorsAndWarnings() {
 
 function exec_cli_scripts() {
   local script="$1"
-  local stdOut="discard"
+  local stdOut="echo"
 
   if [ "${SCRIPT_DEBUG}" = "true" ]; then
     CLI_DEBUG="TRUE";
@@ -114,7 +114,6 @@ function exec_cli_scripts() {
 
     # Dump the cli script file for debugging
     if [ "${CLI_DEBUG^^}" = "TRUE" ]; then
-      stdOut="echo"
 
       echo "================= CLI files debug ================="
       if [ -f "${script}" ]; then
