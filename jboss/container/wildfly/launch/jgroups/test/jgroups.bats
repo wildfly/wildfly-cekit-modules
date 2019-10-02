@@ -323,7 +323,8 @@ normalize_spaces_new_lines() {
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="true")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
           run-batch
        end-if
 
@@ -338,7 +339,8 @@ normalize_spaces_new_lines() {
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="true")
+               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
+               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
           run-batch
        end-if
 EOF

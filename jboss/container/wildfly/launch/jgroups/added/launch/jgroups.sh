@@ -153,7 +153,8 @@ create_jgroups_encrypt_asym_cli() {
             "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value=\"${sym_keylength:-128}\")"
             "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value=\"${sym_algorithm:-AES/ECB/PKCS5Padding}\")"
             "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value=\"${asym_keylength:-512}\")"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value=\"${change_key_on_leave:-true}\")"
+            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value=\"${asym_algorithm:-RSA}\")"
+            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value=\"${change_key_on_leave:-true}\")"
         )
         config="${config} $(configure_protocol_cli_helper "${stack}" "ASYM_ENCRYPT" "${op[@]}")"
       done  <<< "${stackNames}"
