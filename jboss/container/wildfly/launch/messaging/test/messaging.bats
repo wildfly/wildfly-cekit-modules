@@ -403,7 +403,7 @@ EOF
       exit
     end-if
 
-    /subsystem=naming/binding="java:global/remoteContext":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://127.0.0.1:remoteContext", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
+    /subsystem=naming/binding="java:global/remoteContext":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://127.0.0.1:9999", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
     /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="queue.queue1", value="queue1")
     /subsystem=naming/binding="java:/queue1":add(binding-type=lookup, lookup="java:global/remoteContext/queue1")
     /subsystem=naming/binding="java:global/remoteContext":map-put(name=environment, key="queue.queue2", value="queue2")

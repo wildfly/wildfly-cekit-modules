@@ -253,7 +253,7 @@ function generate_remote_artemis_naming_cli() {
       exit
     end-if
 
-    /subsystem=naming/binding="java:global/${1}":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://${2}:${1}", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
+    /subsystem=naming/binding="java:global/${1}":add(binding-type=external-context, class=javax.naming.InitialContext, module=org.apache.activemq.artemis, environment={java.naming.provider.url="tcp://${2}:${3}", java.naming.factory.initial=org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory})
 EOF
 
     echo "${cli_operations}"
