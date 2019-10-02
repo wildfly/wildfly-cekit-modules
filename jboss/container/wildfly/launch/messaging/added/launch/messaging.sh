@@ -63,6 +63,12 @@ function prepareEnv() {
 }
 
 function configure() {
+   can_add_embedded
+
+  if [ $? -eq 1 ]; then
+    DISABLE_EMBEDDED_JMS_BROKER="always"
+  fi
+
   configure_artemis_address
   inject_brokers
   configure_mq
@@ -136,6 +142,7 @@ function configure_mq() {
     fi
 
     local embeddedBroker="false"
+    local activemq_subsystem
     if [ "${messaging_subsystem_config_mode}" = "xml" ]; then
       # We need the broker if they configured destinations or didn't explicitly disable the broker AND there's a point to doing it because the marker exists
       if ([ -n "${destinations}" ] || ([ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ] && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]) ) && grep -q '<!-- ##MESSAGING_SUBSYSTEM_CONFIG## -->' ${CONFIG_FILE}; then
@@ -150,8 +157,10 @@ function configure_mq() {
       # If we do not want the embeded server added when there are no destinations, then DISABLE_EMBEDDED_JMS_BROKER should be explicitely set to always.
       if ([ -n "${destinations}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]; then
         activemq_subsystem=$(add_messaging_default_server_cli "${error_message_text}" "${destinations}")
-        echo "${activemq_subsystem}" >> "${CLI_SCRIPT_FILE}"
-        embeddedBroker="true"
+        if [ -n "${activemq_subsystem}" ]; then
+          echo "${activemq_subsystem}" >> "${CLI_SCRIPT_FILE}"
+          embeddedBroker="true"
+        fi
       fi
     fi
 
@@ -985,23 +994,31 @@ add_messaging_default_server_cli() {
 
   if [ "${has_security_subsystem}" -ne 0 ]; then
     if [ "${has_elytron_subsystem}" -ne 0 ]; then
-      echo "${error_message_text}. Fix your configuration to contain Elytron subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-      return
+      # Just ignore
+      return 0
     fi
+  fi
+
+  local has_remoting_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:remoting:')]\""
+  testXpathExpression "${xpath}" "has_remoting_subsystem"
+
+  if [ "${has_remoting_subsystem}" -ne 0 ]; then
+      # Just ignore
+      return 0
+  fi
+
+  local has_messaging_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:messaging-activemq:')]\""
+  testXpathExpression "${xpath}" "has_messaging_subsystem"
+
+  if [ "${has_messaging_subsystem}" -ne 0 ]; then
+      # Just ignore
+      return 0
   fi
 
   local cli_operations
   IFS= read -rd '' cli_operations << EOF
-
-    if (outcome != success) of /subsystem=remoting:read-resource
-      echo ${error_message_text}. Fix your configuration to contain Remoting subsystem for this to happen. >> \${error_file}
-      exit
-    end-if
-
-    if (outcome != success) of /subsystem=messaging-activemq:read-resource
-      echo ${error_message_text}. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
-      exit
-    end-if
 
     if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
       echo ${error_message_text}. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
@@ -1050,4 +1067,41 @@ EOF
   fi
 
   echo "${cli_operations}"
+}
+
+can_add_embedded(){
+  local has_security_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
+  testXpathExpression "${xpath}" "has_security_subsystem"
+
+  local has_elytron_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:wildfly:elytron:')]\""
+  testXpathExpression "${xpath}" "has_elytron_subsystem"
+
+  if [ "${has_security_subsystem}" -ne 0 ]; then
+    if [ "${has_elytron_subsystem}" -ne 0 ]; then
+      # Just ignore
+      return 1
+    fi
+  fi
+
+  local has_remoting_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:remoting:')]\""
+  testXpathExpression "${xpath}" "has_remoting_subsystem"
+
+  if [ "${has_remoting_subsystem}" -ne 0 ]; then
+      # Just ignore
+      return 1
+  fi
+
+  local has_messaging_subsystem
+  local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:messaging-activemq:')]\""
+  testXpathExpression "${xpath}" "has_messaging_subsystem"
+
+  if [ "${has_messaging_subsystem}" -ne 0 ]; then
+      # Just ignore
+      return 1
+  fi
+
+  return 0
 }
