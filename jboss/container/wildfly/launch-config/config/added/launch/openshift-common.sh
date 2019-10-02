@@ -33,12 +33,8 @@ function createConfigExecutionContext() {
   systime=$(date +%s)
   # This is the cli file generated
   export CLI_SCRIPT_FILE=/tmp/cli-script-$systime.cli
-  # This is the file used to log errors by the CLI execution
-  export CONFIG_ERROR_FILE=/tmp/cli-script-error-$systime.cli
   # The property file used to pass variables to jboss-cli.sh
   export CLI_SCRIPT_PROPERTY_FILE=/tmp/cli-script-property-$systime.cli
-  # An output file for warning
-  export CONFIG_WARNING_FILE=/tmp/cli-warning-$systime.log
   # This is the cli process output file
   export CLI_SCRIPT_OUTPUT_FILE=/tmp/cli-script-output-$systime.cli
   # This is the file used to log errors by the launch scripts

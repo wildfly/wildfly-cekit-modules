@@ -59,7 +59,7 @@ function configure_drivers(){
           echo "Warning - ${driver_prefix}_DRIVER_MODULE is missing from driver configuration. Driver will not be configured"
           continue
         fi
-      
+
         driver_name=$(find_env "${driver_prefix}_DRIVER_NAME")
         if [ -z "$driver_name" ]; then
           echo "Warning - ${driver_prefix}_DRIVER_NAME is missing from driver configuration. Driver will not be configured"

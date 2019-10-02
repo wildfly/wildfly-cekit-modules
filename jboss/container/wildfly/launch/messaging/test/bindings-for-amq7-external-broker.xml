@@ -1,0 +1,18 @@
+<bindings>
+    <external-context name="java:global/remoteContext" module="org.apache.activemq.artemis" class="javax.naming.InitialContext">
+        <environment>
+            <property name="java.naming.factory.initial" value="org.apache.activemq.artemis.jndi.ActiveMQInitialContextFactory"/>
+            <property name="java.naming.provider.url" value="tcp://127.0.0.1:9999"/>
+            <property name="queue.queue1" value="queue1"/>
+            <property name="queue.queue2" value="queue2"/>
+            <property name="topic.topic1" value="topic1"/>
+            <property name="topic.topic2" value="topic2"/>
+            <!-- ##AMQ7_CONFIG_PROPERTIES## -->
+        </environment>
+    </external-context>
+    <lookup name="java:/queue1" lookup="java:global/remoteContext/queue1"/>
+    <lookup name="java:/queue2" lookup="java:global/remoteContext/queue2"/>
+    <lookup name="java:/topic1" lookup="java:global/remoteContext/topic1"/>
+    <lookup name="java:/topic2" lookup="java:global/remoteContext/topic2"/>
+    <!-- ##AMQ_LOOKUP_OBJECTS## -->
+</bindings>

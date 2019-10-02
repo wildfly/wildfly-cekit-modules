@@ -35,4 +35,4 @@ envs:
     description: Name of the secret, containing the JGroups keystore file used for securing the JGroups communications, when using SYM_ENCRYPT JGroups cluster traffic encryption protocol. If not set, cluster communication is not encrypted and a warning is issued.
   - name: "JGROUPS_PING_PROTOCOL"
     example: "openshift.DNS_PING"
-    description: JGroups protocol to use for node discovery. Can be either openshift.DNS_PING or kubernetes.KUBE_PING. 
+    description: JGroups protocol to use for node discovery. Can be either openshift.DNS_PING or kubernetes.KUBE_PING.
