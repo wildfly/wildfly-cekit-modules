@@ -948,10 +948,13 @@ EOF
 }
 
 disable_unused_rar() {
+  local resource_adapters_mode
+  getConfigurationMode "<!-- ##RESOURCE_ADAPTERS## -->" "resource_adapters_mode"
+
   # Put down a skipdeploy marker for the legacy activemq-rar.rar unless there is a .dodeploy marker
   # or the rar is mentioned in the config file
   local base_rar="$JBOSS_HOME/standalone/deployments/activemq-rar.rar"
-  if [ -e "${base_rar}" ] && [ ! -e "${base_rar}.dodeploy" ] && ! grep -q -E "activemq-rar\.rar" $CONFIG_FILE; then
+  if [ -e "${base_rar}" ] && [ ! -e "${base_rar}.dodeploy" ] && ! grep -q -E "activemq-rar\.rar" $CONFIG_FILE && ! ([ "${resource_adapters_mode}" = "cli" ] && [ "${REMOTE_AMQ6}" = "true" ]); then
     touch "$JBOSS_HOME/standalone/deployments/activemq-rar.rar.skipdeploy"
   fi
 }
