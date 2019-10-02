@@ -114,9 +114,10 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with markers embedded disabled" {
-    expected=$(echo "${INPUT_CONTENT}" | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run configure_mq
@@ -129,9 +130,11 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with socket-binding marker only" {
-    expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}" | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     run configure_mq
     echo "Output: ${output}"
@@ -143,9 +146,11 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with socket-binding marker only and destinations" {
-    expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}" | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
@@ -159,9 +164,11 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with socket-binding marker only, destinations and disabled" {
-    expected=$(echo "${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}"  | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
@@ -176,10 +183,11 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with socket-binding marker only embedded disabled" {
-    INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
-    expected=$(echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${SOCKET_BINDING_ONLY_INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run configure_mq
@@ -192,10 +200,10 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with markers embedded disabled and default JMSFactory to be removed" {
-    INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
-    expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
+    INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
+    expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
@@ -455,16 +463,6 @@ EOF
 
 @test "Configure Embedded server broker -- with CLI and destinations" {
     expected=$(cat << EOF
-      if (outcome != success) of /subsystem=remoting:read-resource
-        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to contain Remoting subsystem for this to happen. >> \${error_file}
-        exit
-      end-if
-
-      if (outcome != success) of /subsystem=messaging-activemq:read-resource
-        echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to contain messaging-activemq subsystem for this to happen. >> \${error_file}
-        exit
-      end-if
-
       if (outcome == success) of /subsystem=messaging-activemq/server=default:read-resource
         echo You have configured messaging queues via 'MQ_QUEUES' or 'HORNETQ_QUEUES' or topics via 'MQ_TOPICS' or 'HORNETQ_TOPICS' variables. Fix your configuration to not contain a default server configured on messaging-activemq subsystem for this to happen. >> \${error_file}
         exit
