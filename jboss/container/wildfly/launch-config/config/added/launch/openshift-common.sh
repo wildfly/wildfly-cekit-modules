@@ -84,7 +84,7 @@ function processErrorsAndWarnings() {
     done < "${CONFIG_WARNING_FILE}"
   fi
   if [ -s "${CONFIG_ERROR_FILE}" ]; then
-    echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successful. The Operations were executed but there were unexpected values. See list of errors in ${CONFIG_ERROR_FILE}"
+    echo "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script. Embedded server started successfully. The Operations were executed but there were unexpected values. See list of errors in ${CONFIG_ERROR_FILE}"
     while IFS= read -r line
     do
       log_error "$line"
