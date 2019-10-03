@@ -20,6 +20,8 @@ configure() {
   testXpathExpression "${xpath}" "ret_jgroups"
   if [ "${ret_jgroups}" -eq 0 ]; then
     configure_ha
+  else
+    configure_ha_args
   fi
 }
 
@@ -295,7 +297,7 @@ generate_dns_ping_config() {
     echo "${config}"
 }
 
-configure_ha() {
+configure_ha_args() {
   # Set HA args
   IP_ADDR=`hostname -i`
   JBOSS_HA_ARGS="-b ${JBOSS_HA_IP:-${IP_ADDR}} -bprivate ${JBOSS_HA_IP:-${IP_ADDR}}"
@@ -303,7 +305,10 @@ configure_ha() {
   init_node_name
 
   JBOSS_HA_ARGS="${JBOSS_HA_ARGS} -Djboss.node.name=${JBOSS_NODE_NAME}"
+}
 
+configure_ha() {
+  configure_ha_args
   JGROUPS_AUTH=$(generate_jgroups_auth_config "${JGROUPS_CLUSTER_PASSWORD}" "${JGROUPS_DIGEST_TOKEN_ALGORITHM}")
 
   local ping_protocol=${JGROUPS_PING_PROTOCOL:-kubernetes.KUBE_PING}
