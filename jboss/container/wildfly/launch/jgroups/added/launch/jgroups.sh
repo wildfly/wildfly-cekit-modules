@@ -2,6 +2,10 @@
 
 source $JBOSS_HOME/bin/launch/jgroups_common.sh
 
+preConfigure() {
+  init_protocol_list_store
+}
+
 prepareEnv() {
   unset JGROUPS_ENCRYPT_SECRET
   unset JGROUPS_ENCRYPT_PASSWORD
@@ -58,29 +62,15 @@ create_jgroups_elytron_encrypt_sym_cli() {
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
-        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
-        testXpathExpression "${xpath}" "result" "protocolTypes"
-        index=0
-        if [ ${result} -eq 0 ]; then
-          protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
-          arr=(${protocolTypes})
-
-          while read -r protocolType; do
-            if [ "${protocolType}" = "pbcast.NAKACK2" ]; then
-              break
-            fi
-            ((index=index+1))
-          done <<< "${protocolTypes}"
-
-          if [ ${index} -eq ${#arr[@]} ]; then
-            echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-            missingNAKACK2="true"
-            continue
-          fi
+        index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+        if [ ${index} -eq -1 ]; then
+          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+          missingNAKACK2="true"
+          continue
         fi
-
         op=("/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:add(add-index=${index}, key-store=\"${jg_encrypt_keystore}\", key-alias=\"${jg_encrypt_key_alias}\", key-credential-reference={clear-text=\"${jg_encrypt_password}\"})")
         config="${config} $(configure_protocol_cli_helper "${stack}" "SYM_ENCRYPT" "${op[@]}")"
+        add_protocol_at_prosition "${stack}" "SYM_ENCRYPT" ${index}
       done <<< "${stackNames}"
     fi
 
@@ -129,25 +119,11 @@ create_jgroups_encrypt_asym_cli() {
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
-        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
-        testXpathExpression "${xpath}" "result" "protocolTypes"
-        index=0
-        if [ ${result} -eq 0 ]; then
-          protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
-          arr=($protocolTypes)
-
-          while read -r protocolType; do
-            if [ ${protocolType} == "pbcast.NAKACK2" ]; then
-              break
-            fi
-            ((index=index+1))
-          done <<< "${protocolTypes}"
-
-          if [ ${index} -eq ${#arr[@]} ]; then
+        index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+        if [ ${index} -eq -1 ]; then
             echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
             missingNAKACK2="true"
             continue
-          fi
         fi
         op=("/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT:add(add-index=${index})"
             "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value=\"${sym_keylength:-128}\")"
@@ -157,6 +133,7 @@ create_jgroups_encrypt_asym_cli() {
             "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value=\"${change_key_on_leave:-true}\")"
         )
         config="${config} $(configure_protocol_cli_helper "${stack}" "ASYM_ENCRYPT" "${op[@]}")"
+        add_protocol_at_prosition "${stack}" "ASYM_ENCRYPT" ${index}
       done  <<< "${stackNames}"
     fi
 
@@ -204,27 +181,12 @@ create_jgroups_elytron_legacy_cli() {
   else
     stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
     while read -r stack; do
-      xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
-      testXpathExpression "${xpath}" "result" "protocolTypes"
-      index=0
-      if [ ${result} -eq 0 ]; then
-        protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
-        arr=(${protocolTypes})
-
-        while read -r protocolType; do
-          if [ "${protocolType}" = "pbcast.NAKACK2" ]; then
-            break
-          fi
-          ((index=index+1))
-        done <<< "${protocolTypes}"
-
-        if [ ${index} -eq ${#arr[@]} ]; then
-          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-          missingNAKACK2="true"
-          continue
-        fi
+      index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+      if [ ${index} -eq -1 ]; then
+        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+        missingNAKACK2="true"
+        continue
       fi
-
       op=("/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:add(add-index=${index})"
           "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)"
           "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)"
@@ -234,6 +196,7 @@ create_jgroups_elytron_legacy_cli() {
           "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=alias:add(value=\"${jg_encrypt_name}\")"
         )
       config="${config} $(configure_protocol_cli_helper "${stack}" "SYM_ENCRYPT" "${op[@]}")"
+      add_protocol_at_prosition "${stack}" "SYM_ENCRYPT" ${index}
     done <<< "${stackNames}"
   fi
 
@@ -282,7 +245,7 @@ validate_keystore_and_create() {
     if [ "${mode}" = "xml" ]; then
       key_store=$(create_elytron_keystore "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
       jgroups_encrypt=$(create_jgroups_elytron_encrypt_sym "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_ENTIRE_MESSAGE:-true}")
-    else
+    elif [ "${mode}" = "cli" ]; then
       key_store=$(create_elytron_keystore_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
       jgroups_encrypt=$(create_jgroups_elytron_encrypt_sym_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_ENTIRE_MESSAGE:-true}")
     fi
@@ -298,7 +261,7 @@ validate_keystore_and_create_legacy() {
   if [ "${valid_state}" = "valid" ]; then
     if [ "${mode}" = "xml" ]; then
       jgroups_encrypt=$(create_jgroups_elytron_legacy "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
-    else
+    elif [ "${mode}" = "cli" ]; then
       jgroups_encrypt=$(create_jgroups_elytron_legacy_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
     fi
   fi

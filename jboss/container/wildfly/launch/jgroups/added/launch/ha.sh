@@ -128,6 +128,7 @@ generate_jgroups_auth_config() {
   echo "${config}"
 }
 
+# AUTH should be inserted always before GMS
 generate_jgroups_auth_config_cli() {
     local config
     local protocolTypes
@@ -152,32 +153,18 @@ generate_jgroups_auth_config_cli() {
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
-
-        xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
-        testXpathExpression "${xpath}" "result" "protocolTypes"
-        index=0
-        if [ ${result} -eq 0 ]; then
-          protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
-          arr=(${protocolTypes})
-
-          while read -r protocolType; do
-            if [ "${protocolType}" = "pbcast.GMS" ]; then
-              break
-            fi
-            ((index=index+1))
-          done <<< "${protocolTypes}"
-
-          if [ ${index} -eq ${#arr[@]} ]; then
+        index=$(get_protocol_position "${stack}" "pbcast.GMS")
+        if [ ${index} -eq -1 ]; then
             echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure AUTH protocol but GMS protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.GMS protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
             missingGMS="true"
             continue
-          fi
         fi
 
         op=("/subsystem=jgroups/stack=$stack/protocol=AUTH:add(add-index=${index})"
             "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
         )
         config="${config} $(configure_protocol_cli_helper "$stack" "AUTH" "${op[@]}")"
+        add_protocol_at_prosition "${stack}" "AUTH" ${index}
       done <<< "${stackNames}"
   fi
 
@@ -223,6 +210,7 @@ generate_generic_ping_config() {
               op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
             fi
             config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}")"
+            add_protocol_at_prosition "${stack}" "${ping_protocol}" 0
           done <<< "${stackNames}"
         fi
       fi
@@ -232,10 +220,10 @@ generate_generic_ping_config() {
 }
 
 generate_dns_ping_config() {
-
     local ping_protocol="${1}"
     local ping_service_name="${2}"
-    local ping_service_port="${3}"
+    # Unused:
+    # local ping_service_port="${3}"
     local ping_service_namespace="${4}"
     local socket_binding="${5}"
     local ping_service_protocol="tcp"
@@ -287,6 +275,7 @@ generate_dns_ping_config() {
             fi
 
             config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
+            add_protocol_at_prosition "${stack}" "${ping_protocol}" 0
           done <<< "${stackNames}"
         fi
       fi

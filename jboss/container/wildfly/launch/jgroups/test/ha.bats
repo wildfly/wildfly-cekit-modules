@@ -20,7 +20,6 @@ WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 # source the scripts needed
 source $JBOSS_HOME/bin/launch/openshift-common.sh
 source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/jgroups.sh
 source $JBOSS_HOME/bin/launch/ha.sh
 
 export OPENSHIFT_DNS_PING_SERVICE_NAMESPACE="testnamespace"
@@ -220,7 +219,7 @@ EOF
   [ "${result}" = "${expected}" ]
 }
 
-@test "Test HA configuration file - dns.DNS_PING" {
+@test "Test HA configuration file - dns.DNS_PING with markers" {
     echo "<!-- ##JGROUPS_AUTH## -->" > $CONFIG_FILE
     echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> $CONFIG_FILE
     expected=$(cat <<EOF
@@ -319,8 +318,9 @@ EOF
   JGROUPS_ENCRYPT_KEYSTORE_DIR="keystore_dir"
   JGROUPS_CLUSTER_PASSWORD="cluster_password"
 
+  init_protocol_list_store
   run configure_ha
-
+  echo "CONSOLE: ${output}"
   output=$(cat "${CLI_SCRIPT_FILE}")
 
   normalize_spaces_new_lines
@@ -334,11 +334,103 @@ EOF
 
 ## test based on CLI operations
 normalize_spaces_new_lines() {
-    echo "output=${output}<<"
+  echo "output=${output}<<"
   echo "expected=${expected}<<"
   output=$(printf '%s\n' "$output" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
   expected=$(printf '%s\n' "$expected" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
 
   #echo "output=${output}<<"
   #echo "expected=${expected}<<"
+}
+
+@test "Test HA configuration file - CLI openshift.DNS_PING" {
+    expected=$(cat <<EOF
+      if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="dns.DNS_PING":read-resource
+          echo Cannot configure jgroups 'dns.DNS_PING' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+          quit
+      end-if
+
+      if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="dns.DNS_PING":read-resource
+          batch
+              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING:add(add-index=0)
+              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
+              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+        run-batch
+      end-if
+
+      if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="dns.DNS_PING":read-resource
+          echo Cannot configure jgroups 'dns.DNS_PING' protocol under 'tcp' stack. This protocol is already configured. >> \${error_file}
+          quit
+      end-if
+
+      if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="dns.DNS_PING":read-resource
+          batch
+              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING:add(add-index=0)
+              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
+              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+        run-batch
+      end-if
+EOF
+)
+  JGROUPS_PING_PROTOCOL="dns.DNS_PING"
+  OPENSHIFT_DNS_PING_SERVICE_PORT="service_port"
+  OPENSHIFT_DNS_PING_SERVICE_NAME="service_name"
+
+  CONF_AUTH_MODE="cli"
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  preConfigure
+  run configure_ha
+
+  echo "COSOLE:${output}"
+  output=$(<"${CLI_SCRIPT_FILE}")
+
+  normalize_spaces_new_lines
+  echo "${output}" > /tmp/output.txt
+  echo "${expected}" > /tmp/expected.txt
+
+  [ "${output}" = "${expected}" ]
+}
+
+@test "Test HA configuration file - CLI kubernetes.KUBE_PING" {
+    expected=$(cat <<EOF
+      if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="kubernetes.KUBE_PING":read-resource
+           echo Cannot configure jgroups 'kubernetes.KUBE_PING' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="kubernetes.KUBE_PING":read-resource
+           batch
+               /subsystem=jgroups/stack=udp/protocol=kubernetes.KUBE_PING:add(add-index=0)
+          run-batch
+       end-if
+
+       if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="kubernetes.KUBE_PING":read-resource
+           echo Cannot configure jgroups 'kubernetes.KUBE_PING' protocol under 'tcp' stack. This protocol is already configured. >> \${error_file}
+           quit
+       end-if
+
+       if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="kubernetes.KUBE_PING":read-resource
+           batch
+               /subsystem=jgroups/stack=tcp/protocol=kubernetes.KUBE_PING:add(add-index=0)
+          run-batch
+       end-if
+EOF
+)
+  JGROUPS_PING_PROTOCOL="kubernetes.KUBE_PING"
+
+  CONF_AUTH_MODE="cli"
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  preConfigure
+  run configure_ha
+
+  echo "COSOLE:${output}"
+  output=$(<"${CLI_SCRIPT_FILE}")
+
+  normalize_spaces_new_lines
+  echo "${output}" > /tmp/output.txt
+  echo "${expected}" > /tmp/expected.txt
+
+  [ "${output}" = "${expected}" ]
 }

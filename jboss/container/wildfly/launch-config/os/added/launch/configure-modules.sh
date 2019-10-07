@@ -26,7 +26,7 @@
 #
 # postConfigure:    invoked after all configuration has been completed.
 #
-# delayedPostConfigure:    invoked after all configuration has been fully 
+# delayedPostConfigure:    invoked after all configuration has been fully
 #                          completed (CLI script executed).
 #
 # prepareEnv:       invoked prior to processing env files.  Modules should
