@@ -282,7 +282,7 @@ EOF
 
 ## test based on CLI operations
 normalize_spaces_new_lines() {
-    echo "output=${output}<<"
+  echo "output=${output}<<"
   echo "expected=${expected}<<"
   output=$(printf '%s\n' "$output" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
   expected=$(printf '%s\n' "$expected" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
@@ -301,6 +301,7 @@ normalize_spaces_new_lines() {
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
   JGROUPS_CLUSTER_PASSWORD="p@ssw0rd"
 
+  init_protocol_list_store
   run configure_jgroups_encryption
 
   # clean spaces before and after each line
@@ -352,6 +353,7 @@ EOF
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
   JGROUPS_CLUSTER_PASSWORD="p@ssw0rd"
 
+  init_protocol_list_store
   run configure_jgroups_encryption
 
   output=$(cat "${CLI_SCRIPT_FILE}")
@@ -403,6 +405,7 @@ EOF
   JGROUPS_ENCRYPT_KEYSTORE_DIR="keystore_dir"
   JGROUPS_CLUSTER_PASSWORD="cluster_password"
 
+  init_protocol_list_store
   run configure_jgroups_encryption
   output=$(cat "${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
@@ -460,6 +463,7 @@ EOF
   JGROUPS_ENCRYPT_KEYSTORE_DIR="keystore_dir"
   JGROUPS_CLUSTER_PASSWORD="cluster_password"
 
+  init_protocol_list_store
   run configure_jgroups_encryption
   output=$(cat "${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
