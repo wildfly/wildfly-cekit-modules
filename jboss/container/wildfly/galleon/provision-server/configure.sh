@@ -31,8 +31,6 @@ cp -r $SERVER_DIR $JBOSS_HOME
 rm -r $TARGET_DIR
 
 chown -R jboss:root $JBOSS_HOME && chmod -R ug+rwX $JBOSS_HOME 
-chown -R jboss:root $HOME
-chmod -R ug+rwX $GALLEON_LOCAL_MAVEN_REPO
 
 # Remove java tmp perf data dir owned by 185
 rm -rf /tmp/hsperfdata_jboss

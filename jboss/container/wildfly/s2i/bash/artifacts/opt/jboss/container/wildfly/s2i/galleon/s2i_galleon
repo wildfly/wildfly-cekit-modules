@@ -1,5 +1,5 @@
-GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/generic_layers
-GALLEON_EXTEND_CONFIG_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/extend_config
+GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/provisioning/generic_layers
+GALLEON_EXTEND_CONFIG_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/provisioning/extend_config
 
 function galleon_patch_generic_config() {
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
@@ -40,19 +40,19 @@ function galleon_cp_artifacts() {
    # In case resolver-status changed, copy them (very few files). This avoid to re-download status for s2i FP
    # not present in remote repository.
    pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
-   find -name resolver-status.properties -printf '%P\n' > ../resolvers.txt
+   find -name resolver-status.properties -printf '%P\n' > "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt
    popd &> /dev/null
    while read line; do
      dir=`dirname $line`
      mkdir -p "$targetDir/$dir"  && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$line" "$targetDir/$dir"
-   done < resolvers.txt
-   rm -rf resolvers.txt &> /dev/null
+   done < "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt
+   rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt &> /dev/null
 }
 
 function galleon_build_repo_diff() {
-    LIVE=$HOME/galleon-maven-repo-live.txt
-    STATIC=$HOME/galleon-maven-repo-snapshot.txt
-    DIFF=$HOME/galleon-maven-repo.diff
+    LIVE=$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/galleon-maven-repo-live.txt
+    STATIC=$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/galleon-maven-repo-snapshot.txt
+    DIFF=$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/galleon-maven-repo.diff
     TARGET_DIR=$1
     LIVE_M2=$TARGET_DIR/galleon-m2
 
@@ -78,7 +78,7 @@ function galleon_handle_incremental_build() {
 function galleon_init_mvn_env() {
     # Capture the list of files present in maven repo. Used by save-artifacts
     # Do it at s2i time, not at build image time, otherwise not exact result in file content (OS dependent ordering)
-    galleon_dump_repo_file_list $HOME/galleon-maven-repo-snapshot.txt
+    galleon_dump_repo_file_list $JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/galleon-maven-repo-snapshot.txt
 
     # Check if we have artifacts injected from previous build
     galleon_handle_incremental_build
