@@ -14,9 +14,6 @@ cp -pr * /
 popd
 
 # Construct the settings in use by galleon at provisioning and startup.
-mkdir -p $HOME/.m2/conf
-chown jboss:root $HOME/.m2/conf
-chmod ug+rwX $HOME/.m2/conf
 cp $HOME/.m2/settings.xml "$GALLEON_MAVEN_SETTINGS_XML"
 local_repo_xml="\n\
   <localRepository>${GALLEON_LOCAL_MAVEN_REPO}</localRepository>"
