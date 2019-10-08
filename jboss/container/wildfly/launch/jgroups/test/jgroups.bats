@@ -1,6 +1,10 @@
 # dont enable these by default, bats on CI doesn't output anything if they are set
 #set -euo pipefail
 #IFS=$'\n\t'
+#!/usr/bin/env bats
+
+source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
@@ -278,17 +282,6 @@ EOF
     run has_elytron_legacy_tls "${CONFIG_FILE}"
     echo "${output}"
     [ "${output}" = "true" ]
-}
-
-## test based on CLI operations
-normalize_spaces_new_lines() {
-  echo "output=${output}<<"
-  echo "expected=${expected}<<"
-  output=$(printf '%s\n' "$output" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
-  expected=$(printf '%s\n' "$expected" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d')
-
-  #echo "output=${output}<<"
-  #echo "expected=${expected}<<"
 }
 
 @test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT - Without pbcast.NAKACK2 protocol" {
