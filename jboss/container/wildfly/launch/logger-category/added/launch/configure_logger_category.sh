@@ -72,7 +72,7 @@ add_logger_category() {
               if (outcome == success) of /subsystem=logging/logger=${logger_category}:read-resource
                 /subsystem=logging/logger=${logger_category}:write-attribute(name=level, value=${logger_level:-FINE})
               else
-                /subsystem=logging/logger=${logger_category}:add(category=${logger_category},level=${logger_level:-FINE})
+                /subsystem=logging/logger=${logger_category}:add(category=${logger_category}, level=${logger_level:-FINE})
               end-if
 EOF
             fi

@@ -21,7 +21,7 @@ function configureEnv() {
 
 function configure_https() {
   if [ "${CONFIGURE_ELYTRON_SSL}" = "true" ]; then
-    echo "Using Elytron for SSL configuration."
+    log_info "Using Elytron for SSL configuration."
     return
   fi
 

@@ -1,12 +1,14 @@
 #!/usr/bin/env bats
 
-# bug in bats with set -eu?
+source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+
 export BATS_TEST_SKIPPED=
 
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 
 rm -rf $JBOSS_HOME 2>/dev/null
 mkdir -p $JBOSS_HOME/bin/launch
+
 cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
@@ -183,4 +185,74 @@ EOF
   done < "$CONFIG_ERROR_FILE"
   echo "${line}"
   [ "${line}" = "${expected}" ]
+}
+
+
+@test "CLI -- Add 1 logger category" {
+  expected=$(cat <<EOF
+    if (outcome == success) of /subsystem=logging/logger=com.my.package:read-resource
+      /subsystem=logging/logger=com.my.package:write-attribute(name=level, value=DEBUG)
+    else
+      /subsystem=logging/logger=com.my.package:add(category=com.my.package, level=DEBUG)
+   end-if
+EOF
+)
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  LOGGER_CATEGORIES=com.my.package:DEBUG
+  run run_logger_category_script
+
+  output=$(<"${CLI_SCRIPT_FILE}")
+  normalize_spaces_new_lines
+  [ "${output}" = "${expected}" ]
+}
+
+@test "CLI -- Add 3 logger categories, one with no log level" {
+  expected=$(cat <<EOF
+    if (outcome == success) of /subsystem=logging/logger=com.my.package:read-resource
+      /subsystem=logging/logger=com.my.package:write-attribute(name=level, value=DEBUG)
+    else
+      /subsystem=logging/logger=com.my.package:add(category=com.my.package, level=DEBUG)
+    end-if
+
+    if (outcome == success) of /subsystem=logging/logger=my.other.package:read-resource
+      /subsystem=logging/logger=my.other.package:write-attribute(name=level, value=ERROR)
+    else
+      /subsystem=logging/logger=my.other.package:add(category=my.other.package, level=ERROR)
+    end-if
+
+    if (outcome == success) of /subsystem=logging/logger=my.another.package:read-resource
+      /subsystem=logging/logger=my.another.package:write-attribute(name=level, value=FINE)
+    else
+      /subsystem=logging/logger=my.another.package:add(category=my.another.package, level=FINE)
+    end-if
+EOF
+)
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  LOGGER_CATEGORIES=com.my.package:DEBUG,my.other.package:ERROR,my.another.package
+  run run_logger_category_script
+
+  output=$(<"${CLI_SCRIPT_FILE}")
+  normalize_spaces_new_lines
+  [ "${output}" = "${expected}" ]
+}
+
+
+@test "CLI -- Add 2 logger categories one with invalid log level" {
+  expected=$(cat <<EOF
+    if (outcome == success) of /subsystem=logging/logger=com.my.package:read-resource
+      /subsystem=logging/logger=com.my.package:write-attribute(name=level, value=DEBUG)
+    else
+      /subsystem=logging/logger=com.my.package:add(category=com.my.package, level=DEBUG)
+    end-if
+EOF
+)
+  CONFIG_ADJUSTMENT_MODE="cli"
+  LOGGER_CATEGORIES=my.other.package:UNKNOWN_LOG_LEVEL,com.my.package:DEBUG
+  run run_logger_category_script
+
+  output=$(<"${CLI_SCRIPT_FILE}")
+  normalize_spaces_new_lines
+  [ "${output}" = "${expected}" ]
 }
