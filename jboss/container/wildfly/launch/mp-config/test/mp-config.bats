@@ -1,20 +1,32 @@
+#!/usr/bin/env bats
 
-# dont enable these by default, bats on CI doesn't output anything if they are set
-#set -euo pipefail
-#IFS=$'\n\t'
-
-# bug in bats with set -eu?
-export BATS_TEST_SKIPPED=
+source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
 
 # fake JBOSS_HOME
-export JBOSS_HOME=$BATS_TEST_DIRNAME
-# fake the logger so we don't have to deal with colors
-export BATS_LOGGING_INCLUDE=$BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
+export JBOSS_HOME=$BATS_TMPDIR/jboss_home
+rm -rf $JBOSS_HOME 2>/dev/null
+mkdir -p $JBOSS_HOME/bin/launch
 
-load $BATS_TEST_DIRNAME/../added/launch/mp-config.sh
+# copy scripts we are going to use
+cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../added/launch/mp-config.sh $JBOSS_HOME/bin/launch
+
+mkdir -p $JBOSS_HOME/standalone/configuration
+
+# Set up the environment variables and load dependencies
+WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
+
+# source the scripts needed
+source $JBOSS_HOME/bin/launch/logging.sh
+source $JBOSS_HOME/bin/launch/openshift-common.sh
+source $JBOSS_HOME/bin/launch/mp-config.sh
+
+BATS_PATH_TO_EXISTING_FILE=$BATS_TEST_DIRNAME/mp-config.bats
 
 setup() {
-  export CONFIG_FILE=${BATS_TMPDIR}/standalone-openshift.xml
+  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
 }
 
 teardown() {
@@ -106,28 +118,28 @@ teardown() {
   [ -n "${result}" ]
 }
 
-@test "Configure MICROPROFILE_CONFIG_DIR=$BATS_LOGGING_INCLUDE" {
+@test "Configure MICROPROFILE_CONFIG_DIR=$BATS_PATH_TO_EXISTING_FILE" {
 
-  run generate_microprofile_config_source "${BATS_LOGGING_INCLUDE}"
-  echo ${output}
+  run generate_microprofile_config_source "${BATS_PATH_TO_EXISTING_FILE}"
+  echo "CONSOLE:${output}"
   [ "$status" -eq 0 ]
 
-  echo "${lines[0]}" | grep "WARN MICROPROFILE_CONFIG_DIR value '${BATS_LOGGING_INCLUDE}' is not a directory"
+  echo "${lines[0]}" | grep "WARN MICROPROFILE_CONFIG_DIR value '${BATS_PATH_TO_EXISTING_FILE}' is not a directory"
   [ $? -eq 0 ]
 
-  result=$(check_dir_config "${BATS_LOGGING_INCLUDE}" "500" "${lines[1]}")
+  result=$(check_dir_config "${BATS_PATH_TO_EXISTING_FILE}" "500" "${lines[1]}")
   [ -n "${result}" ]
 }
 
-@test "Configure MICROPROFILE_CONFIG_DIR=BATS_LOGGING_INCLUDE MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
-  run generate_microprofile_config_source "${BATS_LOGGING_INCLUDE}" "150"
+@test "Configure MICROPROFILE_CONFIG_DIR=BATS_PATH_TO_EXISTING_FILE MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
+  run generate_microprofile_config_source "${BATS_PATH_TO_EXISTING_FILE}" "150"
 echo "CONFIG_FILE $CONFIG_FILE"
   echo ${output}
   [ "$status" -eq 0 ]
-  echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '${BATS_LOGGING_INCLUDE}' is not a directory"
+  echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '${BATS_PATH_TO_EXISTING_FILE}' is not a directory"
   [ $? -eq 0 ]
 
-  result=$(check_dir_config "${BATS_LOGGING_INCLUDE}" "150" "${lines[1]}")
+  result=$(check_dir_config "${BATS_PATH_TO_EXISTING_FILE}" "150" "${lines[1]}")
   [ -n "${result}" ]
 }
 
@@ -145,3 +157,56 @@ EOF
   fi
 }
 
+
+@test "Configure MICROPROFILE_CONFIG_DIR -- Verify CLI operations with ordinal" {
+    expected=$(cat << EOF
+      if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
+        echo \"You have set MICROPROFILE_CONFIG_DIR to configure a config-source. Fix your configuration to contain the microprofile-config subsystem for this to happen.\" >> \${error_file}
+        quit
+      end-if
+
+      if (outcome == success) of /subsystem=microprofile-config-smallrye/config-source=config-map:read-resource
+        echo \"Cannot configure Microprofile Config. MICROPROFILE_CONFIG_DIR was specified but there is already a config-source named config-map configured.\" >> \${error_file}
+        quit
+      end-if
+
+      /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path="/test/dir"}, ordinal=22)
+EOF
+    )
+
+    CONFIG_ADJUSTMENT_MODE="cli"
+    MICROPROFILE_CONFIG_DIR="/test/dir"
+    MICROPROFILE_CONFIG_DIR_ORDINAL=22
+
+    run configure_microprofile_config_source
+    echo "CONSOLE:${output}"
+    output=$(<"${CLI_SCRIPT_FILE}")
+    normalize_spaces_new_lines
+    [ "${output}" = "${expected}" ]
+}
+
+@test "Configure MICROPROFILE_CONFIG_DIR -- Verify CLI operations without configure an ordinal" {
+    expected=$(cat << EOF
+      if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
+        echo \"You have set MICROPROFILE_CONFIG_DIR to configure a config-source. Fix your configuration to contain the microprofile-config subsystem for this to happen.\" >> \${error_file}
+        quit
+      end-if
+
+      if (outcome == success) of /subsystem=microprofile-config-smallrye/config-source=config-map:read-resource
+        echo \"Cannot configure Microprofile Config. MICROPROFILE_CONFIG_DIR was specified but there is already a config-source named config-map configured.\" >> \${error_file}
+        quit
+      end-if
+
+      /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path="/test/dir"}, ordinal=500)
+EOF
+    )
+
+    CONFIG_ADJUSTMENT_MODE="cli"
+    MICROPROFILE_CONFIG_DIR="/test/dir"
+
+    run configure_microprofile_config_source
+    echo "CONSOLE:${output}"
+    output=$(<"${CLI_SCRIPT_FILE}")
+    normalize_spaces_new_lines
+    [ "${output}" = "${expected}" ]
+}

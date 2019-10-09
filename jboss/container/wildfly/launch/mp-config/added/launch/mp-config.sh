@@ -1,12 +1,3 @@
-# Configuration manipulations related to observability of the appserver
-
-if [ -n "${BATS_LOGGING_INCLUDE}" ]; then
-    source "${BATS_LOGGING_INCLUDE}"
-else
-    source $JBOSS_HOME/bin/launch/logging.sh
-fi
-
-
 configure() {
   configure_microprofile_config_source
 }
@@ -34,7 +25,7 @@ configure_microprofile_config_source() {
           quit
       end-if
 
-      /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path=${MICROPROFILE_CONFIG_DIR}}, ordinal=${MICROPROFILE_CONFIG_DIR_ORDINAL})
+      /subsystem=microprofile-config-smallrye/config-source=config-map:add(dir={path="${MICROPROFILE_CONFIG_DIR}"}, ordinal=${MICROPROFILE_CONFIG_DIR_ORDINAL:-500})
 EOF
 
     fi
