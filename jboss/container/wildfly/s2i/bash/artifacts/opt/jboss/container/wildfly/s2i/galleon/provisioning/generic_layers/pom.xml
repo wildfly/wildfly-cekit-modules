@@ -52,7 +52,7 @@
                         <configuration>
                             <install-dir>${project.build.directory}/server</install-dir>
                             <record-state>true</record-state>
-                            <offline>false</offline>
+                            <offline>true</offline>
                             <plugin-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
