@@ -141,7 +141,7 @@ function create_resource_adapter() {
         end-if
 
         if (outcome == success) of ${ra_addr}:read-resource
-          echo You have set environment variables to configure the resource-adapter '${ra_id}'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+          echo You have set environment variables to configure the resource-adapter '${ra_id}'. However, your base configuration already contains a resource-adapter with that name. >> \${error_file}
           exit
         end-if
 

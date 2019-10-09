@@ -42,7 +42,7 @@ teardown() {
     exit
   end-if
   if (outcome == success) of /subsystem=resource-adapters/resource-adapter=activemq-rar-one:read-resource
-    echo You have set environment variables to configure the resource-adapter 'activemq-rar-one'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+    echo You have set environment variables to configure the resource-adapter 'activemq-rar-one'. However, your base configuration already contains a resource-adapter with that name. >> \${error_file}
     exit
   end-if
   batch
@@ -62,7 +62,7 @@ teardown() {
     exit
   end-if
   if (outcome == success) of /subsystem=resource-adapters/resource-adapter=activemq-rar-two:read-resource
-    echo You have set environment variables to configure the resource-adapter 'activemq-rar-two'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+    echo You have set environment variables to configure the resource-adapter 'activemq-rar-two'. However, your base configuration already contains a resource-adapter with that name. >> \${error_file}
     exit
   end-if
   batch
@@ -146,7 +146,7 @@ EOF
       exit
     end-if
     if (outcome == success) of /subsystem=resource-adapters/resource-adapter=activemq-rar-one:read-resource
-      echo You have set environment variables to configure the resource-adapter 'activemq-rar-one'. However, your base configuration already contains a datasource with that name. >> \${error_file}
+      echo You have set environment variables to configure the resource-adapter 'activemq-rar-one'. However, your base configuration already contains a resource-adapter with that name. >> \${error_file}
       exit
     end-if
     batch
