@@ -59,7 +59,7 @@ teardown() {
         echo You have set the HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add the ssl server-identity. But this already exists in the base configuration. Fix your configuration. >> \${error_file}
         exit
     end-if
-    /core-service=management/security-realm=ApplicationRealm/server-identity=ssl:add(keystore-path="/home/yborgess/tmp/jboss_home/ssl.key", keystore-password="p@ssw0rd")
+    /core-service=management/security-realm=ApplicationRealm/server-identity=ssl:add(keystore-path="/jboss_home/ssl.key", keystore-password="p@ssw0rd")
     for serverName in /subsystem=undertow:read-children-names(child-type=server)
         /subsystem=undertow/server=\$serverName/https-listener=https:add(security-realm=ApplicationRealm, socket-binding=https, proxy-address-forwarding=true)
     done
@@ -69,7 +69,7 @@ EOF
     CONFIG_ADJUSTMENT_MODE="cli"
     CONFIGURE_ELYTRON_SSL=false
     HTTPS_PASSWORD="p@ssw0rd"
-    HTTPS_KEYSTORE_DIR="$JBOSS_HOME"
+    HTTPS_KEYSTORE_DIR="/jboss_home"
     HTTPS_KEYSTORE="ssl.key"
 
     run configure_https
