@@ -70,6 +70,17 @@ function configure_cli_keycloak() {
     app_sec_domain=${SSO_SECURITY_DOMAIN:-keycloak}
     id=$(date +%s)
 
+    local has_security_subsystem
+    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
+    testXpathExpression "${xpath}" "has_security_subsystem"
+
+    useLegacySecurity=false;
+
+    # In some context we want to use legacy subsystem only.
+    if [ "x${SSO_FORCE_LEGACY_SECURITY}" == "xtrue"  ] && [ "${has_security_subsystem}" -eq 0 ]; then
+      useLegacySecurity=true;
+    fi
+
     if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
 
       elytron_assert="$(elytron_common_assert $app_sec_domain)"
@@ -83,11 +94,12 @@ function configure_cli_keycloak() {
 
           oidc_elytron="$(configure_OIDC_elytron $id)"
           ejb_config="$(configure_ejb $id $app_sec_domain)"
-        
-          echo " 
-            $elytron_assert
-            $oidc_elytron
-            $ejb_config" >> ${CLI_SCRIPT_FILE}
+          if [ "$useLegacySecurity" == "false" ]; then
+            echo " 
+              $elytron_assert
+              $oidc_elytron
+              $ejb_config" >> ${CLI_SCRIPT_FILE}
+          fi
         else
           log_warning "keycloak subsystem already exists, no configuration applied"
         fi
@@ -101,25 +113,30 @@ function configure_cli_keycloak() {
           sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
 
           saml_elytron="$(configure_SAML_elytron $id)"
-        
-          echo "
-            $elytron_assert
-            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
+          if [ "$useLegacySecurity" == "false" ]; then
+            echo "
+              $elytron_assert
+              $saml_elytron"  >> ${CLI_SCRIPT_FILE}
+          fi
         else
           log_warning "keycloak saml subsystem already exists, no configuration applied"
         fi
       fi
-
-      undertow_config="$(configure_undertow $id $app_sec_domain)"
-      echo "
-       $undertow_config" >> ${CLI_SCRIPT_FILE}
-
+      if [ "$useLegacySecurity" == "false" ]; then
+        undertow_config="$(configure_undertow $id $app_sec_domain)"
+        echo "
+         $undertow_config" >> ${CLI_SCRIPT_FILE}
+      else
+        legacy_security="$(configure_security_domain_cli)"
+        echo "
+            $legacy_security"  >> ${CLI_SCRIPT_FILE}
+      fi
       configure_extensions_no_marker
       enable_keycloak_deployments
 
   elif [ -n "$SSO_URL" ]; then
     enable_keycloak_deployments
-
+    
     oidc_extension="$(configure_OIDC_extension)"
     saml_extension="$(configure_SAML_extension)"
     oidc_elytron="$(configure_OIDC_elytron $id)"
@@ -149,12 +166,18 @@ function configure_cli_keycloak() {
 
     if [ ! -z "${oidc}" ]; then
       if [ "${ret_oidc}" -ne 0 ]; then
-        echo " 
-          $elytron_assert
-          $oidc_extension
-          $oidc_elytron
-          $oidc
-          $ejb_config" >> ${CLI_SCRIPT_FILE}
+        if [ "$useLegacySecurity" == "true" ]; then
+          echo "
+            $oidc_extension
+            $oidc" >> ${CLI_SCRIPT_FILE}
+        else
+          echo " 
+            $elytron_assert
+            $oidc_extension
+            $oidc_elytron
+            $oidc
+            $ejb_config" >> ${CLI_SCRIPT_FILE}
+        fi
       else
           log_warning "keycloak subsystem already exists, no configuration applied"
       fi
@@ -162,20 +185,43 @@ function configure_cli_keycloak() {
     
     if [ ! -z "${saml}" ]; then
       if [ "${ret_saml}" -ne 0 ]; then
-        echo "
-          $elytron_assert
-          $saml_extension
-          $saml_elytron
-          $saml"  >> ${CLI_SCRIPT_FILE}
+        if [ "$useLegacySecurity" == "true" ]; then
+          echo "
+            $saml_extension
+            $saml"  >> ${CLI_SCRIPT_FILE}
+        else
+          echo "
+            $elytron_assert
+            $saml_extension
+            $saml_elytron
+            $saml"  >> ${CLI_SCRIPT_FILE}
+        fi
       else
         log_warning "keycloak saml subsystem already exists, no configuration applied"
       fi
     fi
 
-    echo "
+    if [ "$useLegacySecurity" == "false" ]; then
+      echo "
        $undertow_config" >> ${CLI_SCRIPT_FILE}
+    else
+      legacy_security="$(configure_security_domain_cli)"
+      echo "
+       $legacy_security"  >> ${CLI_SCRIPT_FILE}
+    fi
   fi
   
+}
+
+function configure_security_domain_cli() {
+  cli="if (outcome != success) of /subsystem=security/security-domain=keycloak:read-resource
+          /subsystem=security/security-domain=keycloak:add
+          /subsystem=security/security-domain=keycloak/authentication=classic:add(login-modules=[{code=org.keycloak.adapters.jboss.KeycloakLoginModule, flag=required}])
+        else
+          echo You have set environment variables to configure the keycloak security domain. However, your base configuration already contains a security domain with that name. >> \${error_file}
+          quit
+        end-if"
+  echo "$cli"
 }
 
 function configure_OIDC_extension() {
