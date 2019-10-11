@@ -168,6 +168,7 @@ create_elytron_keystore_cli() {
       ${cli_key_store_op}
     else
       echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      quit
     end-if
 EOF
 }

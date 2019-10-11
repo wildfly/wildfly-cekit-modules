@@ -29,20 +29,22 @@ configureEnv() {
   configure
 }
 
-create_jgroups_elytron_encrypt_sym() {
-    declare jg_encrypt_keystore="$1" jg_encrypt_key_alias="$2" jg_encrypt_password="$3"
+create_jgroups_elytron_encrypt() {
+    declare jg_encrypt_protocol="${1}" jg_encrypt_keystore="${2}" jg_encrypt_key_alias="${3}" jg_encrypt_password="${4}"
     local encrypt
+
     read -r -d '' encrypt <<- EOF
-    <encrypt-protocol type="SYM_ENCRYPT" key-store="${jg_encrypt_keystore}" key-alias="${jg_encrypt_key_alias}">
+    <encrypt-protocol type="${jg_encrypt_protocol}" key-store="${jg_encrypt_keystore}" key-alias="${jg_encrypt_key_alias}">
        <key-credential-reference clear-text="${jg_encrypt_password}"/>
     </encrypt-protocol>
+
 EOF
 
     echo "${encrypt}"
 }
 
-create_jgroups_elytron_encrypt_sym_cli() {
-  declare jg_encrypt_keystore="$1" jg_encrypt_key_alias="$2" jg_encrypt_password="$3"
+create_jgroups_elytron_encrypt_cli() {
+  declare jg_encrypt_protocol="${1}" jg_encrypt_keystore="${2}" jg_encrypt_key_alias="${3}" jg_encrypt_password="${4}"
 
   local protocolTypes
   local xpath
@@ -57,20 +59,20 @@ create_jgroups_elytron_encrypt_sym_cli() {
     testXpathExpression "${xpath}" "result" "stackNames"
 
     if [ ${result} -ne 0 ]; then
-      echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but your configuration does not contain any stacks in the JGroups subsystem. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
+      echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ${jg_encrypt_protocol} protocol but your configuration does not contain any stacks in the JGroups subsystem. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
       return
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
         index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
         if [ ${index} -eq -1 ]; then
-          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ${jg_encrypt_protocol} protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
           missingNAKACK2="true"
           continue
         fi
-        op=("/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:add(add-index=${index}, key-store=\"${jg_encrypt_keystore}\", key-alias=\"${jg_encrypt_key_alias}\", key-credential-reference={clear-text=\"${jg_encrypt_password}\"})")
-        config="${config} $(configure_protocol_cli_helper "${stack}" "SYM_ENCRYPT" "${op[@]}")"
-        add_protocol_at_prosition "${stack}" "SYM_ENCRYPT" ${index}
+        op=("/subsystem=jgroups/stack=$stack/protocol=${jg_encrypt_protocol}:add(add-index=${index}, key-store=\"${jg_encrypt_keystore}\", key-alias=\"${jg_encrypt_key_alias}\", key-credential-reference={clear-text=\"${jg_encrypt_password}\"})")
+        config="${config} $(configure_protocol_cli_helper "${stack}" "${jg_encrypt_protocol}" "${op[@]}")"
+        add_protocol_at_prosition "${stack}" "${jg_encrypt_protocol}" ${index}
       done <<< "${stackNames}"
     fi
 
@@ -237,17 +239,17 @@ validate_keystore_legacy() {
 }
 
 validate_keystore_and_create() {
-  local mode="$1"
+  local mode="${1}" protocol="${2}"
 
   valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_SECRET}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
 
   if [ "${valid_state}" = "valid" ]; then
     if [ "${mode}" = "xml" ]; then
       key_store=$(create_elytron_keystore "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
-      jgroups_encrypt=$(create_jgroups_elytron_encrypt_sym "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_ENTIRE_MESSAGE:-true}")
+      jgroups_encrypt=$(create_jgroups_elytron_encrypt "${protocol}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}")
     elif [ "${mode}" = "cli" ]; then
       key_store=$(create_elytron_keystore_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
-      jgroups_encrypt=$(create_jgroups_elytron_encrypt_sym_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_ENTIRE_MESSAGE:-true}")
+      jgroups_encrypt=$(create_jgroups_elytron_encrypt_cli "${protocol}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}")
     fi
   fi
 }
@@ -296,18 +298,18 @@ configure_jgroups_encryption() {
  local jgroups_encrypt_protocol="${JGROUPS_ENCRYPT_PROTOCOL:=SYM_ENCRYPT}"
  local jgroups_encrypt=""
  local key_store=""
-
+ local valid_state=""
+ local jgroups_unencrypted_message=
  case "${jgroups_encrypt_protocol}" in
   "SYM_ENCRYPT")
     log_info "Configuring JGroups cluster traffic encryption protocol to SYM_ENCRYPT."
-    local jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster WILL NOT be encrypted."
-    local valid_state=""
+    jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster WILL NOT be encrypted."
 
     if [ "${has_elytron_subsystem}" -eq 0 ]; then
       if [ "${key_store_conf_mode}" = "xml" ]; then
-        validate_keystore_and_create "xml"
+        validate_keystore_and_create "xml" "SYM_ENCRYPT"
       elif [ "${key_store_conf_mode}" = "cli" ]; then
-        validate_keystore_and_create "cli"
+        validate_keystore_and_create "cli" "SYM_ENCRYPT"
 
         # This if-check is here to cover the following case: User has strictly defined that he wants only replacement via xml markers (CONFIG_ADJUSTMENT_MODE=xml),
         # we have the Elytron subsystem but we do not have the Keystore marker, in that case, then replace the protocol using the "legacy" style,
@@ -331,20 +333,34 @@ configure_jgroups_encryption() {
   ;;
   "ASYM_ENCRYPT")
       log_info "Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT."
-      if [ -n "${JGROUPS_ENCRYPT_SECRET}"      -o \
-           -n "${JGROUPS_ENCRYPT_NAME}"         -o \
-           -n "${JGROUPS_ENCRYPT_PASSWORD}"     -o \
-           -n "${JGROUPS_ENCRYPT_KEYSTORE_DIR}" -o \
-           -n "${JGROUPS_ENCRYPT_KEYSTORE}" ] ; then
-        log_warning "The specified JGroups configuration properties (JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE_DIR JGROUPS_ENCRYPT_KEYSTORE) will be ignored when using JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT. Only JGROUPS_CLUSTER_PASSWORD is used."
-      fi
 
-      # CLOUD-2437 AUTH protocol is required when using ASYM_ENCRYPT protocol: https://github.com/belaban/JGroups/blob/master/conf/asym-encrypt.xml#L23
+      # CLOUD-2437 AUTH protocol is required when using ASYM_ENCRYPT protocol
       if [ -n "${JGROUPS_CLUSTER_PASSWORD}" ]; then
-        if [ "${encrypt_conf_mode}" = "xml" ]; then
-          jgroups_encrypt=$(create_jgroups_encrypt_asym)
-        elif [ "${encrypt_conf_mode}" = "cli" ]; then
-          jgroups_encrypt=$(create_jgroups_encrypt_asym_cli)
+        # Test if we have all the information available to configure ASYM_ENCRYPT protocol configuring the Key Store in the Elytron subsystem
+        valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_SECRET}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
+
+        if [ "${has_elytron_subsystem}" -eq 0 ] && [ "${valid_state}" = "valid" ]; then
+          log_info "Detected valid JGroups encryption configuration, the communication within the cluster will be encrypted using ASYM_ENCRYPT and Elytron keystore."
+          if [ "${key_store_conf_mode}" = "xml" ]; then
+            validate_keystore_and_create "xml" "ASYM_ENCRYPT"
+          elif [ "${key_store_conf_mode}" = "cli" ]; then
+            validate_keystore_and_create "cli" "ASYM_ENCRYPT"
+          fi
+        else
+          jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol. You need to set all of these variables to configure ASYM_ENCRYPT using the Elytron keysore: JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE."
+          if [ ! "${has_elytron_subsystem}" -eq 0 ]; then
+            log_warning "Elytron subsystem is not in your configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol."
+          elif [ -n "${JGROUPS_ENCRYPT_SECRET}" ] || [ -n "${JGROUPS_ENCRYPT_NAME}" ] || [ -n "${JGROUPS_ENCRYPT_PASSWORD}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE_DIR}" ]; then
+            log_warning "${jgroups_unencrypted_message//<STATE>/partial}"
+          else
+            log_warning "${jgroups_unencrypted_message//<STATE>/missing}"
+          fi
+
+          if [ "${encrypt_conf_mode}" = "xml" ]; then
+            jgroups_encrypt=$(create_jgroups_encrypt_asym)
+          elif [ "${encrypt_conf_mode}" = "cli" ]; then
+            jgroups_encrypt=$(create_jgroups_encrypt_asym_cli)
+          fi
         fi
       else
         log_warning "JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT requires JGROUPS_CLUSTER_PASSWORD to be set and not empty, the communication within the cluster WILL NOT be encrypted."
@@ -363,4 +379,18 @@ configure_jgroups_encryption() {
   elif [ "${encrypt_conf_mode}" = "cli" ]; then
     echo "${jgroups_encrypt}" >> ${CLI_SCRIPT_FILE}
   fi
+}
+
+
+create_jgroups_encrypt_elytron_asym() {
+  declare jg_encrypt_keystore="$1" jg_encrypt_key_alias="$2" jg_encrypt_password="$3" jg_encrypt_entire_message="$4"
+  local encrypt
+  read -r -d '' encrypt <<- EOF
+  <encrypt-protocol type="ASYM_ENCRYPT" key-alias="${jg_encrypt_key_alias}" keystore="${jg_encrypt_keystore}">
+    <key-credential-reference clear-text="${jg_encrypt_password}"/>
+    <property name="encrypt_entire_message">"${jg_encrypt_entire_message}"</property>
+  </encrypt-protocol>
+EOF
+
+  echo "${encrypt}"
 }
