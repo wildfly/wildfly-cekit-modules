@@ -49,7 +49,7 @@ teardown() {
    </encrypt-protocol>
 EOF
 )
-  run create_jgroups_elytron_encrypt_sym "keystore" "key_alias" "encrypt_password"
+  run create_jgroups_elytron_encrypt "SYM_ENCRYPT" "keystore" "key_alias" "encrypt_password"
   xml=${output}
   result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Result: ${result}"
@@ -66,7 +66,7 @@ EOF
    </encrypt-protocol>
 EOF
 )
-  run create_jgroups_elytron_encrypt_sym "keystore1" "key_alias2" "encrypt_password3"
+  run create_jgroups_elytron_encrypt "SYM_ENCRYPT" "keystore1" "key_alias2" "encrypt_password3"
   xml=${output}
   result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Result: ${result}"
@@ -257,7 +257,7 @@ EOF
 }
 
 @test "Test JGroups configuration - basic ASYM_ENCRYPT - extra params" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+    echo '<subsystem xmlns="urn:wildfly:elytron:5.0"></subsystem><!-- ##TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
 
     JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT
@@ -271,7 +271,7 @@ EOF
     run configure_jgroups_encryption
     echo "${output}"
     [[ "${output}" =~ "INFO Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT." ]]
-    [[ "${output}" =~ "WARN The specified JGroups configuration properties (JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE_DIR JGROUPS_ENCRYPT_KEYSTORE) will be ignored when using JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT. Only JGROUPS_CLUSTER_PASSWORD is used." ]]
+    [[ "${output}" =~ "INFO Detected valid JGroups encryption configuration, the communication within the cluster will be encrypted using ASYM_ENCRYPT and Elytron keystore." ]]
 
     run has_elytron_tls "${CONFIG_FILE}"
     echo "${output}"
@@ -304,7 +304,7 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
-@test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT " {
+@test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT without Elytron " {
   expected=$(cat <<EOF
        if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
            echo Cannot configure jgroups 'ASYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
@@ -354,6 +354,60 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
+@test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT with Elytron" {
+  expected=$(cat <<EOF
+    if (outcome == success) of /subsystem=elytron:read-resource
+      /subsystem=elytron/key-store="jgroups.jceks":add(credential-reference={clear-text="p@ssw0rd"},type="JCEKS",path="jgroups.jceks", relative-to="jboss.server.config.dir")
+    else
+      echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      quit
+    end-if
+
+    if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
+      echo Cannot configure jgroups 'ASYM_ENCRYPT' protocol under 'udp' stack. This protocol is already configured. >> \${error_file}
+      quit
+    end-if
+
+    if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
+      batch
+        /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=4, key-store="jgroups.jceks", key-alias="jgroups", key-credential-reference={clear-text="p@ssw0rd"})
+      run-batch
+    end-if
+
+    if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
+      echo Cannot configure jgroups 'ASYM_ENCRYPT' protocol under 'tcp' stack. This protocol is already configured. >> \${error_file}
+      quit
+    end-if
+
+    if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
+      batch
+        /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=4, key-store="jgroups.jceks", key-alias="jgroups", key-credential-reference={clear-text="p@ssw0rd"})
+      run-batch
+    end-if
+EOF
+)
+
+  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-with-elytron.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  CONFIG_ADJUSTMENT_MODE="cli"
+
+  JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
+  JGROUPS_CLUSTER_PASSWORD="p@ssw0rd"
+
+  JGROUPS_ENCRYPT_SECRET="app-secret"
+  JGROUPS_ENCRYPT_NAME="jgroups"
+  JGROUPS_ENCRYPT_PASSWORD="p@ssw0rd"
+  JGROUPS_ENCRYPT_KEYSTORE="jgroups.jceks"
+
+
+  init_protocol_list_store
+  run configure_jgroups_encryption
+
+  output=$(cat "${CLI_SCRIPT_FILE}")
+  normalize_spaces_new_lines
+
+  [ "${output}" = "${expected}" ]
+}
+
 
 @test "Configure CLI JGROUPS_PROTOCOL=SYM_ENCRYPT - Using Elytron to configure the keystore" {
     expected=$(cat <<EOF
@@ -361,6 +415,7 @@ EOF
          /subsystem=elytron/key-store="encrypt_keystore":add(credential-reference={clear-text="encrypt_password"},type="JCEKS",path="encrypt_keystore", relative-to="keystore_dir")
        else
          echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+         quit
        end-if
 
        if (outcome == success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
