@@ -13,6 +13,10 @@
             <valid-connection-checker class-name="org.jboss.jca.adapters.jdbc.extensions.oracle.OracleValidConnectionChecker"/>
             <exception-sorter class-name="org.jboss.jca.adapters.jdbc.extensions.oracle.OracleExceptionSorter"/>
         </validation>
+        <xa-pool>
+            <is-same-rm-override>false</is-same-rm-override>"
+            <no-tx-separate-pools />
+        </xa-pool>
     </xa-datasource>
     <!-- ##DATASOURCES## -->
     <drivers>
