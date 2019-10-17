@@ -65,12 +65,16 @@ if [ -d "$JBOSS_HOME/modules" ]; then
   rm -rf $JBOSS_HOME/modules/
 fi
 
+if [ ! -f "$GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML" ]; then
+  cp $GALLEON_MAVEN_SETTINGS_XML $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
+fi
+
 
 # Install the producers and universe
 mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-producers/pom.xml install -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
---settings $GALLEON_MAVEN_SETTINGS_XML
+--settings $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
 mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-universe/pom.xml install -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO \
---settings $GALLEON_MAVEN_SETTINGS_XML
+--settings $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
 
 # Copy JBOSS_HOME content (custom os content) to common package dir
 CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
@@ -80,7 +84,7 @@ rm -rf $JBOSS_HOME/*
 
 # Build Galleon s2i feature-pack and install it in local maven repository
 mvn -f $GALLEON_FP_PATH/pom.xml install \
---settings $GALLEON_MAVEN_SETTINGS_XML -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO $GALLEON_BUILD_FP_MAVEN_ARGS_APPEND
+--settings $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML -Dmaven.repo.local=$GALLEON_LOCAL_MAVEN_REPO $GALLEON_BUILD_FP_MAVEN_ARGS_APPEND
 
 keepFP=${DEBUG_GALLEON_FP_SRC:-false}
 if [ "x$keepFP" == "xfalse" ]; then
