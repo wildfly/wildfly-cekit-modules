@@ -30,7 +30,8 @@ ZIPPED_REPO="/tmp/artifacts/maven-repo.zip"
 if [ -f "${ZIPPED_REPO}" ]; then
   echo "Found zipped repository, installing it."
   unzip ${ZIPPED_REPO} -d /tmp
-  mv /tmp/repository "$GALLEON_LOCAL_MAVEN_REPO"
+  repoDir=$(find /tmp -type d -iname "*-image-builder-maven-repository")
+  mv $repoDir/maven-repository "$GALLEON_LOCAL_MAVEN_REPO"
 else
   # Download offliner runtime
   curl -v -L http://repo.maven.apache.org/maven2/com/redhat/red/offliner/offliner/$OFFLINER_VERSION/offliner-$OFFLINER_VERSION.jar > /tmp/offliner.jar
