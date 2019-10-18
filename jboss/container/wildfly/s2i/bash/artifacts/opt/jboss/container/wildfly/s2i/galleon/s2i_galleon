@@ -41,12 +41,18 @@ function galleon_cp_artifacts() {
    # not present in remote repository.
    pushd "$GALLEON_LOCAL_MAVEN_REPO" &> /dev/null
    find -name resolver-status.properties -printf '%P\n' > "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt
+   find -name _remote.repositories -printf '%P\n' > "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/remote-repositories.txt
    popd &> /dev/null
    while read line; do
      dir=`dirname $line`
      mkdir -p "$targetDir/$dir"  && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$line" "$targetDir/$dir"
    done < "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt
    rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/resolvers.txt &> /dev/null
+   while read line; do
+     dir=`dirname $line`
+     mkdir -p "$targetDir/$dir"  && cp -r "$GALLEON_LOCAL_MAVEN_REPO/$line" "$targetDir/$dir"
+   done < "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/remote-repositories.txt
+   rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR"/remote-repositories.txt &> /dev/null
 }
 
 function galleon_build_repo_diff() {
