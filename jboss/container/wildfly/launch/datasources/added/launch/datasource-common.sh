@@ -457,6 +457,14 @@ function generate_external_datasource_xml() {
                            <background-validation-millis>${millis}</background-validation-millis>"
     fi
 
+
+    # allows for specificaiton of a stale-connection-checker
+    stale_checker=$(find_env "${prefix}_STALE_CONNECTION_CHECKER")
+    if [ -n $stale_checker ]; then
+        validation_conf="$validation_conf
+                           <stale-connection-checker class-name=\"${stale_checker}\"/>"
+    fi
+
     ds="$ds
            <validation>
              ${validation_conf}
