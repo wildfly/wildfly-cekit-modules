@@ -723,13 +723,13 @@ function configure_subsystem() {
               fi
               if [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
                 cli="$cli
-                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.password,${SSO_SAML_KEYSTORE_PASSWORD})
-                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-password,${SSO_SAML_KEYSTORE_PASSWORD})"
+                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.password,value=${SSO_SAML_KEYSTORE_PASSWORD})
+                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-password,value=${SSO_SAML_KEYSTORE_PASSWORD})"
               fi
               if [ -n "$SSO_SAML_CERTIFICATE_NAME" ]; then
                 cli="$cli
-                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.Certificate-alias,${SSO_SAML_CERTIFICATE_NAME})
-                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-alias,${SSO_SAML_CERTIFICATE_NAME})"
+                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.Certificate-alias,value=${SSO_SAML_CERTIFICATE_NAME})
+                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-alias,value=${SSO_SAML_CERTIFICATE_NAME})"
               fi
           fi
           deployments="${deployments} ${deployment}"
@@ -849,7 +849,7 @@ function configure_client() {
   then
     client_config="{\"adminUrl\":\"${endpoint}saml\""
     if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ] && [ -n "$SSO_SAML_CERTIFICATE_NAME" ] && [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
-      $JAVA_HOME/jre/bin/keytool -export -keystore ${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE} -alias $SSO_SAML_CERTIFICATE_NAME -storepass $SSO_SAML_KEYSTORE_PASSWORD -file $JBOSS_HOME/standalone/configuration/keycloak.cer
+      $JAVA_HOME/bin/keytool -export -keystore ${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE} -alias $SSO_SAML_CERTIFICATE_NAME -storepass $SSO_SAML_KEYSTORE_PASSWORD -file $JBOSS_HOME/standalone/configuration/keycloak.cer
       base64 $JBOSS_HOME/standalone/configuration/keycloak.cer > $JBOSS_HOME/standalone/configuration/keycloak.pem
       pem=`cat $JBOSS_HOME/standalone/configuration/keycloak.pem | sed ':a;N;$!ba;s/\n//g'`
 
