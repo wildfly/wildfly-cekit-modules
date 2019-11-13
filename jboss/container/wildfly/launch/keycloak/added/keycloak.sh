@@ -716,7 +716,10 @@ function configure_subsystem() {
               SingleLogoutService={validateRequestSignature=${validate_signature},validateResponseSignature=${validate_signature},signRequest=true,\
               signResponse=true,requestBinding=POST,responseBinding=POST, postBindingUrl=${SSO_URL}/realms/${SSO_REALM}/protocol/saml,\
               redirectBindingUrl=${SSO_URL}/realms/${SSO_REALM}/protocol/saml})"
-              
+              if [ -n "$realm_certificate" ]; then
+                cli="$cli
+                  /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/IDP=idp/Key=Key:add(signing=true,CertificatePem=\"${realm_certificate}\")"
+              fi
               if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ]; then
                 cli="$cli
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.file,value=${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE})"
