@@ -23,6 +23,7 @@ function prepareEnv() {
   unset SSO_SAML_LOGOUT_PAGE
   unset SSO_SAML_VALIDATE_SIGNATURE
   unset SSO_SECRET
+  unset SSO_SECURITY_DOMAIN
   unset SSO_SERVICE_URL
   unset SSO_TRUSTSTORE
   unset SSO_TRUSTSTORE_CERTIFICATE_ALIAS
@@ -81,6 +82,15 @@ function configure_cli_keycloak() {
       useLegacySecurity=true;
     fi
 
+    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='application-security-domains']/*[local-name()='application-security-domain' and @name='other' and @security-domain='ApplicationDomain']\""
+    local ret_domain
+    testXpathExpression "${xpath}" "ret_domain"
+    is_saml="false"
+    is_oidc="false"
+    other_exists="false"
+    if [ "${ret_domain}" -eq 0 ]; then
+      other_exists="true"
+    fi
     if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
 
       elytron_assert="$(elytron_common_assert $app_sec_domain)"
@@ -100,6 +110,7 @@ function configure_cli_keycloak() {
               $oidc_elytron
               $ejb_config" >> ${CLI_SCRIPT_FILE}
           fi
+          is_oidc="true"
         else
           log_warning "keycloak subsystem already exists, no configuration applied"
         fi
@@ -118,11 +129,17 @@ function configure_cli_keycloak() {
               $elytron_assert
               $saml_elytron"  >> ${CLI_SCRIPT_FILE}
           fi
+          is_saml="true"
         else
           log_warning "keycloak saml subsystem already exists, no configuration applied"
         fi
       fi
       if [ "$useLegacySecurity" == "false" ]; then
+        if [ "$other_exists" == "true" ]; then
+          other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+          echo "
+           $other_config" >> ${CLI_SCRIPT_FILE}
+        fi
         undertow_config="$(configure_undertow $id $app_sec_domain)"
         echo "
          $undertow_config" >> ${CLI_SCRIPT_FILE}
@@ -178,6 +195,7 @@ function configure_cli_keycloak() {
             $oidc
             $ejb_config" >> ${CLI_SCRIPT_FILE}
         fi
+        is_oidc="true"
       else
           log_warning "keycloak subsystem already exists, no configuration applied"
       fi
@@ -196,12 +214,18 @@ function configure_cli_keycloak() {
             $saml_elytron
             $saml"  >> ${CLI_SCRIPT_FILE}
         fi
+        is_saml="true"
       else
         log_warning "keycloak saml subsystem already exists, no configuration applied"
       fi
     fi
 
     if [ "$useLegacySecurity" == "false" ]; then
+      if [ "$other_exists" == "true" ]; then
+        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+        echo "
+        $other_config" >> ${CLI_SCRIPT_FILE}
+      fi
       echo "
        $undertow_config" >> ${CLI_SCRIPT_FILE}
     else
@@ -222,6 +246,44 @@ function configure_security_domain_cli() {
           quit
         end-if"
   echo "$cli"
+}
+
+function configure_existing_other_cli() {
+   is_saml=$1
+   is_oidc=$2
+   id=$3
+   ext_domain="ext-KeycloakDomain-$id"
+   ext_factory="ext-keycloak-http-authentication-$id"
+   http_auth="/subsystem=elytron/http-authentication-factory=$ext_factory:add(\
+      security-domain=$ext_domain,http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id,\
+      mechanism-configurations=[{mechanism-name=BASIC,mechanism-realm-configurations=[{realm-name=ApplicationRealm}]},\
+      {mechanism-name=FORM},{mechanism-name=DIGEST,mechanism-realm-configurations=[{realm-name=ApplicationRealm}]},\
+      {mechanism-name=CLIENT_CERT}"
+   sec_domain="/subsystem=elytron/security-domain=$ext_domain:add(default-realm=ApplicationRealm,\
+      permission-mapper=default-permission-mapper,security-event-listener=local-audit,\
+      realms=[{realm=local},{realm=ApplicationRealm,role-decoder=groups-to-roles}"
+   if [ "$is_saml" == "true" ]; then
+     sec_domain="$sec_domain,{realm=KeycloakSAMLRealm-$id}"
+     http_auth="$http_auth,{mechanism-name=KEYCLOAK-SAML,mechanism-realm-configurations=[\
+       {realm-name=KeycloakSAMLCRealm-$id,realm-mapper=keycloak-saml-realm-mapper-$id}]}"
+   fi
+   if [ "$is_oidc" == "true" ]; then
+     sec_domain="$sec_domain,{realm=KeycloakOIDCRealm-$id}"
+     http_auth="$http_auth,{mechanism-name=KEYCLOAK,mechanism-realm-configurations=[\
+      {realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]}"
+   fi
+   sec_domain="$sec_domain])"
+   http_auth="$http_auth])"
+
+   cli="
+     if (outcome == success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
+       $sec_domain
+       $http_auth
+       /subsystem=undertow/application-security-domain=other:remove
+       /subsystem=undertow/application-security-domain=other:add(http-authentication-factory=$ext_factory)
+       echo Existing other application-security-domain is extended with support for keycloak >> \${warning_file}
+     end-if"
+    echo "$cli"
 }
 
 function configure_OIDC_extension() {
