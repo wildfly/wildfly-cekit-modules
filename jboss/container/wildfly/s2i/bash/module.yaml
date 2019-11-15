@@ -18,6 +18,8 @@ envs:
   value: "/opt/jboss/container/wildfly/s2i/galleon"
 - name: GALLEON_LOCAL_MAVEN_REPO
   value: "/opt/jboss/container/wildfly/s2i/galleon/galleon-m2-repository"
+- name: TMP_GALLEON_LOCAL_MAVEN_REPO
+  value: "/opt/jboss/container/wildfly/s2i/galleon/tmp-galleon-m2-repository"
 - name: GALLEON_MAVEN_SETTINGS_XML
   value: "/opt/jboss/container/wildfly/s2i/galleon/settings.xml"
 - name: GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML

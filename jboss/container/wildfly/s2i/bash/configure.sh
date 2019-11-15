@@ -21,6 +21,16 @@ sed -i "s|<!-- ### configured local repository ### -->|${local_repo_xml}|" "$GAL
 chown jboss:root $GALLEON_MAVEN_SETTINGS_XML
 chmod ug+rwX $GALLEON_MAVEN_SETTINGS_XML
 
+# Construct the settings used to build the image if not provided
+if [ ! -f "$GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML" ]; then
+  cp $HOME/.m2/settings.xml "$GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML"
+  local_repo_xml="\n\
+    <localRepository>${TMP_GALLEON_LOCAL_MAVEN_REPO}</localRepository>"
+  sed -i "s|<!-- ### configured local repository ### -->|${local_repo_xml}|" "$GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML"
+  chown jboss:root $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
+  chmod ug+rwX $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
+fi
+
 ln -s /opt/jboss/container/wildfly/s2i/install-common/install-common.sh /usr/local/s2i/install-common.sh
 chown -h jboss:root /usr/local/s2i/install-common.sh
 
