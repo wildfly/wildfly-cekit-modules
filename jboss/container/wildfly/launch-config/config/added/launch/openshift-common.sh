@@ -151,7 +151,7 @@ function exec_cli_scripts() {
       cat "${CLI_SCRIPT_OUTPUT_FILE}"
     fi
 
-    log_info "Duration: " $((end-start)) " milliseconds"
+    log_info "Duration: $((end-start)) milliseconds"
 
     if [ $cli_result -ne 0 ]; then
       log_error "Error applying ${CLI_SCRIPT_FILE_FOR_EMBEDDED} CLI script."
