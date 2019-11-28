@@ -82,20 +82,9 @@ function inject_datasources_common() {
 
   inject_internal_datasources
 
-  tx_datasource="$(inject_tx_datasource)"
-  if [ -n "$tx_datasource" ]; then
-    local dsConfMode
-    getDataSourceConfigureMode "dsConfMode"
-    if [ "${dsConfMode}" = "xml" ]; then
-      sed -i "s|<!-- ##DATASOURCES## -->|${tx_datasource}<!-- ##DATASOURCES## -->|" $CONFIG_FILE
-    elif [ "${dsConfMode}" = "cli" ]; then
-      echo "${tx_datasource}" >> ${CLI_SCRIPT_FILE}
-    fi
-
-  fi
+  inject_tx_datasource
 
   inject_external_datasources
-
 }
 
 function inject_internal_datasources() {
@@ -358,7 +347,6 @@ function generate_datasource_common() {
     inject_job_repository "${pool_name}"
     inject_default_job_repository "${pool_name}"
   fi
-
 
   if [ "${dsConfMode}" = "xml" ]; then
     # Only do this replacement if we are replacing an xml marker
