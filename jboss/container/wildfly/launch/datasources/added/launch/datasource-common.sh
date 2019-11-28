@@ -954,7 +954,7 @@ function inject_datasource() {
 
   if [ -z "$jta" ]; then
     log_warning "JTA flag not set, defaulting to true for datasource  ${service_name}"
-    jta=false
+    jta=true
   fi
 
   if [ -z "$driver" ]; then
