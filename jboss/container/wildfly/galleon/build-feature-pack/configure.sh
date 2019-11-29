@@ -51,9 +51,10 @@ else
   java -jar /tmp/offliner.jar $OFFLINER_URLS \
   /tmp/offliner.txt --dir $TMP_GALLEON_LOCAL_MAVEN_REPO > /dev/null
   if [ -f ./errors.log ]; then
-    echo ERRORS WHILE RETRIEVING ARTIFACTS. Offliner file is invalid or you are using a SNAPSHOT BUILD
+    echo ERRORS WHILE RETRIEVING ARTIFACTS.
     echo Offliner errors:
     cat ./errors.log
+    exit 1
   fi
   cd ..
 

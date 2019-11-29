@@ -92,8 +92,9 @@ function processErrorsAndWarnings() {
     do
       log_error "$line"
     done < "${CONFIG_ERROR_FILE}"
-    exit 1
+    return 1
   fi
+  return 0
 }
 
 function exec_cli_scripts() {
@@ -160,6 +161,9 @@ function exec_cli_scripts() {
       exit 1
     else
       processErrorsAndWarnings
+      if [ $? -ne 0 ]; then
+        exit 1
+      fi
       if [ "${SCRIPT_DEBUG}" != "true" ] ; then
         rm ${script} 2> /dev/null
         rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
