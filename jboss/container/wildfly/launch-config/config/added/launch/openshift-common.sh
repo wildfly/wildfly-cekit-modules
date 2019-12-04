@@ -6,6 +6,7 @@ if [ "${SCRIPT_DEBUG}" = "true" ] ; then
 fi
 
 source $JBOSS_HOME/bin/launch/launch-common.sh
+source $JBOSS_HOME/bin/launch/logging.sh
 
 SERVER_CONFIG=${WILDFLY_SERVER_CONFIGURATION:-standalone.xml}
 export CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
