@@ -31,8 +31,8 @@ function clearDatasourceEnv() {
   local prefix=$1
   local service=$2
 
-  unset ${service}_HOST
-  unset ${service}_PORT
+  unset ${service}_SERVICE_HOST
+  unset ${service}_SERVICE_PORT
   unset ${prefix}_JNDI
   unset ${prefix}_USERNAME
   unset ${prefix}_PASSWORD
