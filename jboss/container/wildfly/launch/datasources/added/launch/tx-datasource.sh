@@ -145,7 +145,7 @@ function inject_tx_datasource() {
     url=$(find_env "${prefix}_URL")
 
     if [ -z $jndi ] || [ -z $username ] || [ -z $password ] || [ -z $database ]; then
-      log_warning "Ooops, there is a problem with the ${db,,} datasource!"
+      log_warning "Ooops, there is a problem with the ${db,,} datasource and JDBC object store creation!"
       log_warning "In order to configure ${db,,} transactional datasource for $prefix service you need to provide following environment variables: ${prefix}_USERNAME, ${prefix}_PASSWORD, ${prefix}_DATABASE."
       log_warning
       log_warning "Current values:"
@@ -154,8 +154,8 @@ function inject_tx_datasource() {
       log_warning "${prefix}_PASSWORD: $password"
       log_warning "${prefix}_DATABASE: $database"
       log_warning
-      log_warning "The ${db,,} datasource for $prefix service WILL NOT be configured."
-      db="ignore"
+      log_warning "The ${db,,} datasource and JDBC object store for $prefix service WILL NOT be configured."
+      return
     fi
 
     # Transaction isolation level environment variable name format: [NAME]_[DATABASE_TYPE]_TX_ISOLATION
@@ -183,6 +183,18 @@ function inject_tx_datasource() {
           url="jdbc:postgresql://${host}:${port}/${database}"
         ;;
       esac
+    fi
+
+    if [ -z "${url}" ]; then
+      log_warning "Ooops, there is a problem with the ${db,,} datasource and JDBC object store creation!"
+      log_warning "In order to configure ${db,,} transactional datasource for $prefix service you need to provide environment variables: ${prefix}_URL."
+      log_warning
+      log_warning "Current value:"
+      log_warning
+      log_warning "${prefix}_URL: $url"
+      log_warning
+      log_warning "The ${db,,} datasource and JDBC object store for $prefix service WILL NOT be configured."
+      return
     fi
 
     if [ -z "$driver" ]; then
