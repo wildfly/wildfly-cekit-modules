@@ -14,6 +14,10 @@ if [ -f $JBOSS_HOME/bin/launch/logging.sh ]; then
     source $JBOSS_HOME/bin/launch/logging.sh
 fi
 
+# Local constants
+
+jndiSuffixDatasourceObjectStore="ObjectStore"
+
 
 function clearTxDatasourceEnv() {
   tx_backend=${TX_DATABASE_PREFIX_MAPPING}
@@ -46,88 +50,11 @@ function clearTxDatasourceEnv() {
 # $6 - datasource port
 # $7 - datasource databasename
 # $8 - driver
+# $9 - url
 function generate_tx_datasource() {
-  local dsConfMode
-  getDataSourceConfigureMode "dsConfMode"
-  if [ "${dsConfMode}" = "xml" ]; then
-    echo "$(generate_tx_datasource_xml $@)"
-  elif [ "${dsConfMode}" = "cli" ]; then
-    echo "$(generate_tx_datasource_cli $@)"
-  fi
-}
-
-# See generate_tx_datasource() for the arguments
-function generate_tx_datasource_xml() {
-
-  ds="                  <datasource jta=\"false\" jndi-name=\"${2}ObjectStore\" pool-name=\"${1}ObjectStorePool\" enabled=\"true\">
-                      <connection-url>jdbc:${8}://${5}:${6}/${7}</connection-url>
-                      <driver>${8}</driver>"
-      if [ -n "$tx_isolation" ]; then
-        ds="$ds
-                      <transaction-isolation>$tx_isolation</transaction-isolation>"
-      fi
-      if [ -n "$min_pool_size" ] || [ -n "$max_pool_size" ]; then
-        ds="$ds
-                      <pool>"
-        if [ -n "$min_pool_size" ]; then
-          ds="$ds
-                          <min-pool-size>$min_pool_size</min-pool-size>"
-        fi
-        if [ -n "$max_pool_size" ]; then
-          ds="$ds
-                          <max-pool-size>$max_pool_size</max-pool-size>"
-        fi
-        ds="$ds
-                      </pool>"
-      fi
-      ds="$ds
-
-                      <security>
-                          <user-name>${3}</user-name>
-                          <password>${4}</password>
-                      </security>
-                  </datasource>"
-  echo $ds | sed ':a;N;$!ba;s|\n|\\n|g'
-}
-
-# See generate_tx_datasource() for the arguments
-function generate_tx_datasource_cli() {
-  local subsystem_address="/subsystem=datasources"
-  local ds_resource="${subsystem_address}/data-source=${1}ObjectStorePool"
-  local xa_resource="${subsystem_address}/xa-data-source=${1}ObjectStorePool"
-  local ds_tmp_add="$ds_resource:add(jta=false, jndi-name=${2}ObjectStore, enabled=true, connection-url=jdbc:${8}://${5}:${6}/${7}, driver-name=$8"
-  ds_tmp_add="${ds_tmp_add}, user-name=${3}, password=${4}"
-  if [ -n "$tx_isolation" ]; then
-    ds_tmp_add="${ds_tmp_add}, transaction-isolation=$tx_isolation"
-  fi
-  if [ -n "$min_pool_size" ]; then
-    ds_tmp_add="$d{ds_tmp_add}, min-pool-size=$min_pool_size"
-  fi
-  if [ -n "$max_pool_size" ]; then
-    ds_tmp_add="$d{ds_tmp_add}, min-pool-size=$max_pool_size"
-  fi
-  ds_tmp_add="${ds_tmp_add})"
-
-  ds="
-    if (outcome != success) of ${subsystem_addr}:read-resource
-      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. Fix your configuration to contain a datasources subsystem for this to happen. >> \${error_file}
-      exit
-    end-if
-
-    if (outcome == success) of ${ds_resource}:read-resource
-      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. However, your base configuration already contains a datasource with that name. >> \${error_file}
-      exit
-    end-if
-
-    if (outcome == success) of ${xa_resource}:read-resource
-      echo You have set environment variables to configure the transactional logstore datasource \'${1}ObjectStorePool\'. However, your base configuration already contains a datasource with that name. >> \${error_file}
-      exit
-    end-if
-
-    ${ds_tmp_add}
-    "
-
-  echo "${ds}"
+  NON_XA_DATASOURCE=true
+  [ -z "$url" ] && url="jdbc:${8}://${5}:${6}/${7}"
+  generate_datasource_common "${1}${jndiSuffixDatasourceObjectStore}Pool" "${2}${jndiSuffixDatasourceObjectStore}" "${3}" "${4}" "${5}" "${6}" "${7}" "" "" "${8}" "${1}" "false" "false" "${9}"
 }
 
 function inject_jdbc_store() {
@@ -168,7 +95,7 @@ function inject_jdbc_store() {
       $subsystem_addr:write-attribute(name=jdbc-state-store-table-prefix, value=${prefix})
       run-batch
     "
-    echo "${cli}" >> ${CLI_SCRIPT_FILE}
+    echo "${cli}" >> "${CLI_SCRIPT_FILE}"
   fi
 
 }
@@ -177,7 +104,7 @@ function inject_jdbc_store() {
 function inject_tx_datasource() {
   tx_backend=${TX_DATABASE_PREFIX_MAPPING}
 
-  if [ -n "${tx_backend}" ] ; then
+  if [ -n "${tx_backend}" ] && [ -z "$JDBC_STORE_JNDI_NAME" ]; then
     service_name=${tx_backend%=*}
     service=${service_name^^}
     service=${service//-/_}
@@ -214,6 +141,9 @@ function inject_tx_datasource() {
     # Database name environment variable name format: [NAME]_[DATABASE_TYPE]_DATABASE
     database=$(find_env "${prefix}_DATABASE")
 
+    # Url for connection. If defined then it's used.
+    url=$(find_env "${prefix}_URL")
+
     if [ -z $jndi ] || [ -z $username ] || [ -z $password ] || [ -z $database ]; then
       log_warning "Ooops, there is a problem with the ${db,,} datasource!"
       log_warning "In order to configure ${db,,} transactional datasource for $prefix service you need to provide following environment variables: ${prefix}_USERNAME, ${prefix}_PASSWORD, ${prefix}_DATABASE."
@@ -237,33 +167,43 @@ function inject_tx_datasource() {
     # max pool size environment variable name format: [NAME]_[DATABASE_TYPE]_MAX_POOL_SIZE
     max_pool_size=$(find_env "${prefix}_MAX_POOL_SIZE")
 
-    case "$db" in
-      "MYSQL")
-        driver="mysql"
-        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)"
-        inject_jdbc_store "${jndi}ObjectStore"
+    driver=$(find_env "${prefix}_DRIVER" )
+    if [ -z "${driver}" ] && [ -n "${db}" ]; then
+      # if $db is equal to MYSQL or POSTGRESQL we use that as the driver name for backward compatibility reasons
+      if [ "${db}" = "MYSQL" ] || [ "${db}" = "POSTGRESQL" ]; then
+        driver="${db,,}"
+      fi
+    fi
+    if [ -z "${url}" ]; then
+      case "${driver}" in
+        "mysql")
+          url="jdbc:mysql://${host}:${port}/${database}"
         ;;
-      "POSTGRESQL")
-        driver="postgresql"
-        datasource="$(generate_tx_datasource ${service,,} $jndi $username $password $host $port $database $driver)"
-        inject_jdbc_store "${jndi}ObjectStore"
+        "postgresql")
+          url="jdbc:postgresql://${host}:${port}/${database}"
         ;;
-      *)
-        datasource=""
-        ;;
-    esac
-
-    local dsConfMode
-    getDataSourceConfigureMode "dsConfMode"
-    if [ "${dsConfMode}" = "xml" ]; then
-      # Only do this replacement if we are replacing an xml marker
-      echo ${datasource} | sed ':a;N;$!ba;s|\n|\\n|g'
-    elif [ "${dsConfMode}" = "cli" ]; then
-      # If using cli, return the raw string, preserving line breaks
-      echo "${datasource}"
+      esac
     fi
 
+    if [ -z "$driver" ]; then
+      log_warning "DRIVER not set for tx datasource ${service_name}. Transaction object store datasource will not be configured."
+      datasource=""
+    else
+      datasource=$(generate_tx_datasource "${service,,}" "$jndi" "$username" "$password" "$host" "$port" "$database" "$driver" "$url")
 
+      local dsConfMode
+      getDataSourceConfigureMode "dsConfMode"
+      if [ "${dsConfMode}" = "xml" ]; then
+        # Only do this replacement if we are replacing an xml marker
+        datasource_adjusted="$(echo ${datasource} | sed ':a;N;$!ba;s|\n|\\n|g')"
+        sed -i "s|<!-- ##DATASOURCES## -->|${datasource_adjusted}<!-- ##DATASOURCES## -->|" $CONFIG_FILE
+      elif [ "${dsConfMode}" = "cli" ]; then
+        # If using cli, return the raw string, preserving line breaks
+        echo "${datasource}" >> "${CLI_SCRIPT_FILE}"
+      fi
+
+      inject_jdbc_store "${jndi}${jndiSuffixDatasourceObjectStore}"
+    fi
   else
     if [ -n "$JDBC_STORE_JNDI_NAME" ]; then
       inject_jdbc_store "${JDBC_STORE_JNDI_NAME}"
