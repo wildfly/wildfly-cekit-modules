@@ -41,7 +41,7 @@ if [ -f "${ZIPPED_REPO}" ]; then
   fi
 else
   # Download offliner runtime
-  curl -v -L http://repo.maven.apache.org/maven2/com/redhat/red/offliner/offliner/$OFFLINER_VERSION/offliner-$OFFLINER_VERSION.jar > /tmp/offliner.jar
+  curl -v -L https://repo.maven.apache.org/maven2/com/redhat/red/offliner/offliner/$OFFLINER_VERSION/offliner-$OFFLINER_VERSION.jar > /tmp/offliner.jar
 
   # Download offliner file
   curl -v -L $WILDFLY_DIST_MAVEN_LOCATION/$WILDFLY_VERSION/wildfly-dist-$WILDFLY_VERSION-artifact-list.txt > /tmp/offliner.txt
