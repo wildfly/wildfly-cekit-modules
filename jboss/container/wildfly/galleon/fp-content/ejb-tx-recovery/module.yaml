@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.galleon.fp-content.ejb-tx-recovery
 version: '1.0'
-description: Support for ejb-tx-recovery
+description: Support for ejb-tx-recovery. This module is deprecated (use jboss.container.wildfly.launch.statefulset) and may be removed in a future release.
 
 execute:
 - script: configure.sh
