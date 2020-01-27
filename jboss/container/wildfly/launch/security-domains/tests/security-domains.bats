@@ -6,6 +6,7 @@ export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 rm -rf $JBOSS_HOME
 mkdir -p $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/security-domains.sh $JBOSS_HOME/bin/launch
 mkdir -p $JBOSS_HOME/standalone/configuration
