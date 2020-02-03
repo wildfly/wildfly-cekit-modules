@@ -30,6 +30,12 @@ function configure_server() {
   fi
 }
 
+# Configure the server using CLI + embedded server.
+function configure_server_with_cli() {
+  configure_scripts
+  configure_embedded_cli_script
+}
+
 function configure_scripts() {
   CONFIGURE_CONFIG_SCRIPTS=(
   )
