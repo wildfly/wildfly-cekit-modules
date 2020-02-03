@@ -112,7 +112,7 @@ function launchServer() {
   local imgVersion=${JBOSS_IMAGE_VERSION:-$IMAGE_VERSION}
   log_info "Running $imgName image, version $imgVersion"
 
-  ${cmd} ${CLI_EXECUTION_OPTS}  &
+  ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_HA_ARGS} ${JBOSS_MESSAGING_ARGS} ${CLI_EXECUTION_OPTS}  &
 
   local pid=$!
 
