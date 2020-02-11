@@ -80,6 +80,10 @@ mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-prod
 mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-universe/pom.xml install -Dmaven.repo.local=$TMP_GALLEON_LOCAL_MAVEN_REPO \
 --settings $GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
 
+# delete universe/producer src
+rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-universe
+rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-producers
+
 # Copy JBOSS_HOME content (custom os content) to common package dir
 CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
 mkdir -p $CONTENT_DIR
