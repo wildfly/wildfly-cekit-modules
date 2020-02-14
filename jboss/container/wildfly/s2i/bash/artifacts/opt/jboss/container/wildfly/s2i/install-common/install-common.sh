@@ -120,3 +120,6 @@ function configure_drivers(){
   )
 }
 
+if [ -s /usr/local/s2i/install-common-overrides.sh ]; then
+  source /usr/local/s2i/install-common-overrides.sh
+fi
