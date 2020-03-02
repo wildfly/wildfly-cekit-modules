@@ -235,6 +235,7 @@ function galleon_provision_server() {
           targetDir=$GALLEON_DESCRIPTION_LOCATION/target/server
           if [ -d $targetDir ]; then
             galleon_replace_server $targetDir
+            rm -rf $targetDir
           else
             echo "Error, no server provisioned in $targetDir"
             exit 1
