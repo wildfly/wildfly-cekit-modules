@@ -347,7 +347,7 @@ configure_jgroups_encryption() {
             validate_keystore_and_create "cli" "ASYM_ENCRYPT"
           fi
         else
-          jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol. You need to set all of these variables to configure ASYM_ENCRYPT using the Elytron keysore: JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE."
+          jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol. You need to set all of these variables to configure ASYM_ENCRYPT using the Elytron keystore: JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE."
           if [ ! "${has_elytron_subsystem}" -eq 0 ]; then
             log_warning "Elytron subsystem is not in your configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol."
           elif [ -n "${JGROUPS_ENCRYPT_SECRET}" ] || [ -n "${JGROUPS_ENCRYPT_NAME}" ] || [ -n "${JGROUPS_ENCRYPT_PASSWORD}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE_DIR}" ]; then
