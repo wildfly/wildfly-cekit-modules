@@ -32,6 +32,13 @@ function configure_server() {
 
 # Configure the server using CLI + embedded server.
 function configure_server_with_cli() {
+  # prepare the cli properties files
+  createConfigExecutionContext
+  # cli for drivers are needed to be added to script file as well
+  if [ -s "${S2I_CLI_DRIVERS_FILE}" ] && [ "${CONFIG_ADJUSTMENT_MODE,,}" != "cli" ]; then
+    cat "${S2I_CLI_DRIVERS_FILE}" > "${CLI_SCRIPT_FILE}"
+  fi
+
   configure_scripts
   configure_embedded_cli_script
 }
