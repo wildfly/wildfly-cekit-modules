@@ -356,3 +356,11 @@ load common
 
     assert_datasources "no-datasource-enabled-default.xml"
 }
+
+@test "inject_datasources: DATASOURCES - DEFAULT BINDINGS" {
+    ENABLE_GENERATE_DEFAULT_DATASOURCE="true"
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_defaut_bindings "default_bindings_placeholder.xml"
+}
