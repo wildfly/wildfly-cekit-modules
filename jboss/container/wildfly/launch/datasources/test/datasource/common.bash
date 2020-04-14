@@ -27,3 +27,9 @@ assert_datasources() {
   local xpath="//*[local-name()='datasources']"
   assert_xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml "$xpath" $BATS_TEST_DIRNAME/expectations/$expected
 }
+
+assert_defaut_bindings() {
+  local expected=$1
+  local xpath="//*[local-name()='default-bindings']"
+  assert_xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml "$xpath" $BATS_TEST_DIRNAME/expectations/$expected
+}
