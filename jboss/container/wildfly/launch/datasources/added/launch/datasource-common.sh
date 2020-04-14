@@ -398,11 +398,11 @@ function generate_external_datasource_xml() {
       ds="$ds
              <driver>${driver}</driver>"
     fi
+  fi
 
-    if [ -n "$tx_isolation" ]; then
-      ds="$ds
+  if [ -n "$tx_isolation" ]; then
+    ds="$ds
              <transaction-isolation>$tx_isolation</transaction-isolation>"
-    fi
   fi
 
   if [ -n "$min_pool_size" ] || [ -n "$max_pool_size" ]; then
@@ -513,12 +513,11 @@ function generate_external_datasource_cli() {
           ds_tmp_xa_connection_properties["$prop_name"]="$prop_val"
         fi
       done
-
-      if [ -n "${tx_isolation}" ]; then
-        ds_tmp_key_values["transaction-isolation"]="${tx_isolation}"
-      fi
     fi
+  fi
 
+  if [ -n "${tx_isolation}" ]; then
+    ds_tmp_key_values["transaction-isolation"]="${tx_isolation}"
   fi
 
   if [ -n "$min_pool_size" ]; then
