@@ -33,6 +33,11 @@ if [ -f "${ZIPPED_REPO}" ]; then
   echo "Found zipped repository, installing it."
   unzip ${ZIPPED_REPO} -d /tmp
   repoDir=$(find /tmp -type d -iname "*-image-builder-maven-repository")
+
+  # hook to allow for maven-repo processing before to initiate feature-pack build
+  if [ -f "$GALLEON_MAVEN_REPO_HOOK_SCRIPT" ]; then
+    sh $GALLEON_MAVEN_REPO_HOOK_SCRIPT "$repoDir"
+  fi
   mv $repoDir/maven-repository "$TMP_GALLEON_LOCAL_MAVEN_REPO"
   
   if [ "x$deleteBuildArtifacts" == "xtrue"  ]; then
