@@ -172,11 +172,16 @@ function writeEEDefaultDatasource() {
 
   # Set the default datasource
   local defaultEEDatasourceConfMode
-  getConfigurationMode "<!-- ##DEFAULT_DATASOURCE## -->" "defaultEEDatasourceConfMode"
+  getConfigurationMode "##DEFAULT_DATASOURCE##" "defaultEEDatasourceConfMode"
   if [ "${defaultEEDatasourceConfMode}" = "xml" ]; then
     writeEEDefaultDatasourceXml
-  elif [ "${defaultEEDatasourceConfMode}" = "cli" ]; then
-    writeEEDefaultDatasourceCli
+  else
+    getConfigurationMode "<!-- ##DEFAULT_DATASOURCE## -->" "defaultEEDatasourceConfMode"
+    if [ "${defaultEEDatasourceConfMode}" = "xml" ]; then
+      writeEEDefaultDatasourceXml
+    elif [ "${defaultEEDatasourceConfMode}" = "cli" ]; then
+      writeEEDefaultDatasourceCli
+    fi
   fi
 }
 
