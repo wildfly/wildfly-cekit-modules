@@ -11,6 +11,8 @@ function configure_json_logging() {
     configureByMarkers
   elif [ "${configureMode}" = "cli" ]; then
     configureByCLI
+  else
+    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $LOGGING_FILE
   fi
 }
 
