@@ -275,7 +275,7 @@ EOF
 # $4 - default connection factory - java:jboss/DefaultJMSConnectionFactory
 # <!-- ##AMQ_POOLED_CONNECTION_FACTORY## -->
 function generate_remote_artemis_connection_factory() {
-    echo "<pooled-connection-factory user=\"${2}\" password=\"${3}\" name=\"${1}\" entries=\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\" connectors=\"netty-remote-throughput\" transaction=\"xa\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
+    echo "<pooled-connection-factory user=\"${2}\" password=\"${3}\" name=\"${1}\" entries=\"${4} java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA\" connectors=\"netty-remote-throughput\" transaction=\"xa\"/>" | sed -e ':a;N;$!ba;s|\n|\\n|g'
 }
 
 # $1 - factory name - activemq-ra-remote
@@ -289,7 +289,7 @@ function generate_remote_artemis_connection_factory_cli() {
       resource="${resource}/server=${5}"
   fi
 
-  echo "${resource}/pooled-connection-factory=\"${1}\":add(user=\"${2}\", password=\"${3}\", entries=[\"java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA ${4}\"], connectors=[\"netty-remote-throughput\"], transaction=xa)"
+  echo "${resource}/pooled-connection-factory=\"${1}\":add(user=\"${2}\", password=\"${3}\", entries=[\"${4} java:/JmsXA java:/RemoteJmsXA java:jboss/RemoteJmsXA\"], connectors=[\"netty-remote-throughput\"], transaction=xa)"
 }
 
 # $1 object type - queue / topic
