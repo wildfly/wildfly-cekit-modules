@@ -19,7 +19,7 @@ function get_maven_artifacts_jar {
   incomplete=$2
   artifacts="$(xmllint --xpath "//*[local-name()='module']/*[local-name()='resources']/*[local-name()='artifact']/@name" $moduleFile 2>/dev/null)"
 
-  read -ra ARR <<< "$artifacts"
+  readarray ARR <<< "${artifacts}"
   for i in "${ARR[@]}"; do
     v="$(echo $i | grep -o '\".*\"')"
     f=${v/\"/}
