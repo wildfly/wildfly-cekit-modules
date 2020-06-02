@@ -1,0 +1,34 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Wildfly Cekit Module Tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+     branches: [ master ]
+env:
+  LANG: en_US.UTF-8
+
+jobs:
+  bats:
+    name: Bats Shell Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install bats
+      run: sudo apt-get install bats
+    - name: Run Bats
+      shell: bash
+      run: |
+          rc=0
+          echo "TAP version 13"
+          for testName in `find ./ -name *.bats`; 
+          do 
+            echo ${testName}; 
+            bats --tap ${testName} || rc=$?
+          done
+          exit ${rc}
