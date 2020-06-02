@@ -21,7 +21,6 @@ jobs:
         uses: mig4/setup-bats@master
         with:
           bats-version: 1.1.0
-      - name: Run Bats
       - name: setup env
         run: echo "BATS_STANDALONE_XML_URL=https://raw.githubusercontent.com/jboss-container-images/jboss-eap-modules/master/os-eap71-openshift/added/standalone-openshift.xml" > ./test-common/configuration/bats-config.env
       - name: Test
