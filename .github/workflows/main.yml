@@ -1,4 +1,4 @@
-name: JBoss EAP OpenShift Modules - Bats
+name: Wildfly Cekit OpenShift Modules - Bats
 on:
   push:
     branches: [ master ]
@@ -17,16 +17,11 @@ jobs:
         os: [ubuntu-latest]
     steps:
     - uses: actions/checkout@v2
-    - name: Install bats
-      run: sudo apt-get install bats
+    - name: Setup BATS
+      uses: mig4/setup-bats@master
     - name: Run Bats
-      shell: bash
-      run: |
-          rc=0
-          echo "TAP version 13"
-          for testName in `find ./ -name *.bats`; 
-          do 
-            echo ${testName}; 
-            bats --tap ${testName} || rc=$?
-          done
-          exit ${rc}
+    - name: setup env
+      run: echo "BATS_STANDALONE_XML_URL=https://raw.githubusercontent.com/jboss-container-images/jboss-eap-modules/master/os-eap71-openshift/added/standalone-openshift.xml" > ./test-common/configuration/bats-config.env
+    - name: Test
+      run: ./run-all-tests.sh
+
