@@ -16,9 +16,13 @@ function run_api_test {
     echo $routes
 }
 
-@test "Is nc installed?" {
-  run nc --version
-  [ "$status" -eq 0 ]
+@test "Is netcat installed?" {
+  if [ -f /bin/nc ] || [ -f /usr/bin/nc ]; then
+     result="ok"
+  else
+     result="failed"
+  fi
+  [ "${result}" = "ok" ]
 }
 
 @test "Kubernetes Route API not available" {
