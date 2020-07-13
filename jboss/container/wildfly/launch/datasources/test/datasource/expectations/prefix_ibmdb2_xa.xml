@@ -5,14 +5,14 @@
         <xa-datasource-property name="PortNumber">50000</xa-datasource-property>
         <xa-datasource-property name="ServerName">localhost</xa-datasource-property>
         <driver>ibmdb2</driver>
+        <xa-pool>
+            <is-same-rm-override>false</is-same-rm-override>
+            <no-tx-separate-pools/>
+        </xa-pool>
         <security>
             <user-name>kermit</user-name>
             <password>thefrog</password>
         </security>
-        <xa-pool>
-            <is-same-rm-override>false</is-same-rm-override>"
-            <no-tx-separate-pools />
-        </xa-pool>
     </xa-datasource>
     <!-- ##DATASOURCES## -->
     <drivers>

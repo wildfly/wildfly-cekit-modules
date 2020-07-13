@@ -267,8 +267,8 @@ load common
     TEST_CONNECTION_CHECKER="org.jboss.jca.adapters.jdbc.extensions.oracle.OracleValidConnectionChecker"
     TEST_EXCEPTION_SORTER="org.jboss.jca.adapters.jdbc.extensions.oracle.OracleExceptionSorter"
     TEST_BACKGROUND_VALIDATION="false"
-    TEST_IS_SAME_RM_OVERRIDE=false
-    TEST_NO_TX_SEPARATE_POOLS=true
+    TEST_SAME_RM_OVERRIDE=false
+    TEST_NO_TX_SEPARATE_POOL=true
 
     run inject_datasources
 
@@ -304,8 +304,8 @@ load common
     TEST_XA_CONNECTION_PROPERTY_PortNumber="50000"
     TEST_XA_CONNECTION_PROPERTY_DatabaseName="ibmdb2db"
 
-    TEST_IS_SAME_RM_OVERRIDE=false
-    TEST_NO_TX_SEPARATE_POOLS=true
+    TEST_SAME_RM_OVERRIDE=false
+    TEST_NO_TX_SEPARATE_POOL=true
 
     run inject_datasources
 

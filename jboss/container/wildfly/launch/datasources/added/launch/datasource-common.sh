@@ -40,8 +40,8 @@ function clearDatasourceEnv() {
   unset ${prefix}_TX_ISOLATION
   unset ${prefix}_MIN_POOL_SIZE
   unset ${prefix}_MAX_POOL_SIZE
-  unset ${prefix}_IS_SAME_RM_OVERRIDE
-  unset ${prefix}_NO_TX_SEPARATE_POOLS
+  unset ${prefix}_SAME_RM_OVERRIDE
+  unset ${prefix}_NO_TX_SEPARATE_POOL
   unset ${prefix}_JTA
   unset ${prefix}_NONXA
   unset ${prefix}_DRIVER
@@ -407,7 +407,7 @@ function generate_external_datasource_xml() {
              <transaction-isolation>$tx_isolation</transaction-isolation>"
   fi
 
-  if [ -n "$min_pool_size" ] || [ -n "$max_pool_size" ] || [ -n "$is_same_rm_override" ] || [ -n "$no_tx_separate_pools" ]; then
+  if [ -n "$min_pool_size" ] || [ -n "$max_pool_size" ] || [ -n "$same_rm_override" ] || [ -n "$no_tx_separate_pool" ]; then
     if [ -n "$NON_XA_DATASOURCE" ] && [ "$NON_XA_DATASOURCE" = "true" ]; then
        ds="$ds
              <pool>"
@@ -425,12 +425,12 @@ function generate_external_datasource_xml() {
              <max-pool-size>$max_pool_size</max-pool-size>"
     fi
     # CLOUD-2903: For Oracle XA Datasources, this configuration is required
-    if [ -n "$is_same_rm_override" ]; then
+    if [ -n "$same_rm_override" ]; then
       ds="$ds
-            <is-same-rm-override>$is_same_rm_override</is-same-rm-override>"
+            <is-same-rm-override>$same_rm_override</is-same-rm-override>"
     fi
     # RHPAM-2261
-    if [ -n "$no_tx_separate_pools" ]; then
+    if [ -n "$no_tx_separate_pool" ]; then
       ds="$ds
             <no-tx-separate-pools />"
     fi
@@ -537,6 +537,14 @@ function generate_external_datasource_cli() {
   fi
   if [ -n "$max_pool_size" ]; then
     ds_tmp_key_values["max-pool-size"]=$max_pool_size
+  fi
+
+  if [ -n "${same_rm_override}"]; then
+    ds_tmp_key_values["same_rm_override"]=${same_rm_override}
+  fi
+
+  if [ -n "${no_tx_seperate_pool}" ]; then
+    ds_tmp_key_values["no-tx-separate-pool"]=${no_tx_seperate_pool}
   fi
 
   ds_tmp_key_values["user-name"]="${username}"
@@ -903,11 +911,11 @@ function inject_datasource() {
   # max pool size environment variable name format: [NAME]_[DATABASE_TYPE]_MAX_POOL_SIZE
   max_pool_size=$(find_env "${prefix}_MAX_POOL_SIZE")
 
-  # is same rm override environment variable name format: [PREFIX]_IS_SAME_RM_OVERRIDE
-  is_same_rm_override=$(find_env "${prefix}_IS_SAME_RM_OVERRIDE")
+  # is same rm override environment variable name format: [PREFIX]_SAME_RM_OVERRIDE
+  same_rm_override=$(find_env "${prefix}_SAME_RM_OVERRIDE")
 
-  # no_tx_separate_pools environment variable name format: [PREFIX]_NO_TX_SEPARATE_POOLS
-  no_tx_separate_pools=$(find_env "${prefix}_NO_TX_SEPARATE_POOLS")
+  # no_tx_separate_pool environment variable name format: [PREFIX]_NO_TX_SEPARATE_POOL
+  no_tx_separate_pool=$(find_env "${prefix}_NO_TX_SEPARATE_POOL")
 
   # jta environment variable name format: [NAME]_[DATABASE_TYPE]_JTA
   jta=$(find_env "${prefix}_JTA" true)
