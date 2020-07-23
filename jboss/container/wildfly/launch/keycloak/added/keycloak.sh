@@ -97,7 +97,7 @@ function configure_cli_keycloak() {
 
       if [ -f $SECURE_DEPLOYMENTS ]; then
         if [ "${ret_oidc}" -ne 0 ]; then
-          keycloak_subsystem=`cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+          keycloak_subsystem=$(cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
           keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
 
           sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
@@ -118,7 +118,7 @@ function configure_cli_keycloak() {
 
       if [ -f $SECURE_SAML_DEPLOYMENTS ]; then
         if [ "${ret_saml}" -ne 0 ]; then
-          keycloak_subsystem=`cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+          keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
           keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
 
           sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
@@ -483,21 +483,21 @@ function configure_SAML_subsystem() {
     cli="
        /subsystem=keycloak-saml:add
        ${secure_deployments}
-"  
+"
   fi
 }
 
 function configure_keycloak() {
   if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
     if [ -f $SECURE_DEPLOYMENTS ]; then
-      keycloak_subsystem=`cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+      keycloak_subsystem=$(cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
       keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>"
 
       sed -i "s|<!-- ##KEYCLOAK_SUBSYSTEM## -->|${keycloak_subsystem}|" "${CONFIG_FILE}"
     fi
 
     if [ -f $SECURE_SAML_DEPLOYMENTS ]; then
-      keycloak_subsystem=`cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g'`
+      keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
       keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>"
 
       sed -i "s|<!-- ##KEYCLOAK_SAML_SUBSYSTEM## -->|${keycloak_subsystem}|" "${CONFIG_FILE}"
@@ -566,7 +566,7 @@ function set_curl() {
   if [ -n "$SSO_DISABLE_SSL_CERTIFICATE_VALIDATION" ] && [[ $SSO_DISABLE_SSL_CERTIFICATE_VALIDATION == "true" ]]; then
     CURL="curl --insecure -s"
   elif [ -n "$SSO_TRUSTSTORE" ] && [ -n "$SSO_TRUSTSTORE_DIR" ] && [ -n "$SSO_TRUSTSTORE_CERTIFICATE_ALIAS" ]; then
-    TMP_SSO_TRUSTED_CERT_FILE=`mktemp`
+    TMP_SSO_TRUSTED_CERT_FILE=$(mktemp)
     keytool -exportcert -alias "$SSO_TRUSTSTORE_CERTIFICATE_ALIAS" -rfc -keystore ${SSO_TRUSTSTORE_DIR}/${SSO_TRUSTSTORE} -storepass ${SSO_TRUSTSTORE_PASSWORD} -file "$TMP_SSO_TRUSTED_CERT_FILE"
     CURL="curl -s --cacert $TMP_SSO_TRUSTED_CERT_FILE"
     unset TMP_SSO_TRUSTED_CERT_FILE
@@ -599,7 +599,7 @@ function explode_keycloak_deployments() {
     fi
 
     if [ -f "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml" ]; then
-      requested_auth_method=`cat ${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]'`
+      requested_auth_method=$(cat ${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
       sed -i "s|${requested_auth_method}|${auth_method}|" "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml"
     fi
   done
@@ -609,17 +609,17 @@ function get_token() {
 
   token=""
   if [ -n "$SSO_USERNAME" ] && [ -n "$SSO_PASSWORD" ]; then
-    token=`$CURL --data "username=${SSO_USERNAME}&password=${SSO_PASSWORD}&grant_type=password&client_id=admin-cli" ${sso_service}/realms/${SSO_REALM}/protocol/openid-connect/token`
+    token=$($CURL --data "username=${SSO_USERNAME}&password=${SSO_PASSWORD}&grant_type=password&client_id=admin-cli" ${sso_service}/realms/${SSO_REALM}/protocol/openid-connect/token)
     if [ $? -ne 0 ] || [[ $token != *"access_token"* ]]; then
       log_warning "Unable to connect to SSO/Keycloak at $sso_service for user $SSO_USERNAME and realm $SSO_REALM. SSO Clients *not* created"
       if [ -z "$token" ]; then
         log_warning "Reason: Check the URL, no response from the URL above, check if it is valid or if the DNS is resolvable."
       else
-        log_warning "Reason: `echo $token | grep -Po '((?<=\<p\>|\<body\>).*?(?=\</p\>|\</body\>)|(?<="error_description":")[^"]*)' | sed -e 's/<[^>]*>//g'`"
+        log_warning "Reason: $(echo $token | grep -Po '((?<=\<p\>|\<body\>).*?(?=\</p\>|\</body\>)|(?<="error_description":")[^"]*)' | sed -e 's/<[^>]*>//g')"
       fi
       token=
     else
-      token=`echo $token | grep -Po '(?<="access_token":")[^"]*'`
+      token=$(echo $token | grep -Po '(?<="access_token":")[^"]*')
       log_info "Obtained auth token from $sso_service for realm $SSO_REALM"
     fi
   else
@@ -651,7 +651,7 @@ function configure_subsystem() {
 
   keycloak_subsystem=$(cat "${subsystem_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
 
-  keycloak_deployment_subsystem=$(cat "${deployment_file}" | sed ':a;N;$!ba;s|\n|\\n|g') 
+  keycloak_deployment_subsystem=$(cat "${deployment_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
 
   pushd $JBOSS_HOME/standalone/deployments
   files=*.war
@@ -666,10 +666,10 @@ function configure_subsystem() {
  # We need it to be retrieved prior to iterate the web deployments, needed by CLI
  if [ -n "$token" ]; then
     # SSO Server 7.0
-    realm_certificate=`$CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM} | grep -Po '(?<="certificate":")[^"]*'`
+    realm_certificate=$($CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM} | grep -Po '(?<="certificate":")[^"]*')
     if [ -z "$realm_certificate" ]; then
       #SSO Server 7.1
-      realm_certificate=`$CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM}/keys | grep -Po '(?<="certificate":")[^"]*'`
+      realm_certificate=$($CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM}/keys | grep -Po '(?<="certificate":")[^"]*')
     fi
   fi
 
@@ -677,9 +677,9 @@ function configure_subsystem() {
   do
     module_name=
     if [[ $f != "*.war" ]];then
-      web_xml=`read_web_dot_xml $f WEB-INF/web.xml`
+      web_xml=$(read_web_dot_xml $f WEB-INF/web.xml)
       if [ -n "$web_xml" ]; then
-        requested_auth_method=`echo $web_xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]'`
+        requested_auth_method=$(echo $web_xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
         if [[ $requested_auth_method == "${auth_method}" ]]; then
 
             if [ -z "$subsystem" ]; then
@@ -689,11 +689,11 @@ function configure_subsystem() {
           if [[ $web_xml == *"<auth-method>${SAML}</auth-method>"* ]]
           then
               SPs="${SPs}${keycloak_saml_sp}"
- 
-              keycloak_deployment_subsystem=`echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_SAML_SP##|${SPs}|"`
+
+              keycloak_deployment_subsystem=$(echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_SAML_SP##|${SPs}|")
           fi
 
-          deployment=`echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT##|${f}|"`
+          deployment=$(echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT##|${f}|")
           if [ $auth_method == ${SAML} ]; then
             cli="$cli
               /subsystem=keycloak-saml/secure-deployment=${f}:add()"
@@ -703,13 +703,13 @@ function configure_subsystem() {
           fi
 
           if [[ $web_xml == *"<module-name>"* ]]; then
-            module_name=`echo $web_xml | xmllint --nowarning --xpath "//*[local-name()='module-name']/text()" -`
+            module_name=$(echo $web_xml | xmllint --nowarning --xpath "//*[local-name()='module-name']/text()" -)
           fi
 
           local jboss_web_xml=$(read_web_dot_xml $f WEB-INF/jboss-web.xml)
           if [ -n "$jboss_web_xml" ]; then
             if [[ $jboss_web_xml == *"<context-root>"* ]]; then
-              context_root=`echo $jboss_web_xml | xmllint --nowarning --xpath "string(//*[local-name()='context-root'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]'`
+              context_root=$(echo $jboss_web_xml | xmllint --nowarning --xpath "string(//*[local-name()='context-root'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
             fi
             if [ -n "$context_root" ]; then
               if [[ $context_root == /* ]]; then
@@ -733,9 +733,9 @@ function configure_subsystem() {
             else
               if [ -n "$context_root" ]; then
                 redirect_path=$context_root
-                module_name=`echo $f | sed -e "s/.war//g"`
+                module_name=$(echo $f | sed -e "s/.war//g")
               else
-                redirect_path=`echo $f | sed -e "s/.war//g"`
+                redirect_path=$(echo $f | sed -e "s/.war//g")
                 module_name=$redirect_path
               fi
             fi
@@ -754,10 +754,10 @@ function configure_subsystem() {
           fi
 
           if [ -n "$APPLICATION_NAME" ]; then
-            deployment=`echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${APPLICATION_NAME}-${module_name}|"`
+            deployment=$(echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${APPLICATION_NAME}-${module_name}|")
             entity_id=${APPLICATION_NAME}-${module_name}
           else
-            deployment=`echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${module_name}|"`
+            deployment=$(echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${module_name}|")
             entity_id=${module_name}
           fi
           if [ $auth_method == ${SAML} ]; then
@@ -799,35 +799,35 @@ function configure_subsystem() {
           fi
           deployments="${deployments} ${deployment}"
 
-          deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_CLIENT##|${keycloak_client}|" `
+          deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_CLIENT##|${keycloak_client}|" )
           if [ $auth_method == $OPENIDCONNECT ]; then
             cli="$cli
                /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=resource, value=${keycloak_client})"
           fi
-          deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_SECRET##|${SSO_SECRET}|" `
+          deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_SECRET##|${SSO_SECRET}|" )
           if [ $auth_method == $OPENIDCONNECT ] && [ -n "${SSO_SECRET}" ]; then
             cli="$cli
-              /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"  
+              /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"
           fi
 
           if [ -n "$SSO_ENABLE_CORS" ]; then
-            deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|${SSO_ENABLE_CORS}|" `
+            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|${SSO_ENABLE_CORS}|" )
             cors=${SSO_ENABLE_CORS}
           else
-            deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|false|" `
+            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|false|" )
             cors=false
           fi
 
           if [ $auth_method == $OPENIDCONNECT ]; then
             cli="$cli
-            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=enable-cors, value=${cors})"  
+            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=enable-cors, value=${cors})"
           fi
 
           if [ -n "$SSO_BEARER_ONLY" ]; then
-            deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|${SSO_BEARER_ONLY}|" `
+            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|${SSO_BEARER_ONLY}|" )
             bearer=${SSO_BEARER_ONLY}
           else
-            deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|false|" `
+            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|false|" )
             bearer=false
           fi
           if [ $auth_method == $OPENIDCONNECT ]; then
@@ -836,10 +836,10 @@ function configure_subsystem() {
           fi
 
           if [ -n "$SSO_SAML_LOGOUT_PAGE" ]; then
-            deployments=`echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|${SSO_SAML_LOGOUT_PAGE}|" `
+            deployments=$(echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|${SSO_SAML_LOGOUT_PAGE}|" )
             logoutPage="${SSO_SAML_LOGOUT_PAGE}"
           else
-            deployments=`echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|/|" `
+            deployments=$(echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|/|" )
             logoutPage=/
           fi
 
@@ -849,13 +849,13 @@ function configure_subsystem() {
           fi
 
           if [ -n "$SSO_PRINCIPAL_ATTRIBUTE" ]; then
-            deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##|<principal-attribute>${SSO_PRINCIPAL_ATTRIBUTE}</principal-attribute>|" `
+            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##|<principal-attribute>${SSO_PRINCIPAL_ATTRIBUTE}</principal-attribute>|" )
             if [ $auth_method == $OPENIDCONNECT ]; then
               cli="$cli
               /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=principal-attribute, value=${SSO_PRINCIPAL_ATTRIBUTE})"
             fi
           else
-              deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##||" `
+              deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##||" )
           fi
 
           log_info "Configured keycloak subsystem for $protocol module $module_name from $f"
@@ -865,21 +865,21 @@ function configure_subsystem() {
   done
 
   popd
- 
-  subsystem=`echo "${subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT_SUBSYSTEM##|${deployments}|" `
+
+  subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT_SUBSYSTEM##|${deployments}|" )
 
   if [ -n "$realm_certificate" ]; then
     keys="<Keys><Key signing=\"true\" ><CertificatePem>${realm_certificate}</CertificatePem></Key></Keys>"
-    subsystem=`echo "${subsystem}" | sed "s|<!-- ##KEYCLOAK_REALM_CERTIFICATE## -->|${keys}|g"`
+    subsystem=$(echo "${subsystem}" | sed "s|<!-- ##KEYCLOAK_REALM_CERTIFICATE## -->|${keys}|g")
 
     validate_signature=true
     if [ -n "$SSO_SAML_VALIDATE_SIGNATURE" ]; then
       validate_signature="$SSO_SAML_VALIDATE_SIGNATURE"
     fi
 
-    subsystem=`echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|${validate_signature}|g"`
+    subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|${validate_signature}|g")
   else
-    subsystem=`echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|false|g"`
+    subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|false|g")
   fi
 
   if [ -z "$is_cli" ]; then
@@ -916,7 +916,7 @@ function configure_client() {
     if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ] && [ -n "$SSO_SAML_CERTIFICATE_NAME" ] && [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
       keytool -export -keystore ${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE} -alias $SSO_SAML_CERTIFICATE_NAME -storepass $SSO_SAML_KEYSTORE_PASSWORD -file $JBOSS_HOME/standalone/configuration/keycloak.cer
       base64 $JBOSS_HOME/standalone/configuration/keycloak.cer > $JBOSS_HOME/standalone/configuration/keycloak.pem
-      pem=`cat $JBOSS_HOME/standalone/configuration/keycloak.pem | sed ':a;N;$!ba;s/\n//g'`
+      pem=$(cat $JBOSS_HOME/standalone/configuration/keycloak.pem | sed ':a;N;$!ba;s/\n//g')
 
       server_signature=
       if [ -n "$SSO_SAML_VALIDATE_SIGNATURE" ]; then
@@ -925,7 +925,7 @@ function configure_client() {
       client_config="${client_config},\"attributes\":{\"saml.signing.certificate\":\"${pem}\"${server_signature}}"
     fi
   else
-    service_addr=`hostname -i`
+    service_addr=$(hostname -i)
     client_config="{\"redirectUris\":[${redirects}]"
 
     if [ -n "$HOSTNAME_HTTP" ]; then
@@ -947,10 +947,10 @@ function configure_client() {
   client_config="${client_config}}"
 
   if [ -z "$SSO_SECRET" ]; then
-    log_warning "ERROR: SSO_SECRET not set. Make sure to generate a secret in the SSO/Keycloak client '$module_name' configuration and then set the SSO_SECRET variable." 
+    log_warning "ERROR: SSO_SECRET not set. Make sure to generate a secret in the SSO/Keycloak client '$module_name' configuration and then set the SSO_SECRET variable."
   fi
 
-  result=`$CURL -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -X POST -d "${client_config}" ${sso_service}/admin/realms/${SSO_REALM}/clients`
+  result=$($CURL -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -X POST -d "${client_config}" ${sso_service}/admin/realms/${SSO_REALM}/clients)
 
   if [ -n "$result" ]; then
     log_warning "ERROR: Unable to register $protocol client for module $module_name in realm $SSO_REALM on $redirects: $result"
@@ -966,12 +966,12 @@ function read_web_dot_xml {
 
   if [ -d "$jarfile" ]; then
     if [ -e "${jarfile}/${filename}" ]; then
-        result=`cat ${jarfile}/${filename}`
+        result=$(cat ${jarfile}/${filename})
     fi
   else
-    file_exists=`unzip -l "$jarfile" "$filename"`
+    file_exists=$(unzip -l "$jarfile" "$filename")
     if [[ $file_exists == *"$filename"* ]]; then
-      result=`unzip -p "$jarfile" "$filename" | xmllint --format --recover --nowarning - | sed ':a;N;$!ba;s/\n//g'`
+      result=$(unzip -p "$jarfile" "$filename" | xmllint --format --recover --nowarning - | sed ':a;N;$!ba;s/\n//g')
     fi
   fi
   echo "$result"
