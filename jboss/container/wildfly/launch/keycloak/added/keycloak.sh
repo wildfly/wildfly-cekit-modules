@@ -36,7 +36,7 @@ function prepareEnv() {
 function configure() {
   local configureSubSystemMode
   getConfigurationMode "##KEYCLOAK_SUBSYSTEM##" "configureSubSystemMode"
-  if [ $configureSubSystemMode == "xml" ]; then
+  if [ "${configureSubSystemMode}" == "xml" ]; then
     configure_keycloak
   else
     configure_cli_keycloak
