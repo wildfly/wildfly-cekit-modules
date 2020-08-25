@@ -40,7 +40,9 @@ if [ -f "${ZIPPED_REPO}" ]; then
   fi
   mv $repoDir/maven-repository "$TMP_GALLEON_LOCAL_MAVEN_REPO"
   mkdir "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
-  mv $repoDir/* "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
+  if [ "$(ls -A $repoDir)" ]; then
+    mv $repoDir/* "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
+  fi
   rm -rf $repoDir
   if [ "x$deleteBuildArtifacts" == "xtrue"  ]; then
     echo "Build artifacts are not kept, will be removed from galleon local cache"
