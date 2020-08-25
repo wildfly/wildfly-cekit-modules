@@ -17,6 +17,8 @@ function configureEnv() {
 }
 
 function configure_administration() {
+  local mode
+    getConfigurationMode "<!-- ##MGMT_IFACE_REALM## -->" "mode"
   if [ -n "${ADMIN_USERNAME}" -a -n "$ADMIN_PASSWORD" ]; then
     # The following fails as-is since there is no $JBOSS_HOME/domain/configuration folder
     #   $JBOSS_HOME/bin/add-user.sh -u "$ADMIN_USERNAME" -p "$ADMIN_PASSWORD"
@@ -28,9 +30,6 @@ function configure_administration() {
         log_error "Exiting..."
         exit
     fi
-
-    local mode
-    getConfigurationMode "<!-- ##MGMT_IFACE_REALM## -->" "mode"
 
     if [ "${mode}" = "xml" ]; then
       local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
