@@ -25,6 +25,7 @@ function prepareEnv() {
   unset SSO_SECRET
   unset SSO_SECURITY_DOMAIN
   unset SSO_SERVICE_URL
+  unset SSO_SSL_REQUIRED
   unset SSO_TRUSTSTORE
   unset SSO_TRUSTSTORE_CERTIFICATE_ALIAS
   unset SSO_TRUSTSTORE_DIR
@@ -105,7 +106,7 @@ function configure_cli_keycloak() {
           oidc_elytron="$(configure_OIDC_elytron $id)"
           ejb_config="$(configure_ejb $id $app_sec_domain)"
           if [ "$useLegacySecurity" == "false" ]; then
-            echo " 
+            echo "
               $elytron_assert
               $oidc_elytron
               $ejb_config" >> ${CLI_SCRIPT_FILE}
@@ -153,7 +154,7 @@ function configure_cli_keycloak() {
 
   elif [ -n "$SSO_URL" ]; then
     enable_keycloak_deployments
-    
+
     oidc_extension="$(configure_OIDC_extension)"
     saml_extension="$(configure_SAML_extension)"
     oidc_elytron="$(configure_OIDC_elytron $id)"
@@ -170,7 +171,11 @@ function configure_cli_keycloak() {
     if [ ! -n "${SSO_REALM}" ]; then
       log_warning "Missing SSO_REALM. Defaulting to ${SSO_REALM:=master} realm"
     fi
-  
+
+    if [ ! -n "${SSO_SSL_REQUIRED}" ]; then
+      ${SSO_SSL_REQUIRED:=external}
+    fi
+
     set_curl
     get_token
 
@@ -188,7 +193,7 @@ function configure_cli_keycloak() {
             $oidc_extension
             $oidc" >> ${CLI_SCRIPT_FILE}
         else
-          echo " 
+          echo "
             $elytron_assert
             $oidc_extension
             $oidc_elytron
@@ -200,7 +205,7 @@ function configure_cli_keycloak() {
           log_warning "keycloak subsystem already exists, no configuration applied"
       fi
     fi
-    
+
     if [ ! -z "${saml}" ]; then
       if [ "${ret_saml}" -ne 0 ]; then
         if [ "$useLegacySecurity" == "true" ]; then
@@ -234,7 +239,7 @@ function configure_cli_keycloak() {
        $legacy_security"  >> ${CLI_SCRIPT_FILE}
     fi
   fi
-  
+
 }
 
 function configure_security_domain_cli() {
@@ -428,7 +433,7 @@ end-if"
 configure_ejb() {
   id=$1
   security_domain=$2
-  
+
   # We cannot have nested if sentences in CLI, so we use Xpath here to see if the subsystem=ejb3 is in the file
   xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
   local ret
@@ -455,13 +460,13 @@ function configure_OIDC_subsystem() {
     realm=$subsystem/realm=${SSO_REALM}
     cli="
       ${subsystem}:add
-      ${realm}:add(auth-server-url=${SSO_URL},register-node-at-startup=true,register-node-period=600,ssl-required=external,allow-any-hostname=false)"
-  
+      ${realm}:add(auth-server-url=${SSO_URL},register-node-at-startup=true,register-node-period=600,ssl-required=${SSO_SSL_REQUIRED},allow-any-hostname=false)"
+
     if [ -n "$SSO_PUBLIC_KEY" ]; then
       cli="$cli
         ${realm}:write-attribute(name=realm-public-key,value=${SSO_PUBLIC_KEY})"
     fi
-    
+
     if [ -n "$SSO_TRUSTSTORE" ] && [ -n "$SSO_TRUSTSTORE_DIR" ]; then
       cli="$cli
         ${realm}:write-attribute(name=truststore,value=${SSO_TRUSTSTORE_DIR}/${SSO_TRUSTSTORE})
@@ -483,7 +488,7 @@ function configure_SAML_subsystem() {
     cli="
        /subsystem=keycloak-saml:add
        ${secure_deployments}
-"  
+"
   fi
 }
 
@@ -521,6 +526,10 @@ function configure_keycloak() {
       log_warning "Missing SSO_REALM. Defaulting to ${SSO_REALM:=master} realm"
     fi
 
+    if [ ! -n "${SSO_SSL_REQUIRED}" ]; then
+      ${SSO_SSL_REQUIRED:=external}
+    fi
+
     set_curl
     get_token
 
@@ -555,6 +564,9 @@ function configure_keycloak() {
     if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ]; then
       sed -i "s|##SSO_SAML_KEYSTORE##|${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE}|g" "${CONFIG_FILE}"
     fi
+
+    sed -i "s|##KEYCLOAK_SSL_REQUIRED##|${SSO_SSL_REQUIRED}|g" "${CONFIG_FILE}"
+
   else
     log_warning "Missing SSO_URL. Unable to properly configure SSO-enabled applications"
   fi
@@ -651,7 +663,7 @@ function configure_subsystem() {
 
   keycloak_subsystem=$(cat "${subsystem_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
 
-  keycloak_deployment_subsystem=$(cat "${deployment_file}" | sed ':a;N;$!ba;s|\n|\\n|g') 
+  keycloak_deployment_subsystem=$(cat "${deployment_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
 
   pushd $JBOSS_HOME/standalone/deployments
   files=*.war
@@ -689,7 +701,7 @@ function configure_subsystem() {
           if [[ $web_xml == *"<auth-method>${SAML}</auth-method>"* ]]
           then
               SPs="${SPs}${keycloak_saml_sp}"
- 
+
               keycloak_deployment_subsystem=`echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_SAML_SP##|${SPs}|"`
           fi
 
@@ -770,7 +782,7 @@ function configure_subsystem() {
               validate_signature=true
             fi
             cli="$cli
-              /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}:add(sslPolicy=EXTERNAL)
+              /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}:add(sslPolicy=${SSO_SSL_REQUIRED^^})
               /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:add(signing=true,encryption=true)
               /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/IDP=idp:add(signatureAlgorithm=RSA_SHA256, \
               signatureCanonicalizationMethod=\"http://www.w3.org/2001/10/xml-exc-c14n#\", SingleSignOnService={signRequest=true,requestBinding=POST,\
@@ -807,7 +819,7 @@ function configure_subsystem() {
           deployments=`echo "${deployments}" | sed "s|##KEYCLOAK_SECRET##|${SSO_SECRET}|" `
           if [ $auth_method == $OPENIDCONNECT ] && [ -n "${SSO_SECRET}" ]; then
             cli="$cli
-              /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"  
+              /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"
           fi
 
           if [ -n "$SSO_ENABLE_CORS" ]; then
@@ -820,7 +832,7 @@ function configure_subsystem() {
 
           if [ $auth_method == $OPENIDCONNECT ]; then
             cli="$cli
-            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=enable-cors, value=${cors})"  
+            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=enable-cors, value=${cors})"
           fi
 
           if [ -n "$SSO_BEARER_ONLY" ]; then
@@ -865,7 +877,7 @@ function configure_subsystem() {
   done
 
   popd
- 
+
   subsystem=`echo "${subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT_SUBSYSTEM##|${deployments}|" `
 
   if [ -n "$realm_certificate" ]; then
@@ -947,7 +959,7 @@ function configure_client() {
   client_config="${client_config}}"
 
   if [ -z "$SSO_SECRET" ]; then
-    log_warning "ERROR: SSO_SECRET not set. Make sure to generate a secret in the SSO/Keycloak client '$module_name' configuration and then set the SSO_SECRET variable." 
+    log_warning "ERROR: SSO_SECRET not set. Make sure to generate a secret in the SSO/Keycloak client '$module_name' configuration and then set the SSO_SECRET variable."
   fi
 
   result=`$CURL -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -X POST -d "${client_config}" ${sso_service}/admin/realms/${SSO_REALM}/clients`
@@ -978,7 +990,7 @@ function read_web_dot_xml {
 }
 
 function get_application_routes {
-  
+
   if [ -n "$HOSTNAME_HTTP" ]; then
     route="http://${HOSTNAME_HTTP}"
   fi
@@ -1023,7 +1035,7 @@ function add_route_with_default_port() {
       fi
     fi
   done
-  
+
   IFS=$IFS_save
 
   echo ${routesWithPort%;}
@@ -1065,7 +1077,7 @@ function query_routes_from_service() {
       echo $routes
     else
       log_warning "Fail to query the Route using the Kubernetes API, the Service Account might not have the necessary privileges."
-      
+
       if [ ! -z "${response}" ]; then
         log_warning "Response message: ${response::- 3} - HTTP Status code: ${response: -3}"
       fi
