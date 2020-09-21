@@ -10,7 +10,7 @@ function configure() {
 
 function configure_jboss_modules_system_pkgs() {
   if [ -z "$JBOSS_MODULES_SYSTEM_PKGS" ]; then
-    export JBOSS_MODULES_SYSTEM_PKGS="org.jboss.logmanager,jdk.nashorn.api,com.sun.crypto.provider"
+    export JBOSS_MODULES_SYSTEM_PKGS="jdk.nashorn.api,com.sun.crypto.provider"
   fi
 
   if [ -n "$JBOSS_MODULES_SYSTEM_PKGS_APPEND" ]; then
