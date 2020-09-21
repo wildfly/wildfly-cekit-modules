@@ -8,7 +8,7 @@
             <param name="default-cache" value="repl"/>
             <feature spec="subsystem.infinispan.cache-container.replicated-cache">
                 <param name="replicated-cache" value="repl"/>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.memory.object">
+                <feature spec="subsystem.infinispan.cache-container.replicated-cache.memory.heap">
                     <param name="size" value="10000"/>
                 </feature>
                 <feature spec="subsystem.infinispan.cache-container.replicated-cache.component.locking">
