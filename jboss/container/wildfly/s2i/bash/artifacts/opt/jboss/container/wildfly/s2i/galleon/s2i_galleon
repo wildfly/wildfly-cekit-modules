@@ -267,5 +267,8 @@ function galleon_replace_server() {
   cp -prf $JBOSS_HOME/standalone/deployments/* /deployments
   rm -rf $JBOSS_HOME/standalone/deployments
   ln -s /deployments $JBOSS_HOME/standalone/deployments
-  chown -R jboss:root $JBOSS_HOME && chmod -R ug+rwX $JBOSS_HOME
+  # CLOUD-3855 - in certain cases when deploying onto the same image in openshift, we don't have permissions
+  # to chown from our running, random UID to the jboss user. So just chown to the current user (which will be root in a docker build
+  # and a random uid elsewhere)
+  chown -R ${USER}:root $JBOSS_HOME && chmod -R ug+rwX $JBOSS_HOME
 }
