@@ -76,7 +76,8 @@ check_view_pods_permission() {
 
 validate_dns_ping_settings() {
   if [ "x$OPENSHIFT_DNS_PING_SERVICE_NAME" = "x" ]; then
-    log_warning "Environment variable OPENSHIFT_DNS_PING_SERVICE_NAME undefined. Clustering will be unavailable. Please refer to the documentation for configuration."
+    log_error "Environment variable OPENSHIFT_DNS_PING_SERVICE_NAME is required when using dns.DNS_PING ping protocol. Please refer to the documentation for configuration."
+    exit 1
   fi
 }
 
