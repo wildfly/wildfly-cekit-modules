@@ -27,6 +27,10 @@ function prepareEnv() {
 
 function configure() {
   initTempFiles
+  if [ -f /usr/local/s2i/install-common.sh ]; then
+    source /usr/local/s2i/install-common.sh
+    configure_drivers
+  fi
   inject_datasources
 }
 
