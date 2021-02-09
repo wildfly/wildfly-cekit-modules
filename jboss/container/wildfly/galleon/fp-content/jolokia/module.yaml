@@ -9,4 +9,4 @@ execute:
 
 modules:
   install:
-  - name: jboss.container.jolokia.bash
+  - name: jboss.container.jolokia
