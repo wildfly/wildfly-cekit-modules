@@ -153,6 +153,21 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
+# check that non-empty OPENSHIFT_DNS_PING_SERVICE_NAME is present when using dns.DNS_PING
+@test "Generate JGroups ping config - dns.DNS_PING requires service name" {
+    expected=$(cat <<EOF
+/tmp/jboss_home/bin/launch/ha.sh: line 295: init_node_name: command not found
+ERROR Environment variable OPENSHIFT_DNS_PING_SERVICE_NAME is required when using dns.DNS_PING ping protocol. Please refer to the documentation for configuration.
+EOF
+)
+  export JGROUPS_CLUSTER_PASSWORD="password"
+  export JGROUPS_PING_PROTOCOL="dns.DNS_PING"
+  export OPENSHIFT_DNS_PING_SERVICE_NAME=""
+  run configure_ha
+  echo "Result: ${output}"
+  echo "Expected: ${expected}"
+  [ "${output}" = "${expected}" ]
+}
 
 # note openshift.DNS_PING is aliased to dns.DNS_PING
 @test "Generate JGroups ping config - openshift.DNS_PING with socket binding" {
@@ -261,12 +276,13 @@ EOF
  </digest-token>
  </auth-protocol>
 
-<protocol type="dns.DNS_PING" ><property name="dns_query"></property><property name="async_discovery_use_separate_thread_per_request">true</property></protocol>
+<protocol type="dns.DNS_PING" ><property name="dns_query">service_name</property><property name="async_discovery_use_separate_thread_per_request">true</property></protocol>
 EOF
 )
   export JGROUPS_CLUSTER_PASSWORD="clusterpassword"
   #export JGROUPS_DIGEST_TOKEN_ALGORITHM="clusterdigest"
   export JGROUPS_PING_PROTOCOL="openshift.DNS_PING"
+  export OPENSHIFT_DNS_PING_SERVICE_NAME="service_name"
   run configure_ha
   result=$(<${CONFIG_FILE})
   result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
