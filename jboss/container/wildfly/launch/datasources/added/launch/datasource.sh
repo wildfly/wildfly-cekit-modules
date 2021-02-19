@@ -21,17 +21,20 @@ function preConfigure() {
 
 function prepareEnv() {
   initTempFiles
+  clearDriversEnv
   clearDatasourcesEnv
   clearTxDatasourceEnv
 }
 
 function configure() {
   initTempFiles
+  inject_drivers
   inject_datasources
 }
 
 function configureEnv() {
   initTempFiles
+  inject_drivers
   inject_external_datasources
 
   # TODO - I don't think this is being used any more? The real action seems to be in tx-datasource.sh
