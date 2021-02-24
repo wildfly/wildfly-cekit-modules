@@ -52,7 +52,7 @@
                         <configuration>
                             <install-dir>${project.build.directory}/server</install-dir>
                             <record-state>true</record-state>
-                            <offline>true</offline>
+                            <offline>false</offline>
                             <plugin-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
@@ -66,6 +66,7 @@
                                     <inherit-packages>false</inherit-packages>
                                     <inherit-configs>false</inherit-configs>
                                 </feature-pack>
+                                <!-- ##GALLEON_FEATURE_PACKS## -->
                             </feature-packs>
                             <customConfig>config.xml</customConfig>
                         </configuration>
