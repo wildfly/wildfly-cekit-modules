@@ -9,7 +9,7 @@ while IFS=  read -r -d $'\0'; do
     targets+=("$REPLY")
 done < <(
   find \
-    -iregex '.*\.\(sh\|bash\|bats\)$' \
+    -iregex '.*\.\(sh\|bash\|bats\|env\)$' \
     -type f \
     -print0
   )
