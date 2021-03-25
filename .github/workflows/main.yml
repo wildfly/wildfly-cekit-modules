@@ -23,8 +23,8 @@ jobs:
       - name: Setup required system packages
         run: |
           sudo apt-get update
-          sudo apt-get install bats libxml2-utils nmap
-          sudo ln -s /usr/bin/ncat /usr/bin/nc
+          sudo apt-get install bats libxml2-utils ncat
+          echo 2 | sudo update-alternatives --config nc
       - name: setup env
         run: |
           PWD=$(pwd)
