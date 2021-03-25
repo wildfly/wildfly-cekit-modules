@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source $JBOSS_HOME/bin/launch/launch-common.sh
+source "$JBOSS_HOME"/bin/launch/launch-common.sh
 
 # Arguments:
 # $1 - realm

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/env bash
 
 # This script executes a list of modules defined by CONFIGURE_SCRIPTS.
 #
@@ -72,18 +72,18 @@ function prepareModule() {
 # $1 - module file
 # $2 - function name
 function executeModule() {
-  source $1;
-  if [ -n "$(type -t $2)" ]; then
-    eval $2
+  source "$1";
+  if [ -n "$(type -t "$2")" ]; then
+    eval "$2"
   fi
 }
 
 # Run through the list of scripts, executing the specified function for each.
 # $1 - function name
 function executeModules() {
-  for module in ${CONFIGURE_SCRIPTS[@]}; do
+  for module in "${CONFIGURE_SCRIPTS[@]}"; do
     prepareModule
-    executeModule $module $1
+    executeModule "$module" "$1"
   done
 }
 
@@ -97,11 +97,11 @@ function processEnvFiles() {
   if [ -n "$ENV_FILES" ]; then
     (
       executeModules prepareEnv
-      for prop_file_arg in $(echo $ENV_FILES | sed "s/,/ /g"); do
-        for prop_file in $(find $prop_file_arg -maxdepth 0 2>/dev/null); do
+      for prop_file_arg in $(echo "$ENV_FILES" | sed "s/,/ /g"); do
+        for prop_file in $(find "$prop_file_arg" -maxdepth 0 2>/dev/null); do
           (
-            if [ -f $prop_file ]; then
-              source $prop_file
+            if [ -f "$prop_file" ]; then
+              source "${prop_file}"
               executeModules preConfigureEnv
               executeModules configureEnv
               executeModules postConfigureEnv

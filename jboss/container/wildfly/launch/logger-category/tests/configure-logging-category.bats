@@ -254,5 +254,8 @@ EOF
 
   output=$(<"${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
+
+  echo "Expected: ${expected}"
+  echo "Result: ${output}"
   [ "${output}" = "${expected}" ]
 }

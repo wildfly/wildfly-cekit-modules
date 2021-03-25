@@ -3,34 +3,34 @@
 function clearResourceAdapterEnv() {
   local prefix=$1
 
-  unset ${prefix}_ID
-  unset ${prefix}_MODULE_SLOT
-  unset ${prefix}_MODULE_ID
-  unset ${prefix}_CONNECTION_CLASS
-  unset ${prefix}_CONNECTION_JNDI
-  unset ${prefix}_POOL_PREFILL
-  unset ${prefix}_POOL_MAX_SIZE
-  unset ${prefix}_POOL_MIN_SIZE
-  unset ${prefix}_POOL_XA
-  unset ${prefix}_POOL_IS_SAME_RM_OVERRIDE
-  unset ${prefix}_POOL_FLUSH_STRATEGY
-  unset ${prefix}_RECOVERY_USERNAME
-  unset ${prefix}_RECOVERY_PASSWORD
-  unset ${prefix}_ADMIN_OBJECTS
-  unset ${prefix}_TRACKING
+  unset "${prefix}"_ID
+  unset "${prefix}"_MODULE_SLOT
+  unset "${prefix}"_MODULE_ID
+  unset "${prefix}"_CONNECTION_CLASS
+  unset "${prefix}"_CONNECTION_JNDI
+  unset "${prefix}"_POOL_PREFILL
+  unset "${prefix}"_POOL_MAX_SIZE
+  unset "${prefix}"_POOL_MIN_SIZE
+  unset "${prefix}"_POOL_XA
+  unset "${prefix}"_POOL_IS_SAME_RM_OVERRIDE
+  unset "${prefix}"_POOL_FLUSH_STRATEGY
+  unset "${prefix}"_RECOVERY_USERNAME
+  unset "${prefix}"_RECOVERY_PASSWORD
+  unset "${prefix}"_ADMIN_OBJECTS
+  unset "${prefix}"_TRACKING
 
   for xa_prop in $(compgen -v | grep -s "${prefix}_PROPERTY_"); do
-    unset ${xa_prop}
+    unset "${xa_prop}"
   done
 
   for admin_object in $(compgen -v | grep -s "${prefix}_ADMIN_OBJECT_"); do
-    unset ${admin_object}
+    unset "${admin_object}"
   done
 }
 
 function clearResourceAdaptersEnv() {
-  for ra_prefix in $(echo $RESOURCE_ADAPTERS | sed "s/,/ /g"); do
-    clearResourceAdapterEnv $ra_prefix
+  for ra_prefix in $(echo "$RESOURCE_ADAPTERS" | sed "s/,/ /g"); do
+    clearResourceAdapterEnv "$ra_prefix"
   done
   unset RESOURCE_ADAPTERS
 }
@@ -41,9 +41,9 @@ function inject_resource_adapters_common() {
 
   resource_adapters=
 
-  hostname=`hostname`
+  hostname=$(hostname)
 
-  for ra_prefix in $(echo $RESOURCE_ADAPTERS | sed "s/,/ /g"); do
+  for ra_prefix in $(echo "$RESOURCE_ADAPTERS" | sed "s/,/ /g"); do
     ra_id=$(find_env "${ra_prefix}_ID")
     if [ -z "$ra_id" ]; then
       log_warning "${ra_prefix}_ID is missing from resource adapter configuration, defaulting to ${ra_prefix}"
@@ -85,9 +85,9 @@ function inject_resource_adapters_common() {
   if [ -n "${resource_adapters}" ]; then
     resource_adapters=$(echo "${resource_adapters}" | sed -e "s/localhost/${hostname}/g")
     if [ "${mode}" = "xml" ]; then
-      sed -i "s|<!-- ##RESOURCE_ADAPTERS## -->|${resource_adapters}<!-- ##RESOURCE_ADAPTERS## -->|" $CONFIG_FILE
+      sed -i "s|<!-- ##RESOURCE_ADAPTERS## -->|${resource_adapters}<!-- ##RESOURCE_ADAPTERS## -->|" "$CONFIG_FILE"
     elif [ "${mode}" = "cli" ]; then
-      echo "${resource_adapters}" >> ${CLI_SCRIPT_FILE}
+      echo "${resource_adapters}" >> "${CLI_SCRIPT_FILE}"
     fi
   fi
 }
@@ -124,7 +124,7 @@ function create_resource_adapter() {
 
 
       if [ -n "$admin_object_list" ]; then
-        admin_objects="$(add_admin_objects ${admin_object_list} ${mode})"
+        admin_objects="$(add_admin_objects "${admin_object_list}" "${mode}")"
         if [ -n "$admin_objects" ]; then
           resource_adapter="${resource_adapter}<admin-objects>${admin_objects}</admin-objects>"
         fi
@@ -164,7 +164,7 @@ function create_resource_adapter() {
       "
       add_connection_definitions "${mode}" "${ra_prefix}" "${ra_addr}"
       if [ -n "$admin_object_list" ]; then
-        admin_objects="$(add_admin_objects ${admin_object_list} ${mode} ${ra_addr})"
+        admin_objects="$(add_admin_objects "${admin_object_list}" "${mode}" "${ra_addr}")"
         if [ -n "$admin_objects" ]; then
           resource_adapter="${resource_adapter}
           ${admin_objects}"
@@ -203,9 +203,9 @@ function add_connection_definitions() {
       resource_adapter="${resource_adapter} class-name=\"${ra_class}\" jndi-name=\"${ra_jndi}\" enabled=\"true\" use-java-context=\"true\">"
 
       if [ -n "$ra_props" ]; then
-        for ra_prop in $(echo $ra_props); do
+        for ra_prop in $(echo "$ra_props"); do
           prop_name=$(echo "${ra_prop}" | sed -e "s/${ra_prefix}_PROPERTY_//g")
-          prop_val=$(find_env $ra_prop)
+          prop_val=$(find_env "$ra_prop")
 
           resource_adapter="${resource_adapter}<config-property name=\"${prop_name}\">${prop_val}</config-property>"
         done
@@ -254,9 +254,9 @@ function add_connection_definitions() {
       # We need to work out the pool-name from the jndi-name (same as the WildFly ResourceAdapters parser does)
       local pool_name
       if [[ "${ra_jndi}" == *\/* ]]; then
-        pool_name="$(echo ${ra_jndi}|sed 's/.*\///')"
+        pool_name="$(echo "${ra_jndi}"|sed 's/.*\///')"
       else
-        pool_name="$(echo ${ra_jndi}|sed 's/.*://')"
+        pool_name="$(echo "${ra_jndi}"|sed 's/.*://')"
       fi
 
       conn_def_addr="${ra_addr}/connection-definitions=${pool_name}"
@@ -318,9 +318,9 @@ function add_connection_definitions() {
       "
 
       if [ -n "$ra_props" ]; then
-        for ra_prop in $(echo $ra_props); do
+        for ra_prop in $(echo "$ra_props"); do
           prop_name=$(echo "${ra_prop}" | sed -e "s/${ra_prefix}_PROPERTY_//g")
-          prop_val=$(find_env $ra_prop)
+          prop_val=$(find_env "$ra_prop")
           resource_adapter="${resource_adapter}
             ${conn_def_addr}/config-properties=${prop_name}:add(value=\"${prop_val}\")
           "
@@ -337,7 +337,7 @@ function add_admin_objects() {
   ra_addr="$3"
 
   admin_objects=
-  IFS=',' read -a objects <<< ${admin_object_list}
+  IFS=',' read -a objects <<< "${admin_object_list}"
   if [ "${#objects[@]}" -ne "0" ]; then
     for object in "${objects[@]}"; do
       class_name=$(find_env "${ra_prefix}_ADMIN_OBJECT_${object}_CLASS_NAME")

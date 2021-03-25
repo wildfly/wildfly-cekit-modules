@@ -1,3 +1,5 @@
+#!/bin/env bash
+
 configure() {
   configure_microprofile_config_source
 }
@@ -11,10 +13,10 @@ configure_microprofile_config_source() {
     getConfigurationMode "<!-- ##MICROPROFILE_CONFIG_SOURCE## -->" "mpConfigMode"
 
     if [ "${mpConfigMode}" = "xml" ]; then
-      sed -i "s|<!-- ##MICROPROFILE_CONFIG_SOURCE## -->|${dirConfigSource}|" $CONFIG_FILE
+      sed -i "s|<!-- ##MICROPROFILE_CONFIG_SOURCE## -->|${dirConfigSource}|" "$CONFIG_FILE"
     elif [ "${mpConfigMode}" = "cli" ]; then
       #expected to fail if config-map is already configured
-      cat << EOF >> ${CLI_SCRIPT_FILE}
+      cat << EOF >> "${CLI_SCRIPT_FILE}"
       if (outcome != success) of /subsystem=microprofile-config-smallrye:read-resource
           echo \"You have set MICROPROFILE_CONFIG_DIR to configure a config-source. Fix your configuration to contain the microprofile-config subsystem for this to happen.\" >> \${error_file}
           quit
@@ -57,6 +59,6 @@ generate_microprofile_config_source() {
     dirConfigSource="<config-source ordinal=\"${ordinal:-500}\" name=\"config-map\"><dir path=\"$dirName\"/></config-source>"
   fi
 
-  echo $dirConfigSource
+  echo "$dirConfigSource"
 }
 

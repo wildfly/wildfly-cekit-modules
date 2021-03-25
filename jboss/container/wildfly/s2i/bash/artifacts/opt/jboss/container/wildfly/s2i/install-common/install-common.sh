@@ -10,7 +10,7 @@ LOCAL_SOURCE_DIR=/tmp/src
 # Resulting WAR files will be deployed to /opt/eap/standalone/deployments
 DEPLOY_DIR=$JBOSS_HOME/standalone/deployments
 
-source ${JBOSS_HOME}/bin/launch/openshift-common.sh
+source "${JBOSS_HOME}"/bin/launch/openshift-common.sh
 
 
 function find_env() {
@@ -25,8 +25,8 @@ function install_deployments(){
   fi
   install_dirs=$1
 
-  for install_dir in $(echo $install_dirs | sed "s/,/ /g"); do
-    cp -rf ${install_dir}/* $DEPLOY_DIR
+  for install_dir in $(echo "$install_dirs" | sed "s/,/ /g"); do
+    cp -rf "${install_dir}"/* "$DEPLOY_DIR"
   done
 }
 
@@ -37,15 +37,15 @@ function install_modules(){
   fi
   install_dirs=$1
 
-  for install_dir in $(echo $install_dirs | sed "s/,/ /g"); do
-    cp -rf ${install_dir}/* $JBOSS_HOME/modules
+  for install_dir in $(echo "$install_dirs" | sed "s/,/ /g"); do
+    cp -rf "${install_dir}"/* "$JBOSS_HOME"/modules
   done
 }
 
 function configure_drivers(){
   (
     if [ $# == 1 ] && [ -f "$1" ]; then
-      source $1
+      source "$1"
     fi
 
     drivers=
@@ -53,7 +53,7 @@ function configure_drivers(){
       local configMode
       getConfigurationMode "<!-- ##DRIVERS## -->" "configMode"
 
-      for driver_prefix in $(echo $DRIVERS | sed "s/,/ /g"); do
+      for driver_prefix in $(echo "$DRIVERS" | sed "s/,/ /g"); do
         driver_module=$(find_env "${driver_prefix}_DRIVER_MODULE")
         if [ -z "$driver_module" ]; then
           echo "Warning - ${driver_prefix}_DRIVER_MODULE is missing from driver configuration. Driver will not be configured"
@@ -104,15 +104,15 @@ function configure_drivers(){
 
       if [ -n "$drivers" ] ; then
         if [ "${configMode}" = "xml" ]; then
-          sed -i "s|<!-- ##DRIVERS## -->|${drivers}<!-- ##DRIVERS## -->|" $CONFIG_FILE
+          sed -i "s|<!-- ##DRIVERS## -->|${drivers}<!-- ##DRIVERS## -->|" "$CONFIG_FILE"
         elif [ "${configMode}" = "cli" ]; then
           if [ "${CONFIG_ADJUSTMENT_MODE,,}" = "cli" ]; then
             # CLI execution to add current driver(s)
-            echo "${drivers}" > ${S2I_CLI_DRIVERS_FILE}
+            echo "${drivers}" > "${S2I_CLI_DRIVERS_FILE}"
             exec_cli_scripts "${S2I_CLI_DRIVERS_FILE}"
           else
             # append to CLI script for delayed CLI execution at server launch
-            echo "${drivers}" >> ${S2I_CLI_DRIVERS_FILE}
+            echo "${drivers}" >> "${S2I_CLI_DRIVERS_FILE}"
           fi
         fi
       fi

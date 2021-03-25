@@ -1,3 +1,4 @@
+#!/bin/env bash
 
 function prepareEnv() {
   unset SECDOMAIN_NAME
@@ -35,7 +36,7 @@ configure_security_domains() {
 
     if [ "${confMode}" = "xml" ]; then
 
-      if [ $login_module == "RealmUsersRoles" ]; then
+      if [ "$login_module" == "RealmUsersRoles" ]; then
           realm="<module-option name=\"realm\" value=\"ApplicationRealm\"/>\n"
       fi
 
@@ -62,7 +63,7 @@ configure_security_domains() {
       local moduleOpts=("\"usersProperties\"=>\""${usersProperties}"\""
                         "\"rolesProperties\"=>\""${rolesProperties}"\"")
 
-      if [ $login_module == "RealmUsersRoles" ]; then
+      if [ "$login_module" == "RealmUsersRoles" ]; then
           moduleOpts+=("\"realm\"=>\"ApplicationRealm\"")
       fi
 
@@ -70,7 +71,7 @@ configure_security_domains() {
           moduleOpts+=("\"password-stacking\"=>\"useFirstPass\"")
       fi
 
-      cat << EOF >> ${CLI_SCRIPT_FILE}
+      cat << EOF >> "${CLI_SCRIPT_FILE}"
         if (outcome != success) of /subsystem=security/security-domain=${SECDOMAIN_NAME}:read-resource
           /subsystem=security/security-domain=${SECDOMAIN_NAME}:add(cache-type=default)
           /subsystem=security/security-domain=${SECDOMAIN_NAME}/authentication=classic:add(login-modules=[{code="${login_module}", flag=required, module-options=$(IFS=,; echo "{${moduleOpts[*]}}")}])

@@ -1,3 +1,5 @@
+#!/bin/env bash
+
 function log_warning() {
   local message="${1}"
 

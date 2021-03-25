@@ -3,19 +3,19 @@
 if [ -n "${TEST_LAUNCH_INCLUDE}" ]; then
     source "${TEST_LAUNCH_INCLUDE}"
 else
-    source $JBOSS_HOME/bin/launch/launch-common.sh
+    source "$JBOSS_HOME"/bin/launch/launch-common.sh
 fi
 
 if [ -n "${TEST_TX_DATASOURCE_INCLUDE}" ]; then
     source "${TEST_TX_DATASOURCE_INCLUDE}"
 else
-    source $JBOSS_HOME/bin/launch/tx-datasource.sh
+    source "$JBOSS_HOME"/bin/launch/tx-datasource.sh
 fi
 
 if [ -n "${TEST_LOGGING_INCLUDE}" ]; then
     source "${TEST_LOGGING_INCLUDE}"
 else
-    source $JBOSS_HOME/bin/launch/logging.sh
+    source "$JBOSS_HOME"/bin/launch/logging.sh
 fi
 
 function getDataSourceConfigureMode() {
@@ -31,31 +31,31 @@ function clearDatasourceEnv() {
   local prefix=$1
   local service=$2
 
-  unset ${service}_SERVICE_HOST
-  unset ${service}_SERVICE_PORT
-  unset ${prefix}_JNDI
-  unset ${prefix}_USERNAME
-  unset ${prefix}_PASSWORD
-  unset ${prefix}_DATABASE
-  unset ${prefix}_TX_ISOLATION
-  unset ${prefix}_MIN_POOL_SIZE
-  unset ${prefix}_MAX_POOL_SIZE
-  unset ${prefix}_JTA
-  unset ${prefix}_NONXA
-  unset ${prefix}_DRIVER
-  unset ${prefix}_CONNECTION_CHECKER
-  unset ${prefix}_EXCEPTION_SORTER
-  unset ${prefix}_URL
-  unset ${prefix}_BACKGROUND_VALIDATION
-  unset ${prefix}_BACKGROUND_VALIDATION_MILLIS
+  unset "${service}"_SERVICE_HOST
+  unset "${service}"_SERVICE_PORT
+  unset "${prefix}"_JNDI
+  unset "${prefix}"_USERNAME
+  unset "${prefix}"_PASSWORD
+  unset "${prefix}"_DATABASE
+  unset "${prefix}"_TX_ISOLATION
+  unset "${prefix}"_MIN_POOL_SIZE
+  unset "${prefix}"_MAX_POOL_SIZE
+  unset "${prefix}"_JTA
+  unset "${prefix}"_NONXA
+  unset "${prefix}"_DRIVER
+  unset "${prefix}"_CONNECTION_CHECKER
+  unset "${prefix}"_EXCEPTION_SORTER
+  unset "${prefix}"_URL
+  unset "${prefix}"_BACKGROUND_VALIDATION
+  unset "${prefix}"_BACKGROUND_VALIDATION_MILLIS
 
   for xa_prop in $(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_"); do
-    unset ${xa_prop}
+    unset "${xa_prop}"
   done
 }
 
 function clearDatasourcesEnv() {
-  IFS=',' read -a db_backends <<< $DB_SERVICE_PREFIX_MAPPING
+  IFS=',' read -a db_backends <<< "$DB_SERVICE_PREFIX_MAPPING"
   for db_backend in "${db_backends[@]}"; do
     service_name=${db_backend%=*}
     service=${service_name^^}
@@ -63,13 +63,13 @@ function clearDatasourcesEnv() {
     db=${service##*_}
     prefix=${db_backend#*=}
 
-    clearDatasourceEnv $prefix $service
+    clearDatasourceEnv "$prefix" "$service"
   done
 
   unset TIMER_SERVICE_DATA_STORE
 
-  for datasource_prefix in $(echo $DATASOURCES | sed "s/,/ /g"); do
-    clearDatasourceEnv $datasource_prefix $datasource_prefix
+  for datasource_prefix in $(echo "$DATASOURCES" | sed "s/,/ /g"); do
+    clearDatasourceEnv "$datasource_prefix" "$datasource_prefix"
   done
   unset DATASOURCES
   unset JDBC_STORE_JNDI_NAME
@@ -93,7 +93,7 @@ function inject_internal_datasources() {
   local jndi
 
   # Find all databases in the $DB_SERVICE_PREFIX_MAPPING separated by ","
-  IFS=',' read -a db_backends <<< $DB_SERVICE_PREFIX_MAPPING
+  IFS=',' read -a db_backends <<< "$DB_SERVICE_PREFIX_MAPPING"
 
   local defaultDatasourceJndi
 
@@ -103,9 +103,9 @@ function inject_internal_datasources() {
       local dsConfMode
       getDataSourceConfigureMode "dsConfMode"
       if [ "${dsConfMode}" = "xml" ]; then
-        sed -i "s|<!-- ##DATASOURCES## -->|${datasource}<!-- ##DATASOURCES## -->|" $CONFIG_FILE
+        sed -i "s|<!-- ##DATASOURCES## -->|${datasource}<!-- ##DATASOURCES## -->|" "$CONFIG_FILE"
       elif [ "${dsConfMode}" = "cli" ]; then
-        echo "${datasource}" >> ${CLI_SCRIPT_FILE}
+        echo "${datasource}" >> "${CLI_SCRIPT_FILE}"
       fi
     fi
 
@@ -131,7 +131,7 @@ function inject_internal_datasources() {
         continue
       fi
 
-      inject_datasource $prefix $service $service_name
+      inject_datasource "$prefix" "$service" "$service_name"
 
       if [ -z "$defaultDatasourceJndi" ]; then
         jndi=$(get_jndi_name "$prefix" "$service")
@@ -192,9 +192,9 @@ function writeEEDefaultDatasourceXml() {
     defaultDatasource=""
   fi
   # new format replacement : datasource="##DEFAULT_DATASOURCE##"
-  sed -i "s|datasource=\"##DEFAULT_DATASOURCE##\"|${defaultDatasource}|" $CONFIG_FILE
+  sed -i "s|datasource=\"##DEFAULT_DATASOURCE##\"|${defaultDatasource}|" "$CONFIG_FILE"
   # old format (for compat)
-  sed -i "s|<!-- ##DEFAULT_DATASOURCE## -->|${defaultDatasource}|" $CONFIG_FILE
+  sed -i "s|<!-- ##DEFAULT_DATASOURCE## -->|${defaultDatasource}|" "$CONFIG_FILE"
 }
 
 function writeEEDefaultDatasourceCli() {
@@ -222,7 +222,7 @@ function writeEEDefaultDatasourceCli() {
     if (outcome != success) of $resource:read-resource
       $resource:add
     end-if
-  " >> ${CLI_SCRIPT_FILE}
+  " >> "${CLI_SCRIPT_FILE}"
 
 
   xpath="\"//*[local-name()='default-bindings' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/@datasource\""
@@ -260,15 +260,15 @@ function writeEEDefaultDatasourceCli() {
   if [ -n "${cli_action}" ]; then
     echo "
         ${cli_action}
-      " >> ${CLI_SCRIPT_FILE}
+      " >> "${CLI_SCRIPT_FILE}"
   fi
 }
 
 function inject_external_datasources() {
   # Add extensions from envs
   if [ -n "$DATASOURCES" ]; then
-    for datasource_prefix in $(echo $DATASOURCES | sed "s/,/ /g"); do
-      inject_datasource $datasource_prefix $datasource_prefix $datasource_prefix
+    for datasource_prefix in $(echo "$DATASOURCES" | sed "s/,/ /g"); do
+      inject_datasource "$datasource_prefix" "$datasource_prefix" "$datasource_prefix"
     done
   fi
 }
@@ -346,7 +346,7 @@ function generate_datasource_common() {
   fi
 
   if [ -n "$TIMER_SERVICE_DATA_STORE" -a "$TIMER_SERVICE_DATA_STORE" = "${service_name}" ]; then
-    inject_timer_service ${pool_name} ${jndi_name} ${driver} ${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1}
+    inject_timer_service "${pool_name}" "${jndi_name}" ${driver} "${TIMER_SERVICE_DATA_STORE_REFRESH_INTERVAL:--1}"
   fi
   if [ -n "$DEFAULT_JOB_REPOSITORY" -a "$DEFAULT_JOB_REPOSITORY" = "${service_name}" ]; then
     inject_job_repository "${pool_name}"
@@ -387,10 +387,10 @@ function generate_external_datasource_xml() {
       failed="true"
     else
 
-      for xa_prop in $(echo $xa_props); do
+      for xa_prop in $(echo "$xa_props"); do
         prop_name=$(echo "${xa_prop}" | sed -e "s/${prefix}_XA_CONNECTION_PROPERTY_//g")
-        prop_val=$(find_env $xa_prop)
-        if [ ! -z ${prop_val} ]; then
+        prop_val=$(find_env "$xa_prop")
+        if [ ! -z "${prop_val}" ]; then
           ds="$ds <xa-datasource-property name=\"${prop_name}\">${prop_val}</xa-datasource-property>"
         fi
       done
@@ -469,7 +469,7 @@ function generate_external_datasource_xml() {
   if [ "$failed" == "true" ]; then
     echo ""
   else
-    echo $ds
+    echo "$ds"
   fi
 }
 
@@ -506,10 +506,10 @@ function generate_external_datasource_cli() {
       failed="true"
     else
 
-      for xa_prop in $(echo $xa_props); do
+      for xa_prop in $(echo "$xa_props"); do
         prop_name=$(echo "${xa_prop}" | sed -e "s/${prefix}_XA_CONNECTION_PROPERTY_//g")
-        prop_val=$(find_env $xa_prop)
-        if [ ! -z ${prop_val} ]; then
+        prop_val=$(find_env "$xa_prop")
+        if [ ! -z "${prop_val}" ]; then
           ds_tmp_xa_connection_properties["$prop_name"]="$prop_val"
         fi
       done
@@ -632,7 +632,7 @@ function generate_default_datasource_xml() {
           </security>
         </datasource>"
 
-  echo $ds
+  echo "$ds"
 }
 
 function generate_default_datasource_cli() {
@@ -673,7 +673,7 @@ function inject_default_timer_service() {
                       <file-data-store name=\"default-file-store\" path=\"timer-service-data\" relative-to=\"jboss.server.data.dir\"/>\
                   </data-stores>\
               </timer-service>"
-    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" "$CONFIG_FILE"
 
     # We will use this file for validation later, so write here that we found a match
     touch "${TIMER_SERVICE_DATA_STORE_FILE}"
@@ -681,7 +681,7 @@ function inject_default_timer_service() {
     local hasEjb3Subsystem
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
     testXpathExpression "${xpath}" "hasEjb3Subsystem"
-    if [ $hasEjb3Subsystem -eq 0 ]; then
+    if [ "$hasEjb3Subsystem" -eq 0 ]; then
       # Since we are adding a default, we only do this if we have an ejb3 subsystem
       local timerResource="/subsystem=ejb3/service=timer-service"
       # Only add this if there is no timer service already existing in the config
@@ -720,7 +720,7 @@ function inject_timer_service() {
                     <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" refresh-interval=\"${refresh_interval}\"/>
                   </data-stores>\
               </timer-service>"
-    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
+    sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" "$CONFIG_FILE"
 
     # We will use this file for validation later, so write here that we found a match
     touch "${TIMER_SERVICE_DATA_STORE_FILE}"
@@ -728,11 +728,11 @@ function inject_timer_service() {
     local hasEjb3Subsystem
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]\""
     testXpathExpression "${xpath}" "hasEjb3Subsystem"
-    if [ $hasEjb3Subsystem -ne 0 ]; then
+    if [ "$hasEjb3Subsystem" -ne 0 ]; then
       # No ejb3 subsystem is an error. We need to push this into the error file since this runs inside a sub-shell and
       # any echo without a redirect here goes to the CLI file. Also any attempt to exit here only exits the sub-shell,
       # Not the whole launch process
-      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+      echo "You have set the TIMER_SERVICE_DATA_STORE environment variable which adds a timer-service to the ejb3 subsystem. Fix your configuration to contain an ejb3 subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
       exit 1
     fi
     local timerResource="/subsystem=ejb3/service=timer-service"
@@ -791,30 +791,30 @@ function map_properties() {
       url="${protocol}://${host}:${port}/${database}"
     fi
 
-    if [ "$NON_XA_DATASOURCE" == "false" ] && [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
+    if [ "$NON_XA_DATASOURCE" == "false" ] && [ -z "$(eval echo \$"${prefix}"_XA_CONNECTION_PROPERTY_URL)" ]; then
       # It is an XA datasource
       if [ -z "${!serverNameVar}" ]; then
-        eval ${serverNameVar}=${host}
+        eval "${serverNameVar}"="${host}"
       fi
 
       if [ -z "${!portVar}" ]; then
-        eval ${portVar}=${port}
+        eval "${portVar}"="${port}"
       fi
 
       if [ -z "${!databaseNameVar}" ]; then
-        eval ${databaseNameVar}=${database}
+        eval "${databaseNameVar}"="${database}"
       fi
     fi
   elif [ "$NON_XA_DATASOURCE" == "false" ]; then
     # It is an XA datasource
-    if [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
+    if [ -z "$(eval echo \$"${prefix}"_XA_CONNECTION_PROPERTY_URL)" ]; then
       if [ -z "${!serverNameVar}" ] || [ -z "${!portVar}" ] || [ -z "${!databaseNameVar}" ]; then
         if [ "$prefix" != "$service" ]; then
           log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
-          eval ${invalidVar}="true"
+          eval "${invalidVar}"="true"
         else
           log_warning "Missing configuration for XA datasource $prefix. Either ${prefix}_XA_CONNECTION_PROPERTY_URL or $serverNameVar, and $portVar, and $databaseNameVar is required. Datasource will not be configured."
-          eval ${invalidVar}="true"
+          eval "${invalidVar}"="true"
         fi
       else
         host="${!serverNameVar}"
@@ -824,7 +824,7 @@ function map_properties() {
     fi
   else
     log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
-    eval ${invalidVar}="true"
+    eval "${invalidVar}"="true"
   fi
 
 }
@@ -958,9 +958,9 @@ function inject_datasource() {
       local dsConfMode
       getDataSourceConfigureMode "dsConfMode"
       if [ "${dsConfMode}" = "xml" ]; then
-        sed -i "s|<!-- ##DATASOURCES## -->|${datasource}\n<!-- ##DATASOURCES## -->|" $CONFIG_FILE
+        sed -i "s|<!-- ##DATASOURCES## -->|${datasource}\n<!-- ##DATASOURCES## -->|" "$CONFIG_FILE"
       elif [ "${dsConfMode}" = "cli" ]; then
-        echo "${datasource}" >> ${CLI_SCRIPT_FILE}
+        echo "${datasource}" >> "${CLI_SCRIPT_FILE}"
       fi
     fi
 
@@ -984,7 +984,7 @@ function inject_default_job_repository() {
   getConfigurationMode "<!-- ##DEFAULT_JOB_REPOSITORY## -->" "dsConfMode"
   if [ "${dsConfMode}" = "xml" ]; then
     local defaultjobrepo="     <default-job-repository name=\"${1}\"/>"
-    sed -i "s|<!-- ##DEFAULT_JOB_REPOSITORY## -->|${defaultjobrepo%$'\n'}|" $CONFIG_FILE
+    sed -i "s|<!-- ##DEFAULT_JOB_REPOSITORY## -->|${defaultjobrepo%$'\n'}|" "$CONFIG_FILE"
 
     # We will use this file for validation later, so create it to indicate we found a match
     touch "${DEFAULT_JOB_REPOSITORY_FILE}"
@@ -1026,7 +1026,7 @@ function inject_job_repository() {
       </job-repository>\
       <!-- ##JOB_REPOSITORY## -->"
 
-    sed -i "s|<!-- ##JOB_REPOSITORY## -->|${jobrepo%$'\n'}|" $CONFIG_FILE
+    sed -i "s|<!-- ##JOB_REPOSITORY## -->|${jobrepo%$'\n'}|" "$CONFIG_FILE"
 
     # We will use this file for validation later, so create it to indicate we found a match
     touch "${DEFAULT_JOB_REPOSITORY_FILE}"

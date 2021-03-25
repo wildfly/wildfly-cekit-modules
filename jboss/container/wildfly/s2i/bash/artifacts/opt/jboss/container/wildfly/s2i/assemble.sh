@@ -6,13 +6,13 @@ function copy_server_s2i_output() {
   isSlim="$(galleon_is_slim_server)"
   if [ "$isSlim" != "true" ]; then
     if [ "x$S2I_COPY_SERVER" == "xtrue" ]; then
-      mkdir -p $WILDFLY_S2I_OUTPUT_DIR
+      mkdir -p "$WILDFLY_S2I_OUTPUT_DIR"
       log_info "Copying server to $WILDFLY_S2I_OUTPUT_DIR"
-      cp -r -L $JBOSS_HOME $WILDFLY_S2I_OUTPUT_DIR/server
-      rm -rf $JBOSS_HOME
+      cp -r -L "$JBOSS_HOME" "$WILDFLY_S2I_OUTPUT_DIR"/server
+      rm -rf "$JBOSS_HOME"
       rm -rf /deployments/*
       log_info "Linking $JBOSS_HOME to $WILDFLY_S2I_OUTPUT_DIR"
-      ln -s $WILDFLY_S2I_OUTPUT_DIR/server $JBOSS_HOME
+      ln -s "$WILDFLY_S2I_OUTPUT_DIR"/server "$JBOSS_HOME"
     fi
   else
     if [ "x$S2I_COPY_SERVER" == "xtrue" ]; then

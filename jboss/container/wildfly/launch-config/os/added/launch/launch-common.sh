@@ -24,13 +24,13 @@ function find_prefixed_env () {
   local prefix=$1
 
   if [[ -z $prefix ]]; then
-    find_env $2 $3
+    find_env "$2" "$3"
   else
     prefix=${prefix^^} # uppercase
     prefix=${prefix//-/_} #replace - by _
 
     local var_name=$prefix"_"$2
-    echo ${!var_name:-$3}
+    echo "${!var_name:-$3}"
   fi
 }
 
@@ -63,7 +63,7 @@ function getConfigurationMode() {
 
   local configVia=""
   if [ "${attemptXml}" = "true" ]; then
-    if grep -Fq "${marker}" $CONFIG_FILE; then
+    if grep -Fq "${marker}" "$CONFIG_FILE"; then
         configVia="xml"
     fi
   fi
@@ -113,6 +113,6 @@ function splitAttributesStringIntoLines() {
   local attribute_name="${2}"
 
   local temp
-  temp=$(echo $input | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
+  temp=$(echo "$input" | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
   echo "${temp}"
 }
