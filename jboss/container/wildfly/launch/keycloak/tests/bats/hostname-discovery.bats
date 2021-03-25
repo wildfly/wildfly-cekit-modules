@@ -6,13 +6,13 @@ load common
 # {1} mock_response
 function run_api_test {
     local mock_response=${1}
-    local server_pid=$(setup_k8s_api ${mock_response})
+    local server_pid=$(setup_k8s_api "${mock_response}")
     K8S_ENV=true
     APPLICATION_ROUTES=""
     get_application_routes
     local routes=${APPLICATION_ROUTES}
     echo "Routes are ${routes}" >&2
-    pkill -P $server_pid
+    pkill -P "$server_pid"
     echo $routes
 }
 

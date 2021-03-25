@@ -1,40 +1,40 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/configure-modules.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups_common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/ha.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../elytron/added/launch/elytron.sh $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/configure-modules.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups_common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/ha.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../elytron/added/launch/elytron.sh "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/jgroups_common.sh
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/elytron.sh
+source "$JBOSS_HOME"/bin/launch/jgroups_common.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/elytron.sh
 
 export OPENSHIFT_DNS_PING_SERVICE_NAMESPACE="testnamespace"
 export CONF_AUTH_MODE="xml"
 export CONF_PING_MODE="xml"
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -48,13 +48,13 @@ add_protocol_after() {
 
   local test_index=$(get_protocol_position "${stack}" "${after_protocol}")
   if [ "${test_index}" -eq -1 ]; then
-    echo "ERROR. "${after_protocol}" does not exist in the config file."
+    echo "ERROR. ""${after_protocol}"" does not exist in the config file."
     exit
   fi
 
   local data=$(<"${JGROUPS_PROTOCOL_ADDS}/${stack}_protocol_list")
   local initial_array=(${data})
-  add_protocol_at_prosition ${stack} ${protocol} ${test_index}
+  add_protocol_at_prosition "${stack}" "${protocol}" "${test_index}"
   data=$(<"${JGROUPS_PROTOCOL_ADDS}/${stack}_protocol_list")
   local result_array=(${data})
 
@@ -67,15 +67,15 @@ add_protocol_after() {
 
   local i=0
   for element in "${result_array[@]}"; do
-    if [ $i -eq ${test_index} ] && [ ! "${result_array[$i]}" = "${protocol}" ]; then
+    if [ $i -eq "${test_index}" ] && [ ! "${result_array[$i]}" = "${protocol}" ]; then
       echo "ERROR. It is expected the possition of the added element is ${test_index}"
       break
     fi
-    if [ $i -lt ${test_index} ] && [ ! "${result_array[$i]}" = "${initial_array[$i]}" ]; then
+    if [ $i -lt "${test_index}" ] && [ ! "${result_array[$i]}" = "${initial_array[$i]}" ]; then
       echo "ERROR. The elements of the protocol lists are incorrect before added index"
       break
     fi
-    if [ $i -gt ${test_index} ] && [ ! "${result_array[$i]}" = "${initial_array[(($i-1))]}" ]; then
+    if [ $i -gt "${test_index}" ] && [ ! "${result_array[$i]}" = "${initial_array[(($i-1))]}" ]; then
       echo "ERROR. The elements of the protocol lists are incorrect after added index"
       break
     fi
@@ -86,7 +86,7 @@ add_protocol_after() {
 }
 
 @test "Test protocol list store -- read protocols" {
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-jgroups-protocol-store.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
   init_protocol_list_store
 
   expected="MERGE3
@@ -125,7 +125,7 @@ add_protocol_after() {
 
 @test "Test protocol list store -- Add protocol after a specific one" {
   expected="done"
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-jgroups-protocol-store.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
   init_protocol_list_store
 
   # add as the first one
@@ -145,7 +145,7 @@ add_protocol_after() {
 }
 
 test_ha_jgroups() {
-  source $JBOSS_HOME/bin/launch/configure-modules.sh
+  source "$JBOSS_HOME"/bin/launch/configure-modules.sh
 }
 
 @test "Test protocol list store -- Run ha.sh and jgroups.sh" {
@@ -237,7 +237,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
 EOF
 )
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-jgroups-protocol-store.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
 
   CONFIG_ADJUSTMENT_MODE="cli"
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"

@@ -3,32 +3,32 @@
 #set -euo pipefail
 #IFS=$'\n\t'
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/login-modules-common.sh $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/login-modules-common.sh "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/login-modules-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/login-modules-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
   sed -i "s|<!-- ##OTHER_LOGIN_MODULES## -->| |" "$CONFIG_FILE"
 }
 

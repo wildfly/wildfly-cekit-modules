@@ -1,38 +1,37 @@
+#!/usr/bin/env bats
 # dont enable these by default, bats on CI doesn't output anything if they are set
 #set -euo pipefail
 #IFS=$'\n\t'
-#!/usr/bin/env bats
-
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups_common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/ha.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../elytron/added/launch/elytron.sh $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups_common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/ha.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../elytron/added/launch/elytron.sh "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/elytron.sh
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/jgroups.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/elytron.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/jgroups.sh
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -51,7 +50,7 @@ EOF
 )
   run create_jgroups_elytron_encrypt "SYM_ENCRYPT" "keystore" "key_alias" "encrypt_password"
   xml=${output}
-  result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Result: ${result}"
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Expected: ${expected}"
@@ -68,7 +67,7 @@ EOF
 )
   run create_jgroups_elytron_encrypt "SYM_ENCRYPT" "keystore1" "key_alias2" "encrypt_password3"
   xml=${output}
-  result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Result: ${result}"
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "Expected: ${expected}"
@@ -89,7 +88,7 @@ EOF
 )
   run create_jgroups_encrypt_asym "sym-keylength-512" "sym-algo-somealgo" "asym-keylength-256" "asym-algo-somealgo" "change-key-on-leave-true"
   xml=${output}
-  result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "${result}"
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   [ "${result}" = "${expected}" ]
@@ -109,7 +108,7 @@ EOF
 )
   run create_jgroups_encrypt_asym "sym-keylength-5122" "sym-algo-somealgo3" "asym-keylength-2564" "asym-algo-somealgo5" "change-key-on-leave-true6"
   xml=${output}
-  result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "${result}"
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   [ "${result}" = "${expected}" ]
@@ -132,7 +131,7 @@ EOF
 )
   run create_jgroups_elytron_legacy "keystore" "keystore-password" "encrypt_name" "encrypt_keystore_dir"
   xml=${output}
-  result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   echo "${result}"
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   [ "${result}" = "${expected}" ]
@@ -181,9 +180,9 @@ EOF
 }
 
 @test "Test JGroups configuration - basic SYM_ENCRYPT" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
+    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> "${CONFIG_FILE}"
 
     JGROUPS_ENCRYPT_PROTOCOL=
     JGROUPS_ENCRYPT_SECRET=
@@ -195,8 +194,8 @@ EOF
 
     run configure_jgroups_encryption
     echo "${output}"
-    [[ "${output}" =~ "INFO Configuring JGroups cluster traffic encryption protocol to SYM_ENCRYPT." ]]
-    [[ "${output}" =~ "WARN Detected missing JGroups encryption configuration, the communication within the cluster WILL NOT be encrypted." ]]
+    [[ "${output}" =~ .*"INFO Configuring JGroups cluster traffic encryption protocol to SYM_ENCRYPT.".* ]]
+    [[ "${output}" =~ .*"WARN Detected missing JGroups encryption configuration, the communication within the cluster WILL NOT be encrypted.".* ]]
 
     run has_elytron_tls "${CONFIG_FILE}"
     [ "${output}" = "false" ]
@@ -207,8 +206,8 @@ EOF
 }
 
 @test "Test JGroups configuration - SYM_ENCRYPT - legacy" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> "${CONFIG_FILE}"
 
     JGROUPS_ENCRYPT_PROTOCOL=SYM_ENCRYPT
     JGROUPS_ENCRYPT_SECRET="encrypt_secret"
@@ -229,8 +228,8 @@ EOF
 }
 
 @test "Test JGroups configuration - basic ASYM_ENCRYPT - no extra params" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> "${CONFIG_FILE}"
 
     JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT
     JGROUPS_ENCRYPT_SECRET=
@@ -242,7 +241,7 @@ EOF
 
     run configure_jgroups_encryption
     echo "${output}"
-    [[ "${output}" =~ "INFO Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT." ]]
+    [[ "${output}" =~ .*"INFO Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT.".* ]]
     [[ "${output}" != "WARN The specified JGroups configuration properties"* ]]
 
     run has_elytron_tls "${CONFIG_FILE}"
@@ -257,8 +256,8 @@ EOF
 }
 
 @test "Test JGroups configuration - basic ASYM_ENCRYPT - extra params" {
-    echo '<subsystem xmlns="urn:wildfly:elytron:5.0"></subsystem><!-- ##TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
+    echo '<subsystem xmlns="urn:wildfly:elytron:5.0"></subsystem><!-- ##TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##JGROUPS_ENCRYPT## -->' >> "${CONFIG_FILE}"
 
     JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT
     JGROUPS_ENCRYPT_SECRET="encrypt_secret"
@@ -270,8 +269,8 @@ EOF
 
     run configure_jgroups_encryption
     echo "${output}"
-    [[ "${output}" =~ "INFO Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT." ]]
-    [[ "${output}" =~ "INFO Detected valid JGroups encryption configuration, the communication within the cluster will be encrypted using ASYM_ENCRYPT and Elytron keystore." ]]
+    [[ "${output}" =~ .*"INFO Configuring JGroups cluster traffic encryption protocol to ASYM_ENCRYPT.".* ]]
+    [[ "${output}" =~ .*"INFO Detected valid JGroups encryption configuration, the communication within the cluster will be encrypted using ASYM_ENCRYPT and Elytron keystore.".* ]]
 
     run has_elytron_tls "${CONFIG_FILE}"
     echo "${output}"
@@ -287,7 +286,7 @@ EOF
 @test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT - Without pbcast.NAKACK2 protocol" {
   expected="You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for UDP stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen."
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-pbcast.NAKACK2.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-pbcast.NAKACK2.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
 
   CONFIG_ADJUSTMENT_MODE="cli"
 
@@ -340,7 +339,7 @@ EOF
 EOF
 )
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-with-elytron.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-with-elytron.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
   CONFIG_ADJUSTMENT_MODE="cli"
 
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
@@ -387,7 +386,7 @@ EOF
 EOF
 )
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-with-elytron.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-with-elytron.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
   CONFIG_ADJUSTMENT_MODE="cli"
 
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
@@ -441,7 +440,7 @@ EOF
        end-if
 EOF
 )
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-with-elytron.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-with-elytron.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
 
   CONFIG_ADJUSTMENT_MODE="cli"
 
@@ -499,7 +498,7 @@ EOF
 
 EOF
 )
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-jgroups.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
 
   CONFIG_ADJUSTMENT_MODE="cli"
 

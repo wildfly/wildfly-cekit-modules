@@ -1,36 +1,36 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/jgroups_common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/ha.sh $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/jgroups_common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/ha.sh "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/ha.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/ha.sh
 
 export OPENSHIFT_DNS_PING_SERVICE_NAMESPACE="testnamespace"
 export CONF_AUTH_MODE="xml"
 export CONF_PING_MODE="xml"
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -94,7 +94,7 @@ EOF
 @test "Generate JGroups Auth config - missing cluster password" {
   run generate_jgroups_auth_config "" "digest_algo"
   echo "Result: ${output}"
-  [[ "${output}" =~ "No password defined for JGroups cluster." ]]
+  [[ "${output}" =~ .*"No password defined for JGroups cluster.".* ]]
 }
 
 # note openshift.KUBE_PING is aliased to kubernetes.KUBE_PING
@@ -212,8 +212,8 @@ EOF
 }
 
 @test "Test HA configuration file - openshift.KUBE_PING" {
-    echo "<!-- ##JGROUPS_AUTH## -->" > $CONFIG_FILE
-    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> $CONFIG_FILE
+    echo "<!-- ##JGROUPS_AUTH## -->" > "$CONFIG_FILE"
+    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> "$CONFIG_FILE"
     expected=$(cat <<EOF
 
  <auth-protocol type="AUTH">
@@ -229,7 +229,7 @@ EOF
   export JGROUPS_DIGEST_TOKEN_ALGORITHM="clusterdigest"
   export JGROUPS_PING_PROTOCOL="kubernetes.KUBE_PING"
   run configure_ha
-  result=$(<${CONFIG_FILE})
+  result=$(<"${CONFIG_FILE}")
   result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
@@ -238,8 +238,8 @@ EOF
 }
 
 @test "Test HA configuration file - dns.DNS_PING with markers" {
-    echo "<!-- ##JGROUPS_AUTH## -->" > $CONFIG_FILE
-    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> $CONFIG_FILE
+    echo "<!-- ##JGROUPS_AUTH## -->" > "$CONFIG_FILE"
+    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> "$CONFIG_FILE"
     expected=$(cat <<EOF
 
  <auth-protocol type="AUTH">
@@ -256,7 +256,7 @@ EOF
   export OPENSHIFT_DNS_PING_SERVICE_PORT="service_port"
   export OPENSHIFT_DNS_PING_SERVICE_NAME="service_name"
   run configure_ha
-  result=$(<${CONFIG_FILE})
+  result=$(<"${CONFIG_FILE}")
   result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
@@ -266,8 +266,8 @@ EOF
 
 # note openshift.DNS_PING will be replaced with dns.DNS_PING now
 @test "Test HA configuration file - openshift.DNS_PING" {
-    echo "<!-- ##JGROUPS_AUTH## -->" > $CONFIG_FILE
-    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> $CONFIG_FILE
+    echo "<!-- ##JGROUPS_AUTH## -->" > "$CONFIG_FILE"
+    echo "<!-- ##JGROUPS_PING_PROTOCOL## -->" >> "$CONFIG_FILE"
     expected=$(cat <<EOF
 
  <auth-protocol type="AUTH">
@@ -284,7 +284,7 @@ EOF
   export JGROUPS_PING_PROTOCOL="openshift.DNS_PING"
   export OPENSHIFT_DNS_PING_SERVICE_NAME="service_name"
   run configure_ha
-  result=$(<${CONFIG_FILE})
+  result=$(<"${CONFIG_FILE}")
   result="$(echo "<t>${result}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   expected="$(echo "<t>${expected}</t>" | sed 's|\\n||g' | xmllint --format --noblanks -)"
   echo "Result: ${result}"
@@ -325,7 +325,7 @@ EOF
 EOF
 )
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-auth-gms.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp "$BATS_TEST_DIRNAME"/server-configs/standalone-openshift-jgroups-auth-gms.xml "$JBOSS_HOME"/standalone/configuration/standalone-openshift.xml
 
   CONF_AUTH_MODE="cli"
   CONFIG_ADJUSTMENT_MODE="cli"

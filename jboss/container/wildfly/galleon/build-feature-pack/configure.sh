@@ -36,12 +36,12 @@ if [ -f "${ZIPPED_REPO}" ]; then
 
   # hook to allow for maven-repo processing before to initiate feature-pack build
   if [ -f "$GALLEON_MAVEN_REPO_HOOK_SCRIPT" ]; then
-    sh $GALLEON_MAVEN_REPO_HOOK_SCRIPT "$repoDir"
+    sh "$GALLEON_MAVEN_REPO_HOOK_SCRIPT" "$repoDir"
   fi
-  mv $repoDir/maven-repository "$TMP_GALLEON_LOCAL_MAVEN_REPO"
+  mv "$repoDir"/maven-repository "$TMP_GALLEON_LOCAL_MAVEN_REPO"
   mkdir "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
   if [ "$(ls -A $repoDir)" ]; then
-    mv $repoDir/* "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
+    mv "$repoDir/*" "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR/maven-repo-misc"
   fi
   rm -rf $repoDir
   if [ "x$deleteBuildArtifacts" == "xtrue"  ]; then

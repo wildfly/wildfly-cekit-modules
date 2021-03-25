@@ -1,29 +1,29 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME"
+mkdir -p "$JBOSS_HOME"/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/messaging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/activemq-subsystem.xml $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/messaging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/activemq-subsystem.xml "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/messaging.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/messaging.sh
 
 
 INPUT_CONTENT="<test-content><!-- ##MESSAGING_SUBSYSTEM_CONFIG## --><!-- ##MESSAGING_PORTS## --></test-content>"
@@ -34,7 +34,7 @@ SOCKET_BINDING_ONLY_OUTPUT_CONTENT='<test-content><socket-binding name="messagin
 
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -44,16 +44,16 @@ teardown() {
 }
 
 @test "Configure Embedded server broker -- with markers" {
-    expected=$(cat $BATS_TEST_DIRNAME/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
+    expected=$(cat "$BATS_TEST_DIRNAME"/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "${INPUT_CONTENT}" > "${CONFIG_FILE}"
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
     ACTIVEMQ_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/activemq-subsystem.xml
     run configure_mq
     echo "Output: ${output}"
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
 
@@ -76,30 +76,30 @@ teardown() {
 @test "Configure Embedded server broker -- without markers" {
     expected=$(echo "<test-content/>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo '<test-content/>' > ${CONFIG_FILE}
+    echo '<test-content/>' > "${CONFIG_FILE}"
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
 }
 
 @test "Configure Embedded server broker -- with markers, destinations and disabled" {
-    expected=$(cat $BATS_TEST_DIRNAME/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
+    expected=$(cat "$BATS_TEST_DIRNAME"/standalone-openshift-configure-mq.xml | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "${INPUT_CONTENT}" > ${CONFIG_FILE}
+    echo "${INPUT_CONTENT}" > "${CONFIG_FILE}"
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run configure_mq
     echo "Output: ${output}"
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -121,13 +121,13 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -137,13 +137,13 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -153,7 +153,7 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
@@ -161,7 +161,7 @@ teardown() {
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -171,7 +171,7 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${SOCKET_BINDING_ONLY_OUTPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
@@ -180,7 +180,7 @@ teardown() {
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -190,14 +190,14 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${SOCKET_BINDING_ONLY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run configure_mq
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -207,14 +207,14 @@ teardown() {
     INCLUDE_REQUIRED_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem><subsystem xmlns='urn:wildfly:elytron:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:remoting:4.0'></subsystem><subsystem xmlns='urn:jboss:domain:messaging-activemq:4.0'></subsystem>"
     expected=$(echo "<root>${INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_REQUIRED_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
 
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export DISABLE_EMBEDDED_JMS_BROKER="true"
     run inject_brokers
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -224,7 +224,7 @@ teardown() {
     INCLUDE_EE_SUBSYSTEM="<subsystem xmlns='urn:jboss:domain:ee:4.0'></subsystem>"
     expected=$(echo "<root>${DEFAULT_JMS_FACTORY_OUTPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" | xmllint --format --noblanks -)
     echo "CONFIG_FILE: ${CONFIG_FILE}"
-    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" > ${CONFIG_FILE}
+    echo "<root>${DEFAULT_JMS_FACTORY_INPUT_CONTENT}${INCLUDE_EE_SUBSYSTEM}</root>" > "${CONFIG_FILE}"
     export MQ_CLUSTER_PASSWORD="somemqpassword"
     export MQ_QUEUES="queue1,queue2"
     export MQ_TOPICS="topic1,topic2"
@@ -232,7 +232,7 @@ teardown() {
     run inject_brokers
     echo "Output: ${output}"
     [ "${output}" = "" ]
-    result=$(cat ${CONFIG_FILE} | xmllint --format --noblanks -)
+    result=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
     echo "Result: ${result}"
     echo "Expected: ${expected}"
     [ "${result}" = "${expected}" ]
@@ -266,7 +266,7 @@ teardown() {
   output=$(xmllint --noblanks --xpath "string(//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ee:')]/*[local-name()='default-bindings']/@jms-connection-factory)" "${CONFIG_FILE}")
   [ "${output}" = "${TEST_MQ_JNDI}" ]
 
-  expected=$(cat $BATS_TEST_DIRNAME/resource-adapters-for-two-amq-external-broker.xml | xmllint --format --noblanks -)
+  expected=$(cat "$BATS_TEST_DIRNAME"/resource-adapters-for-two-amq-external-broker.xml | xmllint --format --noblanks -)
   output=$(xmllint --noblanks --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:resource-adapters:')]/*" "${CONFIG_FILE}" | xmllint --format --noblanks -)
 
   [ "${output}" = "${expected}" ]
@@ -296,11 +296,11 @@ teardown() {
   [ "${output}" = "<outbound-socket-binding name=\"messaging-remote-throughput\"><remote-destination host=\"${MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_HOST}\" port=\"${MESSAGING_BATS_TEST_AMQ_TCP_SERVICE_PORT}\"/></outbound-socket-binding>" ]
 
 
-  expected=$(xmllint --xpath "//*[local-name()='server']" $BATS_TEST_DIRNAME/messaging-activemq-server-for-amq7-external-broker.xml | xmllint --format --noblanks -)
+  expected=$(xmllint --xpath "//*[local-name()='server']" "$BATS_TEST_DIRNAME"/messaging-activemq-server-for-amq7-external-broker.xml | xmllint --format --noblanks -)
   output=$(xmllint --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:messaging-activemq:')]/*" "${CONFIG_FILE}" | xmllint --format --noblanks -)
   [ "${output}" = "${expected}" ]
 
-  expected=$(xmllint --xpath "//*[local-name()='bindings']" $BATS_TEST_DIRNAME/bindings-for-amq7-external-broker.xml | xmllint --format --noblanks -)
+  expected=$(xmllint --xpath "//*[local-name()='bindings']" "$BATS_TEST_DIRNAME"/bindings-for-amq7-external-broker.xml | xmllint --format --noblanks -)
   output=$(xmllint --xpath "//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:naming:')]/*[local-name()='bindings']" "${CONFIG_FILE}" | xmllint --format --noblanks -)
   [ "${output}" = "${expected}" ]
 }
