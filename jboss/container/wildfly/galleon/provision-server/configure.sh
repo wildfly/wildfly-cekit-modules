@@ -7,9 +7,9 @@ if [ ! -d "$GALLEON_DEFAULT_SERVER" ]; then
   exit 1
 fi
 
-if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
+if [ -f $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven ]; then
   # required to have maven enabled.
-  source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+  source $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven
 fi
 
 # Provision the default server
