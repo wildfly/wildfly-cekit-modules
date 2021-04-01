@@ -29,7 +29,7 @@
 #
 # This script will be executed during container startup
 
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 
 function configure() {
   configure_access_log_valve
@@ -46,7 +46,7 @@ function configure_access_log_valve() {
     if [ "${mode}" == "xml" ]; then
       local pattern=$(getPattern "add-xml")
       local valve="<access-log use-server-log=\"true\" pattern=\"${pattern}\"/>"
-      sed -i "s|<!-- ##ACCESS_LOG_VALVE## -->|${valve}|" $CONFIG_FILE
+      sed -i "s|<!-- ##ACCESS_LOG_VALVE## -->|${valve}|" "$CONFIG_FILE"
     else
             # A lot of XPath here since we need to do more advanced stuff than CLI allows us to...
 
@@ -55,7 +55,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]\""
       testXpathExpression "${xpath}" "subsystemRet"
       if [ "${subsystemRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
         return
       fi
 
@@ -66,7 +66,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
       testXpathExpression "${xpath}" "serverNamesRet" "serverNames"
       if [ "${serverNamesRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
         return
       fi
 
@@ -75,7 +75,7 @@ function configure_access_log_valve() {
       local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/*[local-name()='host']\""
       testXpathExpression "${xpath}" "hostsRet"
       if [ "${hostsRet}" -ne 0 ]; then
-        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+        echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. Fix your configuration to contain at least one server with one host in the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
         return
       fi
 
@@ -97,7 +97,7 @@ function add_cli_commands_for_server_hosts() {
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server' and @name='${serverName}']/*[local-name()='host']/@name\""
   testXpathExpression "${xpath}" "ret" "hostNames"
   if [ "${ret}" -ne 0 ]; then
-    echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. This is not added to the undertow server '${serverName}' since it has no hosts." >> ${CONFIG_WARNING_FILE}
+    echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. This is not added to the undertow server '${serverName}' since it has no hosts." >> "${CONFIG_WARNING_FILE}"
     return
   fi
 
@@ -149,7 +149,7 @@ function add_cli_commands_for_host() {
     fi
 
     if [ "${nonMatching}" == "1" ]; then
-      echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration." >> ${CONFIG_ERROR_FILE}
+      echo "You have set ENABLE_ACCESS_LOG=true to add the access-log valve. However there is already one for ${resourceAddr} which has conflicting values. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
       return
     fi
   else
@@ -160,12 +160,12 @@ function add_cli_commands_for_host() {
     "
   fi
 
-  echo "$cli" >> ${CLI_SCRIPT_FILE}
+  echo "$cli" >> "${CLI_SCRIPT_FILE}"
 }
 
 
 function version_compare () {
-    [ "$1" = "`echo -e \"$1\n$2\" | sort -V | head -n1`" ] && echo "older" || echo "newer"
+    [ "$1" = "$(echo -e \"$1\n$2\" | sort -V | head -n1)" ] && echo "older" || echo "newer"
 }
 
 function configure_access_log_handler() {
@@ -176,7 +176,7 @@ function configure_access_log_handler() {
     local log_category="org.infinispan.rest.logging.RestAccessLoggingHandler"
 
     # In this piece we check whether this is JDG and whether the version is >= 7.2
-    if [ ! -z $JBOSS_DATAGRID_VERSION ] && [ $IS_NEWER_OR_EQUAL_TO_7_2 = "newer" ]; then
+    if [ ! -z "$JBOSS_DATAGRID_VERSION" ] && [ "$IS_NEWER_OR_EQUAL_TO_7_2" = "newer" ]; then
       log_category="org.infinispan.REST_ACCESS_LOG"
     fi
 
@@ -184,7 +184,7 @@ function configure_access_log_handler() {
     getConfigurationMode "<!-- ##ACCESS_LOG_HANDLER## -->" "mode"
 
     if [ "${mode}" = "xml" ]; then
-      sed -i "s|<!-- ##ACCESS_LOG_HANDLER## -->|<logger category=\"${log_category}\"><level name=\"TRACE\"/></logger>|" $CONFIG_FILE
+      sed -i "s|<!-- ##ACCESS_LOG_HANDLER## -->|<logger category=\"${log_category}\"><level name=\"TRACE\"/></logger>|" "$CONFIG_FILE"
     elif [ "${mode}" = "cli" ]; then
 
       if [ -z "${ENABLE_ACCESS_LOG_TRACE}" ] || [ "${ENABLE_ACCESS_LOG_TRACE^^}" != "TRUE" ]; then
@@ -211,7 +211,7 @@ function configure_access_log_handler() {
           ${resourceAddr}:add(level=TRACE)
         end-if
       "
-      echo "${cli}" >> ${CLI_SCRIPT_FILE}
+      echo "${cli}" >> "${CLI_SCRIPT_FILE}"
     fi
   fi
 }

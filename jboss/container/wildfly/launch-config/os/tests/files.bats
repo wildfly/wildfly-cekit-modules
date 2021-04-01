@@ -1,21 +1,21 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../added/launch/files.sh
+source "$BATS_TEST_DIRNAME"/../added/launch/files.sh
 setup() {
   # setup mock local cache
   GALLEON_LOCAL_MAVEN_REPO=$(mktemp -d)
   #setup mock JBOSS_HOME
   JBOSS_HOME=$(mktemp -d)
-  echo JBOSS_HOME $JBOSS_HOME
-  echo GALLEON_LOCAL_MAVEN_REPO $GALLEON_LOCAL_MAVEN_REPO
+  echo JBOSS_HOME "$JBOSS_HOME"
+  echo GALLEON_LOCAL_MAVEN_REPO "$GALLEON_LOCAL_MAVEN_REPO"
 
   create_module_m1
   create_module_in_jboss_home
 }
 
 teardown() {
-  rm -rf $GALLEON_LOCAL_MAVEN_REPO
-  rm -rf $JBOSS_HOME
+  rm -rf "$GALLEON_LOCAL_MAVEN_REPO"
+  rm -rf "$JBOSS_HOME"
 }
 
 create_module_descriptor() {

@@ -1,10 +1,10 @@
-
+#!/bin/env bash
 function configure() {
   configure_json_logging
 }
 
 function configure_json_logging() {
-  sed -i "s|^.*\.module=org\.jboss\.logmanager\.ext$||" $LOGGING_FILE
+  sed -i "s|^.*\.module=org\.jboss\.logmanager\.ext$||" "$LOGGING_FILE"
   local configureMode
   getConfigurationMode "##CONSOLE-FORMATTER##" "configureMode"
   if [ "${configureMode}" = "xml" ]; then
@@ -12,17 +12,17 @@ function configure_json_logging() {
   elif [ "${configureMode}" = "cli" ]; then
     configureByCLI
   else
-    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $LOGGING_FILE
+    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' "$LOGGING_FILE"
   fi
 }
 
 function configureByMarkers() {
   if [ "${ENABLE_JSON_LOGGING^^}" == "TRUE" ]; then
-    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' $CONFIG_FILE
-    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' $LOGGING_FILE
+    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' "$CONFIG_FILE"
+    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' "$LOGGING_FILE"
   else
-    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $CONFIG_FILE
-    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $LOGGING_FILE
+    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' "$CONFIG_FILE"
+    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' "$LOGGING_FILE"
   fi
 }
 
@@ -35,7 +35,7 @@ function configureByCLI() {
     testXpathExpression "${xpath}" "ret"
 
     if [ "${ret}" -eq 0 ]; then
-      cat <<'EOF' >> ${CLI_SCRIPT_FILE}
+      cat <<'EOF' >> "${CLI_SCRIPT_FILE}"
           if (outcome != success) of /subsystem=logging/json-formatter=OPENSHIFT:read-resource
             /subsystem=logging/json-formatter=OPENSHIFT:add(exception-output-type=formatted, key-overrides=[timestamp="@timestamp"], meta-data=[@version=1])
           else
@@ -44,11 +44,11 @@ function configureByCLI() {
             /subsystem=logging/json-formatter=OPENSHIFT:write-attribute(name=meta-data, value=[@version=1])
           end-if
 EOF
-      consoleHandlerName "OPENSHIFT" >> ${CLI_SCRIPT_FILE}
+      consoleHandlerName "OPENSHIFT" >> "${CLI_SCRIPT_FILE}"
     fi
-    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' $LOGGING_FILE
+    sed -i 's|##CONSOLE-FORMATTER##|OPENSHIFT|' "$LOGGING_FILE"
   else
-    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $LOGGING_FILE
+    sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' "$LOGGING_FILE"
   fi
 }
 

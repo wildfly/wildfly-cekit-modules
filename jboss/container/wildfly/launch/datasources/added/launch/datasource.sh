@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source $JBOSS_HOME/bin/launch/datasource-common.sh
+source "$JBOSS_HOME"/bin/launch/datasource-common.sh
 
 function preConfigure() {
   # Since inject_datasources_common ends up executing in a sub-shell for where I want
@@ -37,7 +37,7 @@ function configureEnv() {
   # TODO - I don't think this is being used any more? The real action seems to be in tx-datasource.sh
   if [ -n "$JDBC_STORE_JNDI_NAME" ]; then
     local jdbcStore="<jdbc-store datasource-jndi-name=\"${JDBC_STORE_JNDI_NAME}\"/>"
-    sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
+    sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" "$CONFIG_FILE"
   fi
 
 }

@@ -1,3 +1,5 @@
+#!/bin/env bash
+
 # Configure Logger Category
 #
 # Usage:
@@ -14,7 +16,7 @@
 #            <logger category="com.my.other.package">
 #                <level name="TRACE"/>
 #            </logger>
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 prepareEnv() {
   unset LOGGER_CATEGORIES
 }
@@ -46,29 +48,30 @@ add_logger_category() {
               local ret
               testXpathExpression "${xpath}" "ret"
               if [ "${ret}" -ne 0 ]; then
-                echo "You have set LOGGER_CATEGORIES to configure a logger. Fix your configuration to contain the logging subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+                echo "You have set LOGGER_CATEGORIES to configure a logger. Fix your configuration to contain the logging subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
               fi
         fi
 
         log_info "Found env LOGGER_CATEGORIES, configuring...."
         for i in ${LOGGER_CATEGORIES}; do
             logger=$(echo "$i" | sed 's/ //g')
-            logger_category=$(echo $logger | awk -F':' '{print $1}')
-            logger_level=$(echo $logger | awk -F':' '{print $2}')
+            logger_category=$(echo "$logger" | awk -F':' '{print $1}')
+            logger_level=$(echo "$logger" | awk -F':' '{print $2}')
+            allowed_log_levels_str=$(printf ",%s", "${allowed_log_levels[@]}")
 
-            if [[ ! "${allowed_log_levels[@]}" =~ "${logger_level}" ]]; then
-                 log_warning "Log Level ${logger_level} is not allowed, the allowed levels are ${allowed_log_levels[@]}"
+            if [[ ! "${allowed_log_levels_str}" =~ ${logger_level} ]]; then
+                 log_warning "Log Level ${logger_level} is not allowed, the allowed levels are ${allowed_log_levels_str}"
             elif [ "${WORK_MODE}" = "xml" ]; then
                 log_info "Configuring logger category ${logger_category} with level ${logger_level:-FINE}"
                 logger="<logger category=\"${logger_category}\">\n                \
 <level name=\"${logger_level:-FINE}\"/>\n\            \
 </logger>\n            \
 <!-- ##LOGGER-CATEGORY## -->"
-                sed -i "s|<!-- ##LOGGER-CATEGORY## -->|${logger}|" $CONFIG_FILE
+                sed -i "s|<!-- ##LOGGER-CATEGORY## -->|${logger}|" "$CONFIG_FILE"
             elif [ "${WORK_MODE}" = "cli" ]; then
               log_info "Configuring logger category ${logger_category} with level ${logger_level:-FINE}"
 
-              cat << EOF >> ${CLI_SCRIPT_FILE}
+              cat << EOF >> "${CLI_SCRIPT_FILE}"
               if (outcome == success) of /subsystem=logging/logger=${logger_category}:read-resource
                 /subsystem=logging/logger=${logger_category}:write-attribute(name=level, value=${logger_level:-FINE})
               else

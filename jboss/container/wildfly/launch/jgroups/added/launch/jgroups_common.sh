@@ -48,14 +48,14 @@ init_protocol_list_store() {
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
     local stackNames
     testXpathExpression "${xpath}" "result" "stackNames"
-    if [ ${result} -eq 0 ]; then
+    if [ "${result}" -eq 0 ]; then
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
         echo -n "" > "${JGROUPS_PROTOCOL_ADDS}/${stack}_protocol_list"
 
         xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack' and @name='${stack}']/*[local-name()='protocol' or contains(local-name(), '-protocol')]/@type\""
         testXpathExpression "${xpath}" "result" "protocolTypes"
-        if [ ${result} -eq 0 ]; then
+        if [ "${result}" -eq 0 ]; then
           protocolTypes=$(splitAttributesStringIntoLines "${protocolTypes}" "type")
           echo "${protocolTypes}" >> "${JGROUPS_PROTOCOL_ADDS}/${stack}_protocol_list"
         fi
@@ -86,7 +86,7 @@ add_protocol_at_prosition() {
     if [ "${protocol}" = "${line}" ]; then
       exist="true"
     fi
-    if [ ${_index} -eq ${index} ]; then
+    if [ ${_index} -eq "${index}" ]; then
       stack_list+=("${protocol}")
     fi
     stack_list+=("${line}")

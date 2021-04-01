@@ -29,7 +29,7 @@ function configure_port_offset() {
         end-if
         /socket-binding-group=standard-sockets:write-attribute(name=port-offset, value="${PORT_OFFSET}")"
 
-      echo "$cli" >> ${CLI_SCRIPT_FILE}
+      echo "$cli" >> "${CLI_SCRIPT_FILE}"
     fi
   fi
 }

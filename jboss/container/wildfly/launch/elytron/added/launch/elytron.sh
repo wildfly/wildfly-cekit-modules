@@ -1,3 +1,5 @@
+#!/bin/env bash
+
 # only processes a single environment as the placeholder is not preserved
 prepareEnv() {
 
@@ -69,9 +71,9 @@ insert_elytron_tls() {
          </tls>\n"
     # check for new config tag, use that if it's present, note we remove the <!-- ##ELYTRON_TLS## --> on first substitution
     if [ "true" = $(has_elytron_tls "${CONFIG_FILE}") ]; then
-        sed -i "s|<!-- ##ELYTRON_TLS## -->|${elytron_tls}|" $CONFIG_FILE
+        sed -i "s|<!-- ##ELYTRON_TLS## -->|${elytron_tls}|" "$CONFIG_FILE"
         # remove the legacy tag, if it's present
-        sed -i "s|<!-- ##TLS## -->||" $CONFIG_FILE
+        sed -i "s|<!-- ##TLS## -->||" "$CONFIG_FILE"
     fi
 }
 
@@ -101,7 +103,7 @@ elytron_legacy_config() {
         </server-ssl-contexts>\n\
     </tls>"
 
-   echo ${legacy_elytron_tls}
+   echo "${legacy_elytron_tls}"
 }
 
 create_elytron_keystore() {
@@ -132,7 +134,7 @@ create_elytron_keystore() {
               <implementation type=\"${encrypt_keystore_type:-JCEKS}\"/>\n\
               <file ${keystore_path} ${keystore_rel_to} />\n\
             </key-store>"
-    echo ${key_store}
+    echo "${key_store}"
 }
 
 create_elytron_keystore_cli() {
@@ -179,7 +181,7 @@ create_elytron_keymanager() {
     # in either case it is required.
     local key_password="<credential-reference clear-text=\"${key_password}\"/>"
     local elytron_keymanager="<key-manager name=\"${key_manager}\" key-store=\"${key_store}\">$key_password</key-manager>"
-    echo ${elytron_keymanager}
+    echo "${elytron_keymanager}"
 }
 
 create_elytron_keymanager_cli() {
@@ -289,14 +291,14 @@ configure_https() {
           # insert the new config element, only if it hasn't been added already
           insert_elytron_tls_config_if_needed "${CONFIG_FILE}"
           # insert the individual config blocks we leave the replacement tags around in case something else (e.g. jgoups might need to add a keystore etc)
-          sed -i "s|<!-- ##ELYTRON_KEY_STORE## -->|${elytron_key_store}<!-- ##ELYTRON_KEY_STORE## -->|" $CONFIG_FILE
-          sed -i "s|<!-- ##ELYTRON_KEY_MANAGER## -->|${elytron_key_manager}<!-- ##ELYTRON_KEY_MANAGER## -->|" $CONFIG_FILE
-          sed -i "s|<!-- ##ELYTRON_SERVER_SSL_CONTEXT## -->|${elytron_server_ssl_context}<!-- ##ELYTRON_SERVER_SSL_CONTEXT## -->|" $CONFIG_FILE
+          sed -i "s|<!-- ##ELYTRON_KEY_STORE## -->|${elytron_key_store}<!-- ##ELYTRON_KEY_STORE## -->|" "$CONFIG_FILE"
+          sed -i "s|<!-- ##ELYTRON_KEY_MANAGER## -->|${elytron_key_manager}<!-- ##ELYTRON_KEY_MANAGER## -->|" "$CONFIG_FILE"
+          sed -i "s|<!-- ##ELYTRON_SERVER_SSL_CONTEXT## -->|${elytron_server_ssl_context}<!-- ##ELYTRON_SERVER_SSL_CONTEXT## -->|" "$CONFIG_FILE"
       else # legacy config
           legacy_elytron_tls=$(elytron_legacy_config "${elytron_key_store}" "${elytron_key_manager}" "${elytron_server_ssl_context}")
       fi
       # will be empty unless only the old marker is present.
-      sed -i "s|<!-- ##TLS## -->|${legacy_elytron_tls}|" $CONFIG_FILE
+      sed -i "s|<!-- ##TLS## -->|${legacy_elytron_tls}|" "$CONFIG_FILE"
     elif [ ${use_tls_cli} -eq 1 ]; then
       create_elytron_keystore_cli "LocalhostKeyStore" "${HTTPS_KEYSTORE}" "${HTTPS_PASSWORD}" "${HTTPS_KEYSTORE_TYPE}" "${HTTPS_KEYSTORE_DIR}"
       create_elytron_keymanager_cli "LocalhostKeyManager" "LocalhostKeyStore" "${key_password}"
@@ -307,7 +309,7 @@ configure_https() {
     getConfigurationMode "<!-- ##HTTPS_CONNECTOR## -->" "elytron_https_connector_conf_mode"
     if [ "${elytron_https_connector_conf_mode}" = "xml" ]; then
       local elytron_https_connector=$(create_elytron_https_connector "https" "https" "LocalhostSslContext" "true")
-      sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|${elytron_https_connector}|" $CONFIG_FILE
+      sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|${elytron_https_connector}|" "$CONFIG_FILE"
     elif [ "${elytron_https_connector_conf_mode}" = "cli" ]; then
       create_elytron_https_connector_cli "https" "https" "LocalhostSslContext" "true"
     fi
@@ -373,7 +375,7 @@ configure_elytron_integration() {
   local configureMode
   getConfigurationMode "<!-- ##ELYTRON_INTEGRATION## -->" "configureMode"
 
-  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##INTEGRATION_ELYTRON_REALM## -->" $CONFIG_FILE; then
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##INTEGRATION_ELYTRON_REALM## -->" "$CONFIG_FILE"; then
     local elytron_realm="<elytron-realm name=\"${SECDOMAIN_NAME}\" legacy-jaas-config=\"${SECDOMAIN_NAME}\"/>\n"
     local elytron_integration="<elytron-integration>\n\
           <security-realms>\n\
@@ -381,11 +383,11 @@ configure_elytron_integration() {
           </security-realms>\n\
     </elytron-integration>"
 
-    sed -i "s|<!-- ##ELYTRON_INTEGRATION## -->|${elytron_integration}|" $CONFIG_FILE
-    sed -i "s|<!-- ##INTEGRATION_ELYTRON_REALM## -->|${elytron_realm}<!-- ##INTEGRATION_ELYTRON_REALM## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##ELYTRON_INTEGRATION## -->|${elytron_integration}|" "$CONFIG_FILE"
+    sed -i "s|<!-- ##INTEGRATION_ELYTRON_REALM## -->|${elytron_realm}<!-- ##INTEGRATION_ELYTRON_REALM## -->|" "$CONFIG_FILE"
   elif [ "${configureMode}" = "cli" ]; then
 
-     cat << EOF >> ${CLI_SCRIPT_FILE}
+     cat << EOF >> "${CLI_SCRIPT_FILE}"
      if (outcome == success) of /subsystem=elytron:read-resource
       /subsystem=security/elytron-realm=${SECDOMAIN_NAME}:add(legacy-jaas-config=${SECDOMAIN_NAME})
     end-if
@@ -403,11 +405,11 @@ configure_elytron_security_domain() {
                       <realm name=\"${SECDOMAIN_NAME}\"/>\n\
                   </security-domain>"
 
-    sed -i "s|<!-- ##ELYTRON_SECURITY_DOMAIN## -->|${elytron_security_domain}<!-- ##ELYTRON_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##ELYTRON_SECURITY_DOMAIN## -->|${elytron_security_domain}<!-- ##ELYTRON_SECURITY_DOMAIN## -->|" "$CONFIG_FILE"
 
   elif [ "${configureMode}" = "cli" ]; then
 
-      cat << EOF >> ${CLI_SCRIPT_FILE}
+      cat << EOF >> "${CLI_SCRIPT_FILE}"
         if (outcome == success) of /subsystem=elytron:read-resource
           /subsystem=elytron/security-domain=${SECDOMAIN_NAME}:add(realms=[{realm=${SECDOMAIN_NAME}}],default-realm=${SECDOMAIN_NAME},permission-mapper=default-permission-mapper)
         end-if
@@ -428,11 +430,11 @@ configure_http_authentication_factory() {
                       </mechanism-configuration>\n\
                   </http-authentication-factory>"
 
-      sed -i "s|<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|${http_authentication_factory}<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|" $CONFIG_FILE
+      sed -i "s|<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|${http_authentication_factory}<!-- ##HTTP_AUTHENTICATION_FACTORY## -->|" "$CONFIG_FILE"
 
   elif [ "${configureMode}" = "cli" ]; then
 
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
       if (outcome == success) of /subsystem=elytron:read-resource
          /subsystem=elytron/http-authentication-factory=${SECDOMAIN_NAME}-http:add(http-server-mechanism-factory=global,security-domain=${SECDOMAIN_NAME},mechanism-configurations=[{mechanism-name=BASIC},{mechanism-name=FORM}])
       end-if
@@ -444,18 +446,18 @@ configure_http_application_security_domains() {
   local configureMode
   getConfigurationMode "<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->" "configureMode"
 
-  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->" $CONFIG_FILE; then
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->" "$CONFIG_FILE"; then
     local application_security_domain="<application-security-domain name=\"${SECDOMAIN_NAME}\" http-authentication-factory=\"${SECDOMAIN_NAME}-http\"/>\n"
     local http_application_security_domains="<application-security-domains>\n\
                 <!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->\
             </application-security-domains>"
 
-    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->|${http_application_security_domains}|" $CONFIG_FILE
-    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAINS## -->|${http_application_security_domains}|" "$CONFIG_FILE"
+    sed -i "s|<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##HTTP_APPLICATION_SECURITY_DOMAIN## -->|" "$CONFIG_FILE"
 
   elif [ "${configureMode}" = "cli" ]; then
 
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome == success) of /subsystem=undertow:read-resource
       /subsystem=undertow/application-security-domain=${SECDOMAIN_NAME}:add(http-authentication-factory=${SECDOMAIN_NAME}-http)
     end-if
@@ -467,18 +469,18 @@ configure_ejb_application_security_domains() {
   local configureMode
   getConfigurationMode "<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->" "configureMode"
 
-  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->" $CONFIG_FILE; then
+  if [ "${configureMode}" = "xml" ] || grep -Fq "<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->" "$CONFIG_FILE"; then
     local application_security_domain="<application-security-domain name=\"${SECDOMAIN_NAME}\" security-domain=\"${SECDOMAIN_NAME}\"/>\n"
     local ejb_application_security_domains="<application-security-domains>\n\
                 <!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->\
             </application-security-domains>"
 
-    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->|${ejb_application_security_domains}|" $CONFIG_FILE
-    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAINS## -->|${ejb_application_security_domains}|" "$CONFIG_FILE"
+    sed -i "s|<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|${application_security_domain}<!-- ##EJB_APPLICATION_SECURITY_DOMAIN## -->|" "$CONFIG_FILE"
 
   elif [ "${configureMode}" = "cli" ]; then
 
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome == success) of /subsystem=ejb3:read-resource
       /subsystem=ejb3/application-security-domain=${SECDOMAIN_NAME}:add(security-domain=${SECDOMAIN_NAME})
     end-if
@@ -500,7 +502,7 @@ configure_elytron_realm() {
   fi
   roles_properties_arg="$roles_properties_arg}"
 
-  cat << EOF >> ${CLI_SCRIPT_FILE}
+  cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome == success) of /subsystem=elytron/properties-realm=$1:read-resource
       echo ELYTRON_SEC_DOMAIN environment variable value conflicts with an existing elytron properties-realm, server can't be configured. >> \${error_file}
       exit
@@ -511,7 +513,7 @@ EOF
 }
 
 configure_elytron_only_security_domain() {
-  cat << EOF >> ${CLI_SCRIPT_FILE}
+  cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome == success) of /subsystem=elytron/security-domain=$1:read-resource
       echo ELYTRON_SEC_DOMAIN environment variable value conflicts with an existing elytron security domain, server can't be configured. >> \${error_file}
       exit
@@ -522,7 +524,7 @@ EOF
 }
 
 configure_undertow_security_domain() {
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome != success) of /subsystem=undertow:read-resource
       echo You have set an ELYTRON_SEC_DOMAIN environment variables to configure an application-security-domain. Fix your configuration to contain undertow subsystem for this to happen. >> \${error_file}
       exit
@@ -537,7 +539,7 @@ EOF
 }
 
 configure_ejb_security_domain() {
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
     if (outcome == success) of /subsystem=ejb3:read-resource
       /subsystem=ejb3/application-security-domain=$1:add(security-domain=$2)
     end-if

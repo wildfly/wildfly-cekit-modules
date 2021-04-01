@@ -6,14 +6,14 @@ if [ "${SCRIPT_DEBUG}" = "true" ] ; then
     echo "Script debugging is enabled, allowing bash commands and their arguments to be printed as they are executed"
 fi
 
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 # sources external project configuration file. External projects will configure the common modules using launch-config.sh file.
 # Specifically, they have to add the scripts they want to run into CONFIG_SCRIPT_CANDIDATES array
 if [[ -s $JBOSS_HOME/bin/launch/launch-config.sh ]]; then
-  source $JBOSS_HOME/bin/launch/launch-config.sh
+  source "$JBOSS_HOME"/bin/launch/launch-config.sh
 fi
 # Common environment variables, functions and configurations
-source $JBOSS_HOME/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
 
 
 # Configure scripts. It takes all the scripts added by the external projects in CONFIG_SCRIPT_CANDIDATES arrays
@@ -59,7 +59,7 @@ function configure_scripts() {
   fi
 
   # Sources the configure-modules, it also will invoke all the modules configured in the CONFIGURE_SCRIPTS array
-  source $JBOSS_HOME/bin/launch/configure-modules.sh
+  source "$JBOSS_HOME"/bin/launch/configure-modules.sh
 
   # Process any errors and warnings generated while running the launch configuration scripts
   processErrorsAndWarnings
@@ -99,9 +99,9 @@ function clean_shutdown() {
   fi
   log_error "*** WildFly wrapper process ($$) received TERM signal ***"
   if [ -z ${management_port} ]; then
-    $JBOSS_HOME/bin/jboss-cli.sh -c "shutdown --timeout=60"
+    "$JBOSS_HOME"/bin/jboss-cli.sh -c "shutdown --timeout=60"
   else
-    $JBOSS_HOME/bin/jboss-cli.sh --commands="connect remote+http://localhost:${management_port},shutdown --timeout=60"
+    "$JBOSS_HOME"/bin/jboss-cli.sh --commands="connect remote+http://localhost:${management_port},shutdown --timeout=60"
   fi
   wait $!
 }
@@ -126,7 +126,7 @@ function launchServer() {
   local imgVersion=${JBOSS_IMAGE_VERSION:-$IMAGE_VERSION}
   log_info "Running $imgName image, version $imgVersion"
 
-  ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_HA_ARGS} ${JBOSS_MESSAGING_ARGS} ${CLI_EXECUTION_OPTS}  &
+  ${cmd} "${JAVA_PROXY_OPTIONS}" "${JBOSS_HA_ARGS}" "${JBOSS_MESSAGING_ARGS}" "${CLI_EXECUTION_OPTS}"  &
 
   local pid=$!
 
@@ -159,7 +159,7 @@ function configure_boot_script() {
   local script="$1"
   # remove any empty line
   if [ -f "${script}" ]; then
-    sed -i '/^$/d' $script
+    sed -i '/^$/d' "$script"
   fi
 
   if [ -f "$JBOSS_HOME/extensions/postconfigure.sh" ] || [ -f "$JBOSS_HOME/extensions/delayedpostconfigure.sh" ]; then
@@ -212,7 +212,7 @@ function handleExtensions {
       exit 1
     else
       read -r status<"${marker_file}"
-      rm -rf ${CLI_BOOT_RELOAD_MARKER_DIR}
+      rm -rf "${CLI_BOOT_RELOAD_MARKER_DIR}"
       if [ "success" = "${status}" ]; then
         configure_extensions
         if [ $? = 0 ]; then
@@ -238,7 +238,7 @@ function wait_marker() {
   do
     sleep 1;
     ((t=t+1))
-    if [ $t -gt ${timeout} ]; then
+    if [ $t -gt "${timeout}" ]; then
       return 1
     fi
   done;
@@ -253,7 +253,7 @@ function shutdown_server() {
     exit 1
   fi
   # Whatever the PORT_OFFSET, server started in admin mode listen on default port.
-  $JBOSS_HOME/bin/jboss-cli.sh -c ":shutdown"
+  "$JBOSS_HOME"/bin/jboss-cli.sh -c ":shutdown"
 }
 
 function reload_server() {
@@ -267,11 +267,11 @@ function reload_server() {
   local script="${CLI_SCRIPT_FILE}"
   # remove any empty line
   if [ -f "${script}" ]; then
-    sed -i '/^$/d' $script
+    sed -i '/^$/d' "$script"
   fi
   if [ -s "${script}" ]; then
-    cat ${script} > ${CLI_SCRIPT_FILE_FOR_RELOAD}
-    echo "" >> ${CLI_SCRIPT_FILE_FOR_RELOAD}
+    cat "${script}" > "${CLI_SCRIPT_FILE_FOR_RELOAD}"
+    echo "" >> "${CLI_SCRIPT_FILE_FOR_RELOAD}"
   fi
 
   restart_marker=/tmp/cli-restart-marker-${systime}
@@ -281,7 +281,7 @@ function reload_server() {
               else
                 :reload(start-mode=normal)
               end-if"
-  echo "$reload_ops" >> ${CLI_SCRIPT_FILE_FOR_RELOAD}
+  echo "$reload_ops" >> "${CLI_SCRIPT_FILE_FOR_RELOAD}"
   log_info "Configuring the server with custom extensions script ${CLI_SCRIPT_FILE_FOR_RELOAD}"
   start=$(date +%s%3N)
   # Whatever the PORT_OFFSET, server started in admin mode listen on default port.
@@ -313,12 +313,12 @@ function reload_server() {
       return 1
     fi
     if [ "${SCRIPT_DEBUG}" != "true" ] ; then
-      rm ${script} 2> /dev/null
-      rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
-      rm ${CONFIG_ERROR_FILE} 2> /dev/null
-      rm ${CONFIG_WARNING_FILE} 2> /dev/null
-      rm ${CLI_SCRIPT_FILE_FOR_RELOAD} 2> /dev/null
-      rm ${CLI_SCRIPT_OUTPUT_FILE} 2> /dev/null
+      rm "${script}" 2> /dev/null
+      rm "${CLI_SCRIPT_PROPERTY_FILE}" 2> /dev/null
+      rm "${CONFIG_ERROR_FILE}" 2> /dev/null
+      rm "${CONFIG_WARNING_FILE}" 2> /dev/null
+      rm "${CLI_SCRIPT_FILE_FOR_RELOAD}" 2> /dev/null
+      rm "${CLI_SCRIPT_OUTPUT_FILE}" 2> /dev/null
     else
       log_info "CLI Script used to configure the server: ${CLI_SCRIPT_FILE_FOR_RELOAD}"
       log_info "CLI Script generated by custom extensions script: ${script}"

@@ -8,6 +8,25 @@ env:
   LANG: en_US.UTF-8
   STANDALONE_CONFIG_URL: https://raw.githubusercontent.com/jboss-container-images/jboss-eap-modules/7.3.x-legacy/jboss-eap-config-openshift/CD17.0/added/standalone-openshift.xml
 jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: n1hility/cancel-previous-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup required system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install shellcheck
+      - name: Run ShellCheck
+        run: |
+          ./shellcheck.sh
   bats:
     name: Bats Shell Tests
     runs-on: ${{ matrix.os }}

@@ -1,32 +1,32 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/mp-config.sh $JBOSS_HOME/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/mp-config.sh "$JBOSS_HOME"/bin/launch
 
-mkdir -p $JBOSS_HOME/standalone/configuration
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/mp-config.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/mp-config.sh
 
 BATS_PATH_TO_EXISTING_FILE=$BATS_TEST_DIRNAME/mp-config.bats
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -50,7 +50,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=$BATS_TEST_DIRNAME" {
 
   run generate_microprofile_config_source "${BATS_TEST_DIRNAME}"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   result=$(check_dir_config "${BATS_TEST_DIRNAME}" "500" "${output}")
@@ -60,7 +60,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=$BATS_TEST_DIRNAME MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
 
   run generate_microprofile_config_source "${BATS_TEST_DIRNAME}" "150"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   result=$(check_dir_config "${BATS_TEST_DIRNAME}" "150" "${output}")
@@ -70,7 +70,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=etc/config" {
 
   run generate_microprofile_config_source "etc/config"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value 'etc/config' is not an absolute path"
@@ -83,7 +83,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=jboss.home MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
 
   run generate_microprofile_config_source "jboss.home" "150"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value 'jboss.home' is not an absolute path"
@@ -96,7 +96,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=/bogus/beyond/belief" {
 
   run generate_microprofile_config_source "/bogus/beyond/belief"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '/bogus/beyond/belief' is a non-existent path"
@@ -108,7 +108,7 @@ teardown() {
 
 @test "Configure MICROPROFILE_CONFIG_DIR=/bogus/beyond/belief MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
   run generate_microprofile_config_source "/bogus/beyond/belief" "150"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
 
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '/bogus/beyond/belief' is a non-existent path"
@@ -134,7 +134,7 @@ teardown() {
 @test "Configure MICROPROFILE_CONFIG_DIR=BATS_PATH_TO_EXISTING_FILE MICROPROFILE_CONFIG_DIR_ORDINAL=150" {
   run generate_microprofile_config_source "${BATS_PATH_TO_EXISTING_FILE}" "150"
 echo "CONFIG_FILE $CONFIG_FILE"
-  echo ${output}
+  echo "${output}"
   [ "$status" -eq 0 ]
   echo "${lines[0]}" | grep -q "WARN MICROPROFILE_CONFIG_DIR value '${BATS_PATH_TO_EXISTING_FILE}' is not a directory"
   [ $? -eq 0 ]
@@ -150,10 +150,10 @@ check_dir_config() {
    <config-source ordinal="$ordinal" name="config-map"><dir path="$dir_name"/></config-source>
 EOF
 )
-  result=$(echo ${toCheck} | sed 's|\\n||g' | xmllint --format --noblanks -)
+  result=$(echo "${toCheck}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
   if [ "${result}" = "${expected}" ]; then
-    echo $result
+    echo "$result"
   fi
 }
 

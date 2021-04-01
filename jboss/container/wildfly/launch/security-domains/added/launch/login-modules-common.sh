@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source $JBOSS_HOME/bin/launch/launch-common.sh
+source "$JBOSS_HOME"/bin/launch/launch-common.sh
 
 # Arguments:
 # $1 - code
@@ -37,11 +37,11 @@ configure_login_module_cli() {
     sec_domain_auth="${sec_domain}/authentication=classic"
     login_module="${sec_domain_auth}/login-module=$1"
     add_login_module="${login_module}:add(code=$1, flag=$2"
-    if [ ! -z $3 ]; then
+    if [ ! -z "$3" ]; then
       add_login_module="$add_login_module, module=$3"
     fi
     add_login_module="$add_login_module)"
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
         if (outcome != success) of $sec_subsystem:read-resource
           echo "You are adding a login module to other security domain. However, your base configuration doesn't contain the security subsystem. Fix your configuration for that to happen." >> \${error_file}
         end-if

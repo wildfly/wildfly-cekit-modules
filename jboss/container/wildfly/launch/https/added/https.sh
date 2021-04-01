@@ -1,7 +1,7 @@
 #!/bin/sh
 # only processes a single environment as the placeholder is not preserved
 
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 
 function prepareEnv() {
   unset HTTPS_NAME
@@ -50,11 +50,11 @@ function configure_https() {
     log_warning "Partial HTTPS configuration, the https connector WILL NOT be configured."
 
     if [ "${sslConfMode}" = xml ]; then
-      sed -i "s|<!-- ##SSL## -->|<!-- No SSL configuration discovered -->|" $CONFIG_FILE
+      sed -i "s|<!-- ##SSL## -->|<!-- No SSL configuration discovered -->|" "$CONFIG_FILE"
     fi
 
     if [ "${httpsConfMode}" = xml ]; then
-      sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|<!-- No HTTPS configuration discovered -->|" $CONFIG_FILE
+      sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|<!-- No HTTPS configuration discovered -->|" "$CONFIG_FILE"
     fi
   fi
 }
@@ -69,7 +69,7 @@ function configureSslXml() {
             </ssl>\n\
         </server-identities>"
 
-  sed -i "s|<!-- ##SSL## -->|${ssl}|" $CONFIG_FILE
+  sed -i "s|<!-- ##SSL## -->|${ssl}|" "$CONFIG_FILE"
 }
 
 function configureSslCli() {
@@ -81,7 +81,7 @@ function configureSslCli() {
   fi
   ssl_add="${ssl_add})"
 
-  cat << EOF >> ${CLI_SCRIPT_FILE}
+  cat << EOF >> "${CLI_SCRIPT_FILE}"
   if (outcome != success) of ${app_realm_resource}:read-resource
     echo You have set the HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add the ssl server-identity. Fix your configuration to contain the ${app_realm_resource} resource for this to happen. >> \${error_file}
     exit
@@ -96,7 +96,7 @@ EOF
 
 function configureHttpsXml() {
   https_connector="<https-listener name=\"https\" socket-binding=\"https\" security-realm=\"ApplicationRealm\" proxy-address-forwarding=\"true\"/>"
-  sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|${https_connector}|" $CONFIG_FILE
+  sed -i "s|<!-- ##HTTPS_CONNECTOR## -->|${https_connector}|" "$CONFIG_FILE"
 }
 
 function configureHttpsCli() {
@@ -115,7 +115,7 @@ function configureHttpsCli() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='server']/@name\""
     testXpathExpression "${xpath}" "serverNamesRet"
     if [ "${serverNamesRet}" -ne 0 ]; then
-      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> ${CONFIG_ERROR_FILE}
+      echo "You have set HTTPS_PASSWORD, HTTPS_KEYSTORE_DIR and HTTPS_KEYSTORE to add an undertow https-listener. Fix your configuration to contain at least one server in the undertow subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
       return
     fi
 
@@ -128,7 +128,7 @@ function configureHttpsCli() {
       return
     fi
 
-    cat << EOF >> ${CLI_SCRIPT_FILE}
+    cat << EOF >> "${CLI_SCRIPT_FILE}"
     for serverName in /subsystem=undertow:read-children-names(child-type=server)
       /subsystem=undertow/server=\$serverName/https-listener=https:add(security-realm=ApplicationRealm, socket-binding=https, proxy-address-forwarding=true)
     done

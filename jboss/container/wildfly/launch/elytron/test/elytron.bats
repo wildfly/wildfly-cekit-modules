@@ -6,20 +6,20 @@
 export BATS_TEST_SKIPPED=
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 
-rm -rf $JBOSS_HOME
-mkdir -p $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/elytron.sh $JBOSS_HOME/bin/launch
-mkdir -p $JBOSS_HOME/standalone/configuration
+rm -rf "$JBOSS_HOME"
+mkdir -p "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/elytron.sh "$JBOSS_HOME"/bin/launch
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
-source $JBOSS_HOME/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
 
-load $BATS_TEST_DIRNAME/../added/launch/elytron.sh
-load $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh
+load "$BATS_TEST_DIRNAME"/../added/launch/elytron.sh
+load "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh
 
 setup() {
   export CONFIG_FILE=${BATS_TMPDIR}/standalone-openshift.xml
@@ -32,44 +32,44 @@ teardown() {
 }
 
 @test "Check for new elytron marker" {
-  echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
+  echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
   run has_elytron_tls "${CONFIG_FILE}"
   [ "${output}" = "true" ]
 }
 
 @test "Check for new elytron marker not present" {
-  echo '<!-- ##XELYTRON_TLSX## -->' > ${CONFIG_FILE}
+  echo '<!-- ##XELYTRON_TLSX## -->' > "${CONFIG_FILE}"
   run has_elytron_tls "${CONFIG_FILE}"
   [ "${output}" = "false" ]
 }
 
 @test "Check for legacy elytron marker" {
-  echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+  echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
   run has_elytron_legacy_tls "${CONFIG_FILE}"
   [ "${output}" = "true" ]
 }
 
 @test "Check for legacy elytron marker not present" {
-  echo '<!-- ##XTLSX## -->' > ${CONFIG_FILE}
+  echo '<!-- ##XTLSX## -->' > "${CONFIG_FILE}"
   run has_elytron_legacy_tls "${CONFIG_FILE}"
   [ "${output}" = "false" ]
 }
 
 @test "Check for new elytron keystore present" {
-  echo '<!-- ##ELYTRON_KEY_STORE## -->' > ${CONFIG_FILE}
+  echo '<!-- ##ELYTRON_KEY_STORE## -->' > "${CONFIG_FILE}"
   run has_elytron_keystore "${CONFIG_FILE}"
   [ "${output}" = "true" ]
 }
 
 @test "Check for new elytron keystore not present" {
-  echo '<!-- ##XELYTRON_KEY_STOREX## -->' > ${CONFIG_FILE}
+  echo '<!-- ##XELYTRON_KEY_STOREX## -->' > "${CONFIG_FILE}"
   run has_elytron_keystore "${CONFIG_FILE}"
   [ "${output}" = "false" ]
 }
 
 @test "Insert elytron TLS config skeleton" {
-  echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-  echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+  echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+  echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
   run has_elytron_tls "${CONFIG_FILE}"
   [ "${output}" = "true" ]
   run has_elytron_legacy_tls "${CONFIG_FILE}"
@@ -87,7 +87,7 @@ teardown() {
 }
 
 @test "Don't insert elytron TLS config skeleton if only legacy present" {
-  echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+  echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
   run has_elytron_tls "${CONFIG_FILE}"
   [ "${output}" = "false" ]
   insert_elytron_tls "${CONFIG_FILE}"
@@ -125,8 +125,8 @@ EOF
 
     run elytron_legacy_config "${elytron_key_store}" "${elytron_key_manager}" "${elytron_server_ssl_context}"
     xml=${output}
-    result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
-    echo ${result}
+    result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
+    echo "${result}"
     expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
     [ "${result}" = "${expected}" ]
 }
@@ -160,8 +160,8 @@ EOF
 
     run elytron_legacy_config "${elytron_key_store}" "${elytron_key_manager}" "${elytron_server_ssl_context}"
     xml=${output}
-    result=$(echo ${xml} | sed 's|\\n||g' | xmllint --format --noblanks -)
-    echo ${result}
+    result=$(echo "${xml}" | sed 's|\\n||g' | xmllint --format --noblanks -)
+    echo "${result}"
     expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
     [ "${result}" = "${expected}" ]
 }
@@ -297,8 +297,8 @@ EOF
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing all required vars" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
     expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD=
@@ -312,8 +312,8 @@ EOF
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_PASSWORD" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
     expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD=
@@ -327,8 +327,8 @@ EOF
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_KEYSTORE_TYPE" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
     expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE_TYPE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
@@ -342,8 +342,8 @@ EOF
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_KEYSTORE" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
     expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
@@ -357,8 +357,8 @@ EOF
 }
 
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, no HTTPS_KEY_PASSWORD" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
     expected='WARN No HTTPS_KEY_PASSWORD was provided; using HTTPS_PASSWORD for Elytron LocalhostKeyManager.'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
@@ -372,9 +372,9 @@ EOF
 }
 
 @test "Configure HTTPS - Basic config" {
-    echo '<?xml version="1.0"?>' > ${CONFIG_FILE}
-    echo '<!-- ##ELYTRON_TLS## -->' >> ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<?xml version="1.0"?>' > "${CONFIG_FILE}"
+    echo '<!-- ##ELYTRON_TLS## -->' >> "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
 
 expected=$(cat <<EOF
 <?xml version="1.0"?>
@@ -415,8 +415,8 @@ EOF
 }
 
 @test "Configure HTTPS - HTTPS_KEYSTORE_DIR absolute path" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
 
 expected=$(cat <<EOF
 <?xml version="1.0"?>
@@ -456,8 +456,8 @@ EOF
 }
 
 @test "Configure HTTPS - HTTPS_KEYSTORE_DIR absolute path, HTTPS_KEY_PASSWORD is set" {
-    echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##TLS## -->' >> "${CONFIG_FILE}"
 
 expected=$(cat <<EOF
 <?xml version="1.0"?>
@@ -498,7 +498,7 @@ EOF
 
 
 @test "Configure HTTPS - legacy configuration - no HTTPS_KEYSTORE_DIR absolute path" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
 expected=$(cat <<EOF
 <?xml version="1.0"?>
    <tls>
@@ -534,7 +534,7 @@ EOF
 }
 
 @test "Configure HTTPS - legacy configuration - HTTPS_KEYSTORE_DIR absolute path, HTTPS_KEY_PASSWORD set" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
 expected=$(cat <<EOF
 <?xml version="1.0"?>
    <tls>
@@ -571,7 +571,7 @@ EOF
 
 
 @test "Configure HTTPS - legacy configuration - HTTPS_KEYSTORE_DIR absolute path" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
 expected=$(cat <<EOF
 <?xml version="1.0"?>
    <tls>
@@ -609,7 +609,7 @@ EOF
 # mixed in with the above, xmllint complains a lot about extra content at end of file,
 # so test them separately for now. This test is the same for both legacy and new configs
 @test "Configure HTTPS - Test HTTPS Connector - basic https-listener" {
-    echo '<!-- ##HTTPS_CONNECTOR## -->' > ${CONFIG_FILE}
+    echo '<!-- ##HTTPS_CONNECTOR## -->' > "${CONFIG_FILE}"
 
 expected=$(cat <<EOF
 <?xml version="1.0"?>
@@ -631,8 +631,8 @@ EOF
 }
 
 @test "Configure HTTPS - missing required params" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##ELYTRON_TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##ELYTRON_TLS## -->' >> "${CONFIG_FILE}"
 expected=$(cat <<EOF
 <!-- ##TLS## -->
 <!-- ##ELYTRON_TLS## -->
@@ -653,8 +653,8 @@ EOF
 }
 
 @test "Configure ELYTRON_TLS - only replace once" {
-    echo '<!-- ##TLS## -->' > ${CONFIG_FILE}
-    echo '<!-- ##ELYTRON_TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' > "${CONFIG_FILE}"
+    echo '<!-- ##ELYTRON_TLS## -->' >> "${CONFIG_FILE}"
 expected=$(cat <<EOF
 
          <tls>

@@ -1,5 +1,5 @@
 #!/bin/bash
-SCRIPT_DIR="$(dirname $0)"
+SCRIPT_DIR="$(dirname "$0")"
 echo "SCRIPT_DIR: ${SCRIPT_DIR}"
 BATS_SERVER_CONFIG_FILE_DIRECTORY="${SCRIPT_DIR}/test-common/configuration"
 BATS_SERVER_CONFIG_FILE_NAME="standalone-openshift.xml"
@@ -26,7 +26,7 @@ if [ -n "${BATS_STANDALONE_XML_URL}" ]; then
     if [ -f "${BATS_SERVER_CONFIG_FILE}" ]; then
         echo "Skipping download as ${BATS_SERVER_CONFIG_FILE} already exists!"
     else
-        cd "${BATS_SERVER_CONFIG_FILE_DIRECTORY}"
+        cd "${BATS_SERVER_CONFIG_FILE_DIRECTORY}" || exit
         wget "${BATS_SERVER_CONFIG_FILE_NAME}" "${BATS_STANDALONE_XML_URL}"
         cd ../..
     fi
@@ -41,10 +41,10 @@ if [ "${1}" = "--tap" ]; then
     tap="--tap"
 fi
 
-for testName in `find ./ -name "${FILE_TEST_PATTERN}"`;
+for testName in $(find ./ -name "${FILE_TEST_PATTERN}");
 do
-    echo ${testName};
-    bats ${tap} ${testName}
+    echo "${testName}";
+    bats ${tap} "${testName}"
     if [ "$?" -ne 0 ]; then
 	rc=1
 	failed+=(${testName})

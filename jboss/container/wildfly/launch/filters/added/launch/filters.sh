@@ -1,7 +1,7 @@
 #!/bin/sh
 
-source $JBOSS_HOME/bin/launch/launch-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/launch-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 
 prepareEnv() {
   clear_filters_env
@@ -16,17 +16,17 @@ configure() {
 }
 
 clear_filters_env() {
-  for filter_prefix in $(echo $FILTERS | sed "s/,/ /g"); do
-    clear_filter_env $filter_prefix
+  for filter_prefix in $(echo "$FILTERS" | sed "s/,/ /g"); do
+    clear_filter_env "$filter_prefix"
   done
   unset FILTERS
 }
 
 clear_filter_env() {
   local prefix=$1
-  unset ${prefix}_FILTER_REF_NAME
-  unset ${prefix}_FILTER_RESPONSE_HEADER_NAME
-  unset ${prefix}_FILTER_RESPONSE_HEADER_VALUE
+  unset "${prefix}"_FILTER_REF_NAME
+  unset "${prefix}"_FILTER_RESPONSE_HEADER_NAME
+  unset "${prefix}"_FILTER_RESPONSE_HEADER_VALUE
 }
 
 # check to see if no already defined FILTER_RESPONSE_HEADERS_MARKER tag
@@ -43,7 +43,7 @@ has_filter_placeholder_tag() {
 
 # <!-- ##HTTP_FILTERS_MARKER## -->
 insert_filter_tag() {
-    sed -i "s|<!-- ##HTTP_FILTERS_MARKER## -->|<filters><!-- ##FILTER_RESPONSE_HEADERS## --></filters>|" $CONFIG_FILE
+    sed -i "s|<!-- ##HTTP_FILTERS_MARKER## -->|<filters><!-- ##FILTER_RESPONSE_HEADERS## --></filters>|" "$CONFIG_FILE"
 }
 
 inject_filters() {
@@ -78,8 +78,8 @@ inject_filters() {
     fi
 
     # Everything seems ok, so let's do the replacements
-    for filter_prefix in $(echo $FILTERS | sed "s/,/ /g"); do
-      inject_filter $filter_prefix
+    for filter_prefix in $(echo "$FILTERS" | sed "s/,/ /g"); do
+      inject_filter "$filter_prefix"
     done
   fi
 }
@@ -115,7 +115,7 @@ inject_filter() {
 inject_response_header() {
   if [ "${filterResponseHeadersConfMode}" = "xml" ]; then
     local responseHeader=$(generate_response_header "$refName" "$responseHeaderName" "$responseHeaderValue")
-    sed -i "s|<!-- ##FILTER_RESPONSE_HEADERS## -->|${responseHeader}\n<!-- ##FILTER_RESPONSE_HEADERS## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##FILTER_RESPONSE_HEADERS## -->|${responseHeader}\n<!-- ##FILTER_RESPONSE_HEADERS## -->|" "$CONFIG_FILE"
   elif [ "${filterResponseHeadersConfMode}" = "cli" ]; then
     # We will do full checking in inject_filter_ref so if there is no undertow subsystem, we will report that there
     # TODO check that there is no existing response filter header
@@ -144,7 +144,7 @@ generate_response_header() {
 inject_filter_ref() {
   if [ "${filterRefConfMode}" = "xml" ]; then
     local filterRef=$(generate_filter_ref_xml "$refName")
-    sed -i "s|<!-- ##FILTER_REFS## -->|${filterRef}\n<!-- ##FILTER_REFS## -->|" $CONFIG_FILE
+    sed -i "s|<!-- ##FILTER_REFS## -->|${filterRef}\n<!-- ##FILTER_REFS## -->|" "$CONFIG_FILE"
   elif [ "${filterRefConfMode}" = "cli" ]; then
     # No need to check if we have an undertow subsystem here, as we already checked this before starting
     generate_filter_ref_cli "$refName"

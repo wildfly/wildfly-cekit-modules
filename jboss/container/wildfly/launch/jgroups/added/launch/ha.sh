@@ -1,6 +1,6 @@
 #!/bin/sh
 
-source $JBOSS_HOME/bin/launch/jgroups_common.sh
+source "$JBOSS_HOME"/bin/launch/jgroups_common.sh
 
 prepareEnv() {
   unset OPENSHIFT_KUBE_PING_NAMESPACE
@@ -61,7 +61,7 @@ check_view_pods_permission() {
             CURL_CERT_OPTION="-k"
         fi
         pods_auth="Authorization: Bearer $(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
-        pods_code=$(curl --noproxy "*" -s -o /dev/null -w "%{http_code}" -G --data-urlencode "${pods_labels}" ${CURL_CERT_OPTION} -H "${pods_auth}" ${pods_url})
+        pods_code=$(curl --noproxy "*" -s -o /dev/null -w "%{http_code}" -G --data-urlencode "${pods_labels}" ${CURL_CERT_OPTION} -H "${pods_auth}" "${pods_url}")
         if [ "${pods_code}" = "200" ]; then
             log_info "Service account has sufficient permissions to view pods in kubernetes (HTTP ${pods_code}). Clustering will be available."
         elif [ "${pods_code}" = "403" ]; then
@@ -150,14 +150,14 @@ generate_jgroups_auth_config_cli() {
     local stackNames
     testXpathExpression "${xpath}" "result" "stackNames"
 
-    if [ ${result} -ne 0 ]; then
+    if [ "${result}" -ne 0 ]; then
       echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure AUTH protocol but your configuration does not contain any stacks in the JGroups subsystem. Fix your configuration." >> "${CONFIG_ERROR_FILE}"
       return
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
         index=$(get_protocol_position "${stack}" "pbcast.GMS")
-        if [ ${index} -eq -1 ]; then
+        if [ "${index}" -eq -1 ]; then
             echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure AUTH protocol but GMS protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.GMS protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
             missingGMS="true"
             continue
@@ -167,7 +167,7 @@ generate_jgroups_auth_config_cli() {
             "/subsystem=jgroups/stack=$stack/protocol=AUTH/token=digest:add(algorithm="${digest_algorithm:-SHA-512}", shared-secret-reference={clear-text="${cluster_password}"})"
         )
         config="${config} $(configure_protocol_cli_helper "$stack" "AUTH" "${op[@]}")"
-        add_protocol_at_prosition "${stack}" "AUTH" ${index}
+        add_protocol_at_prosition "${stack}" "AUTH" "${index}"
       done <<< "${stackNames}"
   fi
 
@@ -198,14 +198,14 @@ generate_generic_ping_config() {
       local ret
       testXpathExpression "${xpath}" "ret"
 
-      if [ $ret -eq 0 ]; then
+      if [ "$ret" -eq 0 ]; then
         # No need to log a warning if the jgroups subsystem does not exist, since we will only call this code if it is there (in configure())
 
         xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
         local stackNames
         testXpathExpression "${xpath}" "result" "stackNames"
 
-        if [ ${result} -eq 0 ]; then
+        if [ "${result}" -eq 0 ]; then
           stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
           while read -r stack; do
             local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
@@ -255,14 +255,14 @@ generate_dns_ping_config() {
       local ret
       testXpathExpression "${xpath}" "ret"
 
-      if [ $ret -eq 0 ]; then
+      if [ "$ret" -eq 0 ]; then
         # No need to log a warning if the jgroups subsystem does not exist, since we will only call this code if it is there (in configure())
 
         xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
         local stackNames
         testXpathExpression "${xpath}" "result" "stackNames"
 
-        if [ ${result} -eq 0 ]; then
+        if [ "${result}" -eq 0 ]; then
           stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
           while read -r stack; do
             local op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0)"
@@ -289,7 +289,7 @@ generate_dns_ping_config() {
 
 configure_ha_args() {
   # Set HA args
-  IP_ADDR=`hostname -i`
+  IP_ADDR=$(hostname -i)
   JBOSS_HA_ARGS="-b ${JBOSS_HA_IP:-${IP_ADDR}} -bprivate ${JBOSS_HA_IP:-${IP_ADDR}}"
 
   init_node_name
@@ -323,16 +323,16 @@ configure_ha() {
   fi
 
   if [ "${CONF_AUTH_MODE}" = "xml" ]; then
-    sed -i "s|<!-- ##JGROUPS_AUTH## -->|${JGROUPS_AUTH}|g" $CONFIG_FILE
+    sed -i "s|<!-- ##JGROUPS_AUTH## -->|${JGROUPS_AUTH}|g" "$CONFIG_FILE"
   elif [ "${CONF_AUTH_MODE}" = "cli" ]; then
-    echo "${JGROUPS_AUTH}" >> ${CLI_SCRIPT_FILE};
+    echo "${JGROUPS_AUTH}" >> "${CLI_SCRIPT_FILE}";
   fi
 
   log_info "Configuring JGroups discovery protocol to ${ping_protocol}"
 
   if [ "${CONF_PING_MODE}" = "xml" ]; then
-    sed -i "s|<!-- ##JGROUPS_PING_PROTOCOL## -->|${ping_protocol_element}|g" $CONFIG_FILE
+    sed -i "s|<!-- ##JGROUPS_PING_PROTOCOL## -->|${ping_protocol_element}|g" "$CONFIG_FILE"
   elif [ "${CONF_PING_MODE}" = "cli" ]; then
-    echo "${ping_protocol_element}" >> ${CLI_SCRIPT_FILE};
+    echo "${ping_protocol_element}" >> "${CLI_SCRIPT_FILE}";
   fi
 }

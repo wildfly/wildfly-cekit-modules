@@ -1,4 +1,6 @@
-source $JBOSS_HOME/bin/launch/resource-adapters-common.sh
+#!/bin/env bash
+
+source "$JBOSS_HOME"/bin/launch/resource-adapters-common.sh
 
 function prepareEnv() {
   clearResourceAdaptersEnv

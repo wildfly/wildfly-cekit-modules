@@ -2,16 +2,16 @@
 
 # Openshift EAP launch script datasource generation routines
 
-if [ -f $JBOSS_HOME/bin/launch/launch-common.sh ]; then
-    source $JBOSS_HOME/bin/launch/launch-common.sh
+if [ -f "$JBOSS_HOME"/bin/launch/launch-common.sh ]; then
+    source "$JBOSS_HOME"/bin/launch/launch-common.sh
 fi
 
-if [ -f ${JBOSS_HOME}/bin/launch/openshift-node-name.sh ]; then
-    source ${JBOSS_HOME}/bin/launch/openshift-node-name.sh
+if [ -f "${JBOSS_HOME}"/bin/launch/openshift-node-name.sh ]; then
+    source "${JBOSS_HOME}"/bin/launch/openshift-node-name.sh
 fi
 
-if [ -f $JBOSS_HOME/bin/launch/logging.sh ]; then
-    source $JBOSS_HOME/bin/launch/logging.sh
+if [ -f "$JBOSS_HOME"/bin/launch/logging.sh ]; then
+    source "$JBOSS_HOME"/bin/launch/logging.sh
 fi
 
 # Local constants
@@ -29,15 +29,15 @@ function clearTxDatasourceEnv() {
     db=${service##*_}
     prefix=${tx_backend#*=}
 
-    unset ${service}_SERVICE_HOST
-    unset ${service}_SERVICE_PORT
-    unset ${prefix}_JNDI
-    unset ${prefix}_USERNAME
-    unset ${prefix}_PASSWORD
-    unset ${prefix}_DATABASE
-    unset ${prefix}_TX_ISOLATION
-    unset ${prefix}_MIN_POOL_SIZE
-    unset ${prefix}_MAX_POOL_SIZE
+    unset "${service}"_SERVICE_HOST
+    unset "${service}"_SERVICE_PORT
+    unset "${prefix}"_JNDI
+    unset "${prefix}"_USERNAME
+    unset "${prefix}"_PASSWORD
+    unset "${prefix}"_DATABASE
+    unset "${prefix}"_TX_ISOLATION
+    unset "${prefix}"_MIN_POOL_SIZE
+    unset "${prefix}"_MAX_POOL_SIZE
   fi
 }
 
@@ -70,7 +70,7 @@ function inject_jdbc_store() {
               <communication table-prefix=\"${prefix}\"/>\\
               <state table-prefix=\"${prefix}\"/>\\
           </jdbc-store>"
-    sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" $CONFIG_FILE
+    sed -i "s|<!-- ##JDBC_STORE## -->|${jdbcStore}|" "$CONFIG_FILE"
   elif [ "${dsConfMode}" = "cli" ]; then
     local subsystem_addr="/subsystem=transactions"
     # Since we have variables indicating that we should use a JDBC store in the Tx subsystem, we
@@ -114,7 +114,7 @@ function inject_tx_datasource() {
     host=$(find_env "${service}_SERVICE_HOST")
     port=$(find_env "${service}_SERVICE_PORT")
 
-    if [ -z $host ] || [ -z $port ]; then
+    if [ -z "$host" ] || [ -z "$port" ]; then
       log_warning "There is a problem with your service configuration!"
       log_warning "You provided following database mapping (via TX_SERVICE_PREFIX_MAPPING environment variable): $tx_backend. To configure datasources we expect ${service}_SERVICE_HOST and ${service}_SERVICE_PORT to be set."
       log_warning
@@ -144,7 +144,7 @@ function inject_tx_datasource() {
     # Url for connection. If defined then it's used.
     url=$(find_env "${prefix}_URL")
 
-    if [ -z $jndi ] || [ -z $username ] || [ -z $password ] || [ -z $database ]; then
+    if [ -z "$jndi" ] || [ -z "$username" ] || [ -z "$password" ] || [ -z "$database" ]; then
       log_warning "Ooops, there is a problem with the ${db,,} datasource and JDBC object store creation!"
       log_warning "In order to configure ${db,,} transactional datasource for $prefix service you need to provide following environment variables: ${prefix}_USERNAME, ${prefix}_PASSWORD, ${prefix}_DATABASE."
       log_warning
@@ -207,8 +207,8 @@ function inject_tx_datasource() {
       getDataSourceConfigureMode "dsConfMode"
       if [ "${dsConfMode}" = "xml" ]; then
         # Only do this replacement if we are replacing an xml marker
-        datasource_adjusted="$(echo ${datasource} | sed ':a;N;$!ba;s|\n|\\n|g')"
-        sed -i "s|<!-- ##DATASOURCES## -->|${datasource_adjusted}<!-- ##DATASOURCES## -->|" $CONFIG_FILE
+        datasource_adjusted="$(echo "${datasource}" | sed ':a;N;$!ba;s|\n|\\n|g')"
+        sed -i "s|<!-- ##DATASOURCES## -->|${datasource_adjusted}<!-- ##DATASOURCES## -->|" "$CONFIG_FILE"
       elif [ "${dsConfMode}" = "cli" ]; then
         # If using cli, return the raw string, preserving line breaks
         echo "${datasource}" >> "${CLI_SCRIPT_FILE}"

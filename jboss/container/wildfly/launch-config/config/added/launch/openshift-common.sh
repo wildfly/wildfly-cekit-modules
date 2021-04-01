@@ -5,8 +5,8 @@ if [ "${SCRIPT_DEBUG}" = "true" ] ; then
     echo "Script debugging is enabled, allowing bash commands and their arguments to be printed as they are executed"
 fi
 
-source $JBOSS_HOME/bin/launch/launch-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/launch-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
 
 SERVER_CONFIG=${WILDFLY_SERVER_CONFIGURATION:-standalone.xml}
 export CONFIG_FILE=$JBOSS_HOME/standalone/configuration/${SERVER_CONFIG}
@@ -106,7 +106,7 @@ function exec_cli_scripts() {
 
   # remove any empty line
   if [ -f "${script}" ]; then
-    sed -i '/^$/d' $script
+    sed -i '/^$/d' "$script"
   fi
 
   if [ -s "${script}" ]; then
@@ -137,14 +137,14 @@ function exec_cli_scripts() {
 
     systime=$(date +%s)
     CLI_SCRIPT_FILE_FOR_EMBEDDED=/tmp/cli-configuration-script-${systime}.cli
-    echo "embed-server --timeout=30 --server-config=${SERVER_CONFIG} --std-out=${stdOut}" > ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    cat ${script} >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    echo "" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
-    echo "stop-embedded-server" >> ${CLI_SCRIPT_FILE_FOR_EMBEDDED}
+    echo "embed-server --timeout=30 --server-config=${SERVER_CONFIG} --std-out=${stdOut}" > "${CLI_SCRIPT_FILE_FOR_EMBEDDED}"
+    cat "${script}" >> "${CLI_SCRIPT_FILE_FOR_EMBEDDED}"
+    echo "" >> "${CLI_SCRIPT_FILE_FOR_EMBEDDED}"
+    echo "stop-embedded-server" >> "${CLI_SCRIPT_FILE_FOR_EMBEDDED}"
 
     log_info "Configuring the server using embedded server"
     start=$(date +%s%3N)
-    eval ${JBOSS_HOME}/bin/jboss-cli.sh "--file=${CLI_SCRIPT_FILE_FOR_EMBEDDED}" "--properties=${CLI_SCRIPT_PROPERTY_FILE}" "&>${CLI_SCRIPT_OUTPUT_FILE}"
+    eval "${JBOSS_HOME}"/bin/jboss-cli.sh "--file=${CLI_SCRIPT_FILE_FOR_EMBEDDED}" "--properties=${CLI_SCRIPT_PROPERTY_FILE}" "&>${CLI_SCRIPT_OUTPUT_FILE}"
     cli_result=$?
     end=$(date +%s%3N)
 
@@ -164,12 +164,12 @@ function exec_cli_scripts() {
         exit 1
       fi
       if [ "${SCRIPT_DEBUG}" != "true" ] ; then
-        rm ${script} 2> /dev/null
-        rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
-        rm ${CONFIG_ERROR_FILE} 2> /dev/null
-        rm ${CONFIG_WARNING_FILE} 2> /dev/null
-        rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
-        rm ${CLI_SCRIPT_OUTPUT_FILE} 2> /dev/null
+        rm "${script}" 2> /dev/null
+        rm "${CLI_SCRIPT_PROPERTY_FILE}" 2> /dev/null
+        rm "${CONFIG_ERROR_FILE}" 2> /dev/null
+        rm "${CONFIG_WARNING_FILE}" 2> /dev/null
+        rm "${CLI_SCRIPT_FILE_FOR_EMBEDDED}" 2> /dev/null
+        rm "${CLI_SCRIPT_OUTPUT_FILE}" 2> /dev/null
       fi
     fi
   else

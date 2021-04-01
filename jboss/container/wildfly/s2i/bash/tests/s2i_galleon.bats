@@ -1,15 +1,15 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../artifacts/opt/jboss/container/wildfly/s2i/galleon/s2i_galleon
+source "$BATS_TEST_DIRNAME"/../artifacts/opt/jboss/container/wildfly/s2i/galleon/s2i_galleon
 
 setup() {
   JBOSS_HOME=$(mktemp -d)
-  echo JBOSS_HOME $JBOSS_HOME
+  echo JBOSS_HOME "$JBOSS_HOME"
   mkdir -p "$JBOSS_HOME/.galleon"
 }
 
 teardown() {
-  rm -rf $JBOSS_HOME
+  rm -rf "$JBOSS_HOME"
 }
 
 create_provisioning() {
@@ -27,7 +27,7 @@ cat > "$abs_path" << EOF
     </options>
 </installation>
 EOF
-cat $abs_path
+cat "$abs_path"
 }
 
 create_slim_installation_1() {

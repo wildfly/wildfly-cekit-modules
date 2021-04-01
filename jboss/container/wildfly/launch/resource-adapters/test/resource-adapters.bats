@@ -1,32 +1,32 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source "$BATS_TEST_DIRNAME"/../../../../../../test-common/cli_utils.sh
 
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
-rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/launch
+rm -rf "$JBOSS_HOME" 2>/dev/null
+mkdir -p "$JBOSS_HOME"/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/resource-adapters-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../added/launch/resource-adapter.sh $JBOSS_HOME/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/config/added/launch/openshift-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../launch-config/os/added/launch/launch-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/logging.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/resource-adapters-common.sh "$JBOSS_HOME"/bin/launch
+cp "$BATS_TEST_DIRNAME"/../added/launch/resource-adapter.sh "$JBOSS_HOME"/bin/launch
 
-mkdir -p $JBOSS_HOME/standalone/configuration
+mkdir -p "$JBOSS_HOME"/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
 
 # source the scripts needed
-source $JBOSS_HOME/bin/launch/openshift-common.sh
-source $JBOSS_HOME/bin/launch/logging.sh
-source $JBOSS_HOME/bin/launch/resource-adapter.sh
+source "$JBOSS_HOME"/bin/launch/openshift-common.sh
+source "$JBOSS_HOME"/bin/launch/logging.sh
+source "$JBOSS_HOME"/bin/launch/resource-adapter.sh
 
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp "$BATS_TEST_DIRNAME"/../../../../../../test-common/configuration/standalone-openshift.xml "$JBOSS_HOME"/standalone/configuration
 }
 
 teardown() {
@@ -134,7 +134,7 @@ EOF
 
   run configure
   echo "Console:${output}"
-  output=$(<${CLI_SCRIPT_FILE})
+  output=$(<"${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
   [ "${output}" = "${expected}" ]
 }
@@ -168,7 +168,7 @@ EOF
 
   run configure
 
-  output=$(<${CLI_SCRIPT_FILE})
+  output=$(<"${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
   [ "${output}" = "${expected}" ]
 }
