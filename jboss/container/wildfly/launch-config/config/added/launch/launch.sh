@@ -134,7 +134,7 @@ function launchServer() {
   handleExtensions
   if [ $? -ne 0 ]; then
     log_info "Restarting the server"
-    ${cmd} &
+    ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_HA_ARGS} ${JBOSS_MESSAGING_ARGS} &
     pid=$!
   fi
   wait $pid 2>/dev/null
