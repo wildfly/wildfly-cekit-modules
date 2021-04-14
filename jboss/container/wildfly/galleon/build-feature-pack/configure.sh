@@ -70,9 +70,9 @@ else
   rm /tmp/offliner.jar && rm /tmp/offliner.txt
 fi
 
-if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
+if [ -f $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven ]; then
   # required to have maven enabled.
-  source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+  source $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven
 fi
 
 if [ -d "$JBOSS_HOME/modules" ]; then
