@@ -7,9 +7,14 @@ if [ ! -d "$GALLEON_DEFAULT_SERVER" ]; then
   exit 1
 fi
 
+# these are sourced so the most recent version is last and will be applied
 if [ -f $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven ]; then
   # required to have maven enabled.
   source $JBOSS_CONTAINER_MAVEN_35_MODULE/scl-enable-maven
+fi
+
+if [ -f $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven ]; then
+  source $JBOSS_CONTAINER_MAVEN_36_MODULE/scl-enable-maven
 fi
 
 # Provision the default server
