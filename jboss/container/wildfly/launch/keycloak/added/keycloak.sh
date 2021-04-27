@@ -53,6 +53,8 @@ OPENIDCONNECT="KEYCLOAK"
 SAML="KEYCLOAK-SAML"
 SECURE_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-deployments
 SECURE_SAML_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-saml-deployments
+SECURE_DEPLOYMENTS_CLI=$JBOSS_HOME/standalone/configuration/secure-deployments.cli
+SECURE_SAML_DEPLOYMENTS_CLI=$JBOSS_HOME/standalone/configuration/secure-saml-deployments.cli
 
 SUBSYSTEM_END_MARKER="</profile>"
 EXTENSIONS_END_MARKER="</extensions>"
@@ -91,11 +93,71 @@ function configure_cli_keycloak() {
     if [ "${ret_domain}" -eq 0 ]; then
       other_exists="true"
     fi
-    if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
+    if [ -f "$SECURE_DEPLOYMENTS_CLI" ] || [ -f "$SECURE_SAML_DEPLOYMENTS_CLI" ]; then
 
       elytron_assert="$(elytron_common_assert $app_sec_domain)"
 
-      if [ -f $SECURE_DEPLOYMENTS ]; then
+      if [ -f "$SECURE_DEPLOYMENTS_CLI" ]; then
+        if [ "${ret_oidc}" -ne 0 ]; then
+          oidc_extension="$(configure_OIDC_extension)"
+          oidc_elytron="$(configure_OIDC_elytron $id)"
+          ejb_config="$(configure_ejb $id $app_sec_domain)"
+
+          if [ "$useLegacySecurity" == "false" ]; then
+            echo " 
+              $elytron_assert
+              $oidc_elytron
+              $ejb_config" >> ${CLI_SCRIPT_FILE}
+          fi
+          echo " 
+              $oidc_extension
+              /subsystem=keycloak:add
+              " >> ${CLI_SCRIPT_FILE}
+          cat "$SECURE_DEPLOYMENTS_CLI" >> "$CLI_SCRIPT_FILE"
+          is_oidc="true"
+        else
+          log_warning "keycloak subsystem already exists, no configuration applied"
+        fi
+      fi
+      if [ -f "$SECURE_SAML_DEPLOYMENTS_CLI" ]; then
+        if [ "${ret_saml}" -ne 0 ]; then
+          saml_extension="$(configure_SAML_extension)"
+          saml_elytron="$(configure_SAML_elytron $id)"
+          if [ "$useLegacySecurity" == "false" ]; then
+            echo "
+              $elytron_assert
+              $saml_elytron"  >> ${CLI_SCRIPT_FILE}
+          fi
+          echo " 
+            $saml_extension
+            /subsystem=keycloak-saml:add
+            " >> ${CLI_SCRIPT_FILE}
+          cat "$SECURE_SAML_DEPLOYMENTS_CLI" >> "$CLI_SCRIPT_FILE"
+          is_saml="true"
+        else
+          log_warning "keycloak saml subsystem already exists, no configuration applied"
+        fi
+      fi
+      if [ "$useLegacySecurity" == "false" ]; then
+        if [ "$other_exists" == "true" ]; then
+          other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+          echo "
+           $other_config" >> ${CLI_SCRIPT_FILE}
+        fi
+        undertow_config="$(configure_undertow $id $app_sec_domain)"
+        echo "
+         $undertow_config" >> ${CLI_SCRIPT_FILE}
+      else
+        legacy_security="$(configure_security_domain_cli)"
+        echo "
+            $legacy_security"  >> ${CLI_SCRIPT_FILE}
+      fi
+      enable_keycloak_deployments
+    elif [ -f "$SECURE_DEPLOYMENTS" ] || [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
+
+      elytron_assert="$(elytron_common_assert $app_sec_domain)"
+
+      if [ -f "$SECURE_DEPLOYMENTS" ]; then
         if [ "${ret_oidc}" -ne 0 ]; then
           keycloak_subsystem=$(cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
           keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
@@ -116,7 +178,7 @@ function configure_cli_keycloak() {
         fi
       fi
 
-      if [ -f $SECURE_SAML_DEPLOYMENTS ]; then
+      if [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
         if [ "${ret_saml}" -ne 0 ]; then
           keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
           keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
@@ -150,7 +212,6 @@ function configure_cli_keycloak() {
       fi
       configure_extensions_no_marker
       enable_keycloak_deployments
-
   elif [ -n "$SSO_URL" ]; then
     enable_keycloak_deployments
     
