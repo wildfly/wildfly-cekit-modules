@@ -6,6 +6,8 @@
     <feature-group name="os-jgroups"/>
     <!-- infinispan -->
     <feature-group name="os-infinispan"/>
+    <!-- distributable-web (replacing the excluded local version) -->
+    <feature-group name="distributable-web"/>
     <!-- ha sockets -->
     <feature spec="socket-binding-group">
         <param name="socket-binding-group" value="standard-sockets"/>
