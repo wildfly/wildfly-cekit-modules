@@ -4,11 +4,11 @@
     <feature-group name="singleton"/>
     <!-- jgroups and ha sockets -->
     <feature-group name="os-jgroups"/>
-    <!-- inifinispan -->
+    <!-- infinispan -->
     <feature-group name="os-infinispan"/>
-        <!-- ha sockets -->
+    <!-- ha sockets -->
     <feature spec="socket-binding-group">
-        <param name="socket-binding-group" value="standard-sockets" />
+        <param name="socket-binding-group" value="standard-sockets"/>
         <feature-group name="ha-sockets">
             <exclude feature-id="socket-binding-group.socket-binding:name=standard-sockets,socket-binding=jgroups-udp-fd"/>
             <exclude feature-id="socket-binding-group.socket-binding:name=standard-sockets,socket-binding=jgroups-tcp-fd"/>
