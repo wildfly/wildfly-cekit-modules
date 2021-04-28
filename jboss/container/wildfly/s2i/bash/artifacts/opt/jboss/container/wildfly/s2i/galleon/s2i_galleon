@@ -15,6 +15,16 @@ function galleon_patch_generic_config() {
        sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/config.xml
      fi
    fi
+   if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
+     echo Provisioning custom Galleon feature-packs: $GALLEON_PROVISION_FEATURE_PACKS
+     for fp in $(echo "${GALLEON_PROVISION_FEATURE_PACKS}" | sed "s/,/ /g"); do
+       featurepacks="$featurepacks<feature-pack><inherit-packages>false</inherit-packages><inherit-configs>false</inherit-configs>"
+       featurepacks="$featurepacks<location>$fp</location></feature-pack>"
+     done
+     if [ -n "$featurepacks" ]; then
+       sed -i "s|<!-- ##GALLEON_FEATURE_PACKS## -->|${featurepacks}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+     fi
+   fi
 }
 
 function galleon_dump_repo_file_list() {
@@ -95,6 +105,7 @@ function galleon_init_mvn_env() {
     fi
     if [ -n "$MAVEN_ARGS_APPEND" ]; then
       ORIGINAL_MAVEN_ARGS_APPEND=${MAVEN_ARGS_APPEND}
+      unset MAVEN_ARGS_APPEND
     fi
     if [ -n "$MAVEN_LOCAL_REPO" ]; then
       ORIGINAL_MAVEN_LOCAL_REPO=$MAVEN_LOCAL_REPO
@@ -102,19 +113,43 @@ function galleon_init_mvn_env() {
     if [ -n "$MAVEN_SETTINGS_XML" ]; then
       ORIGINAL_MAVEN_SETTINGS_XML=$MAVEN_SETTINGS_XML
     fi
+
+    # Need to compute the project src root dir.
+    dest_dir="${S2I_DESTINATION_DIR:-/tmp}"
+    GALLEON_PROJECT_SRC_DIR="${dest_dir}/src"
+    
+    # Identify custom galleon content directory
+    if [ -n "${GALLEON_DIR}" ]; then
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/${GALLEON_DIR}"
+      if [ ! -d "${GALLEON_LOCAL_PROVISIONING}" ]; then
+        log_error "$GALLEON_DIR directory referenced by GALLEON_DIR env variable doesn't exist in the project. Exiting."
+        exit 1
+      fi
+    else
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/galleon"
+    fi
     # Set galleon settings prior to init maven.
     # Doing so default settings.xml are untouched.
-    MAVEN_SETTINGS_XML=$GALLEON_MAVEN_SETTINGS_XML
-    # Required for S2I_SOURCE_DIR to be initialized
-    maven_s2i_init
+    if [ -f "${GALLEON_LOCAL_PROVISIONING}/settings.xml" ]; then
+      MAVEN_SETTINGS_XML="${GALLEON_LOCAL_PROVISIONING}/settings.xml"
+      echo "Using ${MAVEN_SETTINGS_XML} when provisioning server."
+    else
+      MAVEN_SETTINGS_XML="${GALLEON_MAVEN_SETTINGS_XML}"
+    fi
+    if test -r "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/scl-enable-maven; then
+      source "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/scl-enable-maven
+    fi
+    source "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/maven.sh
+    # Initialize Maven
+    maven_init
     # reset part of the s2i maven initialization to adapt to galleon local repo
     MAVEN_LOCAL_REPO=$GALLEON_LOCAL_MAVEN_REPO
+    # Unset args set by maven initialization
     unset MAVEN_ARGS
-    unset MAVEN_ARGS_APPEND
+    #capture default Maven ARGS
     maven_init_var_MAVEN_ARGS    
     # Add settings that Galleon plugin will use when generating config
     MAVEN_ARGS="$MAVEN_ARGS -Djboss.modules.settings.xml.url=file://$GALLEON_MAVEN_SETTINGS_XML"
-    
 }
 
 function galleon_is_slim_server {
@@ -168,10 +203,31 @@ function galleon_reset_mvn_env() {
     fi
 }
 
+
+function install_custom_fps() {
+  if [ -n "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO" ]; then
+    if [ -d "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO" ]; then
+      copy_custom_fps "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO"
+    else
+      log_error "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO directory referenced by GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO env variable doesn't exist. Exiting."
+      exit 1
+    fi
+  else
+    if [ -d "$GALLEON_LOCAL_PROVISIONING/repository" ]; then
+      copy_custom_fps "$GALLEON_LOCAL_PROVISIONING/repository"
+    fi
+  fi
+}
+
+function copy_custom_fps() {
+  pushd "$1" &> /dev/null
+  cp -r * $GALLEON_LOCAL_MAVEN_REPO
+  popd &> /dev/null
+}
+
 function galleon_provision_server() {
     galleon_init_mvn_env
-    # Embedded galleon description
-    GALLEON_LOCAL_PROVISIONING=$S2I_SOURCE_DIR/galleon
+    install_custom_fps
     GALLEON_ROOT_DIR=${GALLEON_DEFINITIONS}
 
     nb=0
@@ -184,15 +240,20 @@ function galleon_provision_server() {
     fi
 
     if [ $nb -gt 1 ]; then
-      echo "Error, GALLEON_PROVISION_SERVER or GALLEON_PROVISION_LAYERS can't be used at the same time."
+      log_error "Error, GALLEON_PROVISION_SERVER and GALLEON_PROVISION_LAYERS can't be used at the same time."
       exit 1
     fi
 
     if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
       galleon_patch_generic_config
       GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
-      if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-        echo "Galleon provisioning of layers overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
+      if [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
+        echo "Galleon provisioning of layers overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
+      fi
+    else
+      if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
+        log_error "GALLEON_PROVISION_FEATURE_PACKS has been set although  GALLEON_PROVISION_LAYERS is not set."
+        exit 1
       fi
     fi
     
@@ -204,17 +265,17 @@ function galleon_provision_server() {
               cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
               GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
             else
-               echo "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION, provisioning.xml file doesn't exist, exiting"
-               exit 1
+               # We don't fail, we could have settings.xml or a custom repository that could be used when GALLEON_PROVISION_LAYERS is set.
+               echo "No provisioning.xml file exists in $GALLEON_LOCAL_PROVISIONING, no server provisioning."
             fi
           fi
         else
           if [ ! -d $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER ]; then
-            echo "Error, $GALLEON_PROVISION_SERVER doesn't exist, can't provision a server, exiting."
+            log_error "Error, $GALLEON_PROVISION_SERVER doesn't exist, can't provision a server, exiting."
             exit 1
           fi
-          if [ -d $GALLEON_LOCAL_PROVISIONING ]; then
-            echo "$GALLEON_SERVER Galleon description overrides Galleon description in $GALLEON_LOCAL_PROVISIONING"
+          if [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
+            echo "$GALLEON_PROVISION_SERVER Galleon description overrides Galleon provisioning.xml in $GALLEON_LOCAL_PROVISIONING"
           fi
           cp $GALLEON_ROOT_DIR/$GALLEON_PROVISION_SERVER/provisioning.xml "$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
           GALLEON_DESCRIPTION_LOCATION="$JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION"
@@ -237,7 +298,7 @@ function galleon_provision_server() {
 
           ERR=$?
           if [ $ERR -ne 0 ]; then
-            echo "Aborting due to error code $ERR from mvn install"
+            log_error "Aborting due to error code $ERR from mvn install"
             exit $ERR
           fi
           targetDir=$GALLEON_DESCRIPTION_LOCATION/target/server
@@ -249,7 +310,7 @@ function galleon_provision_server() {
             exit 1
           fi
       else
-          echo "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION exiting"
+          log_error "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION exiting"
           exit 1
       fi
     fi

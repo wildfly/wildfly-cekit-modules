@@ -16,6 +16,12 @@ envs:
   value: "/s2i-output"
 - name: JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR
   value: "/opt/jboss/container/wildfly/s2i/galleon"
+- name: GALLEON_DIR
+  description: "Used during s2i build to locate the directory relative to the application project directory that contains galleon custom content. By default the directory 'galleon' is used."
+- name: GALLEON_PROVISION_FEATURE_PACKS
+  description: "A comma separated list of custom galleon feature-packs GAV.  Can be used when a set of Galleon layers has been set in GALLEON_PROVISION_LAYERS."
+- name: GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO
+  description: "Absolute path to a maven repo directory containing custom galleon feature-packs. By default the directory 'galleon/repository' is used."
 - name: GALLEON_LOCAL_MAVEN_REPO
   value: "/opt/jboss/container/wildfly/s2i/galleon/galleon-m2-repository"
 - name: TMP_GALLEON_LOCAL_MAVEN_REPO
