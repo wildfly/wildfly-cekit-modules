@@ -39,7 +39,7 @@ envs:
 - name: GALLEON_VERSION
   value: "4.2.8.Final"
 - name: GALLEON_WILDFLY_VERSION
-  value: "5.1.2.Final"
+  value: "5.2.0.Alpha2"
   description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
 - name: GALLEON_S2I_PRODUCER_NAME
   description: Mandatory. Name of the built feature-pack producer.
