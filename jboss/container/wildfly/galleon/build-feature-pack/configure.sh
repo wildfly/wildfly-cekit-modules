@@ -21,11 +21,6 @@ if [ -z "$GALLEON_FP_PATH" ]; then
   exit 1
 fi
 
-if [ -z "$GALLEON_FP_COMMON_PKG_NAME" ]; then
-  echo "GALLEON_FP_COMMON_PKG_NAME must be set to the name of the galleon package containing common content"
-  exit 1
-fi
-
 deleteBuildArtifacts=${DELETE_BUILD_ARTIFACTS:-false}
 
 ZIPPED_REPO="/tmp/artifacts/maven-repo.zip"
@@ -98,10 +93,12 @@ mvn -f "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-univ
 rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-universe
 rm -rf "$JBOSS_CONTAINER_WILDFLY_S2I_MODULE"/galleon/provisioning/jboss-s2i-producers
 
-# Copy JBOSS_HOME content (custom os content) to common package dir
-CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
-mkdir -p $CONTENT_DIR
-cp -r $JBOSS_HOME/* $CONTENT_DIR
+if [ ! -z "$GALLEON_FP_COMMON_PKG_NAME" ]; then
+  # Copy JBOSS_HOME content (custom os content) to common package dir
+  CONTENT_DIR=$GALLEON_FP_PATH/src/main/resources/packages/$GALLEON_FP_COMMON_PKG_NAME/content
+  mkdir -p $CONTENT_DIR
+  cp -r $JBOSS_HOME/* $CONTENT_DIR
+fi
 rm -rf $JBOSS_HOME/*
 
 # Build Galleon s2i feature-pack and install it in local maven repository

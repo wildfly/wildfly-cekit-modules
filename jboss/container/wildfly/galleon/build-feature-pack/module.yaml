@@ -13,7 +13,7 @@ envs:
 - name: GALLEON_FP_PATH
   description: "Mandatory. Absolute path to galleon feature-pack maven project."
 - name: GALLEON_FP_COMMON_PKG_NAME
-  description: "Mandatory. Name of galleon package that contains common content."
+  description: "Optional. Name of galleon package that contains common content."
 - name: GALLEON_BUILD_FP_MAVEN_ARGS_APPEND
   description: "Optional. Maven arguments to use when building galleon feature-pack."
 - name: OFFLINER_VERSION
