@@ -1,65 +1,23 @@
 schema_version: 1
 name: jboss.container.wildfly.s2i.bash
 version: '1.0'
-description: Common scripts for S2I.
+description: Customization of common Maven S2I for WildFly S2I images.
 
 envs:
 - name: JBOSS_CONTAINER_WILDFLY_S2I_MODULE
   value: /opt/jboss/container/wildfly/s2i
-- name: JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_PROVISION
-  value: /opt/jboss/container/wildfly/s2i/galleon/provisioning/generic_provisioning
-- name: GALLEON_DEFINITIONS
-  description: "Mandatory. Absolute path to directory that contains galleon server provisioning maven projects."
-- name: S2I_SOURCE_DEPLOYMENTS_FILTER
-  value: "*.war *.ear *.rar *.jar"
-- name: WILDFLY_S2I_OUTPUT_DIR
-  value: "/s2i-output"
-- name: JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_DIR
-  value: "/opt/jboss/container/wildfly/s2i/galleon"
-- name: GALLEON_DIR
-  description: "Used during s2i build to locate the directory relative to the application project directory that contains galleon custom content. By default the directory 'galleon' is used."
-- name: GALLEON_PROVISION_FEATURE_PACKS
-  description: "A comma separated list of custom galleon feature-packs GAV.  Can be used when a set of Galleon layers has been set in GALLEON_PROVISION_LAYERS."
-- name: GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO
-  description: "Absolute path to a maven repo directory containing custom galleon feature-packs. By default the directory 'galleon/repository' is used."
-- name: GALLEON_LOCAL_MAVEN_REPO
-  value: "/opt/jboss/container/wildfly/s2i/galleon/galleon-m2-repository"
-- name: TMP_GALLEON_LOCAL_MAVEN_REPO
-  value: "/opt/jboss/container/wildfly/s2i/galleon/tmp-galleon-m2-repository"
-- name: GALLEON_MAVEN_SETTINGS_XML
-  value: "/opt/jboss/container/wildfly/s2i/galleon/settings.xml"
-- name: GALLEON_MAVEN_BUILD_IMG_SETTINGS_XML
-  value: /opt/jboss/container/wildfly/s2i/galleon/build-image-settings.xml
-- name: GALLEON_MAVEN_REPO_HOOK_SCRIPT
-  description: "Optional, path to a bash script to execute once the maven repository has been unzipped. Script is called with path to maven repo as argument."
-- name: GALLEON_S2I_FP_GROUP_ID
-  description: "Mandatory. groupid of s2i galleon feature-pack"
-- name: GALLEON_S2I_FP_ARTIFACT_ID
-  description: "Mandatory. artifactid of s2i galleon feature-pack"
-- name: GALLEON_VERSION
-  value: "4.2.8.Final"
-- name: GALLEON_WILDFLY_VERSION
-  value: "5.2.0.Alpha2"
-  description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
-- name: GALLEON_S2I_PRODUCER_NAME
-  description: Mandatory. Name of the built feature-pack producer.
-- name: S2I_FP_VERSION
-  description: "Mandatory, version of s2i galleon feature-pack"
-- name: GALLEON_PROVISION_SERVER
-  description: "Used during s2i to provision a custom galleon server. Name of a galleon built-in configuration."
-- name: GALLEON_PROVISION_LAYERS
-  description: "Used during s2i to provision a custom galleon server. Comma separated list of layers to compose the configuration."
-- name: GALLEON_DEFAULT_FAT_SERVER
-  description: "Mandatory. Absolute path to directory that contains galleon fat default server provisioning.xml file"
-- name: GALLEON_PROVISION_DEFAULT_FAT_SERVER
-  description: "When set to true and if no galleon provisioning is done during s2i, provision the default fat server."
-- name: S2I_COPY_SERVER
-  description: "When set to true, copy the galleon provisioned server to s2i output dir to be consumed by next build in the chain. True by default."
-  value: "true"
+- name: S2I_SERVER_DIR
+  description: The provisioned server directory inside the application project target directory. By default it looks for 'server' directory in the target directory.
+
+# These labels could be moved to shared s2i module.
+labels:
+- name: io.openshift.s2i.scripts-url
+  value: &imgLocation image:///usr/local/s2i
+- name: io.s2i.scripts-url
+  value: *imgLocation
 execute:
 - script: configure.sh
 
 modules:
   install:
-  - name: jboss.container.maven.s2i
-  - name: jboss.container.util.logging.bash
+  - name: jboss.container.wildfly.run
