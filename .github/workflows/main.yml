@@ -1,4 +1,4 @@
-name: Wildfly Cekit OpenShift Modules - Bats
+name: Wildfly Cekit OpenShift Modules - Bats DISABLED< Will be replaced by WildFly s2i build/test in next commit.
 on:
   push:
     branches: [ master ]
@@ -7,32 +7,32 @@ on:
 env:
   LANG: en_US.UTF-8
   STANDALONE_CONFIG_URL: https://raw.githubusercontent.com/jboss-container-images/jboss-eap-modules/7.3.x-legacy/jboss-eap-config-openshift/CD17.0/added/standalone-openshift.xml
-jobs:
-  bats:
-    name: Bats Shell Tests
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: n1hility/cancel-previous-runs@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Setup required system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install bats libxml2-utils ncat
-          echo 2 | sudo update-alternatives --config nc
-      - name: setup env
-        run: |
-          PWD=$(pwd)
-          ./test-common/default-env.sh
-          wget ${{ env.STANDALONE_CONFIG_URL }} -O ${PWD}/test-common/configuration/standalone-openshift.xml
-      - name: Test
-        run: |
-          set -x
-          PWD=$(pwd)
-          ${PWD}/run-all-tests.sh --tap
+#jobs:
+#  bats:
+#    name: Bats Shell Tests
+#    runs-on: ${{ matrix.os }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os: [ubuntu-latest]
+#    steps:
+#      - uses: actions/checkout@v2
+#      - uses: n1hility/cancel-previous-runs@v2
+#        with:
+#          token: ${{ secrets.GITHUB_TOKEN }}
+#      - name: Setup required system packages
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install bats libxml2-utils ncat
+#          echo 2 | sudo update-alternatives --config nc
+#      - name: setup env
+#        run: |
+#          PWD=$(pwd)
+#          ./test-common/default-env.sh
+#          wget ${{ env.STANDALONE_CONFIG_URL }} -O ${PWD}/test-common/configuration/standalone-openshift.xml
+#      - name: Test
+#        run: |
+#          set -x
+#          PWD=$(pwd)
+#          ${PWD}/run-all-tests.sh --tap
 

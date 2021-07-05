@@ -1,8 +1,0 @@
-schema_version: 1
-name: jboss.container.wildfly.galleon.fp-content.config
-version: '1.0'
-description: Galleon default config and layers adjustment.
-
-execute:
-- script: configure.sh
-  user: 185
