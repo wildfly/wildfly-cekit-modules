@@ -5,7 +5,11 @@ description: Env variable to configure the server for cloud execution. JVM is au
 
 envs:
 - name: JAVA_OPTS_APPEND
-  description: To append options to JAVA_OPTS env variabke.
+  description: To append options to JAVA_OPTS env variable.
+- name: CLI_LAUNCH_SCRIPT
+  description: A path to a CLI script to execute at server launch time. The path can be absolute or relative to $JBOSS_HOME directory. If an error occurs during script execution, the server startup aborts and CLI errors are displayed in the console. Management operations that imply a restart of the server are not supported in such CLI script.
+- name: CLI_EXECUTION_OUTPUT
+  description: By default executed CLI script output is redirected to '/tmp/server-cli-execution-output-file.txt' file. Set this env variable to `CONSOLE` for output to be displayed in the console. Set this env variable to a file path for output to be redirected in the provided file".
 - name: PORT_OFFSET
   description: Use this env variable to set the server port offset. This is advised practice instead of directly setting jboss.socket.binding.port-offset in the SERVER_ARGS. It allows the server shutdown logic to connect to the running server to do a clean CLI shutdown. 
 - name: CLI_GRACEFUL_SHUTDOWN
