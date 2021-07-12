@@ -137,6 +137,32 @@ else
 
     SERVER_ARGS="${JAVA_PROXY_OPTIONS} -Djboss.node.name=${JBOSS_NODE_NAME} ${PORT_OFFSET_PROPERTY} -b ${PUBLIC_IP_ADDRESS} -bmanagement ${MANAGEMENT_IP_ADDRESS} -Dwildfly.statistics-enabled=${ENABLE_STATISTICS} ${SERVER_ARGS}"
 
+    if [ -n "${CLI_LAUNCH_SCRIPT}" ]; then
+      if [ ! -f "${CLI_LAUNCH_SCRIPT}" ]; then
+        scriptFile="${JBOSS_HOME}/${CLI_LAUNCH_SCRIPT}"
+        if [ ! -f "${scriptFile}" ]; then
+          log_error "${CLI_LAUNCH_SCRIPT} doesn't exist or is not a relative path inside ${JBOSS_HOME}"
+          exit 1
+        fi
+      else
+        scriptFile="${CLI_LAUNCH_SCRIPT}"
+      fi
+      log_info "Executing CLI script ${scriptFile} during server startup"
+      markerDir=/tmp/server-cli-boot-hook-dir
+      rm -rf "${markerDir}"
+      mkdir "${markerDir}"
+      bootHookOptions="--start-mode=admin-only -Dorg.wildfly.internal.cli.boot.hook.script=${scriptFile} -Dorg.wildfly.internal.cli.boot.hook.marker.dir=${markerDir}"
+      outputLocation="${CLI_EXECUTION_OUTPUT:-/tmp/server-cli-execution-output-file.txt}"
+      if [ "${outputLocation}" == "CONSOLE" ]; then
+        log_info "CLI execution output displayed in the console"
+      else
+        rm -f "${outputLocation}"
+        bootHookOptions="${bootHookOptions} -Dorg.wildfly.internal.cli.boot.hook.script.output.file=${outputLocation}"
+        log_info "CLI execution output redirected to ${outputLocation}"
+      fi
+
+      SERVER_ARGS="${SERVER_ARGS}  ${bootHookOptions}"
+    fi
     log_info "Starting server with arguments: ${SERVER_ARGS}"
 
     export JAVA_OPTS
