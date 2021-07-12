@@ -1,0 +1,22 @@
+name: Send event to Wildfly s2i to Build and Deploy images when pushing to the v2 branch.
+on:
+  push:
+    branches:
+      - "v2"
+env:
+  LANG: en_US.UTF-8
+  WF_S2I_TOKEN: ${{ secrets.WILDFLY_S2I_BUILD_DEPLOY_TOKEN }}
+jobs:
+  wfci:
+    name: Wildfly-s2i Image Deployment on push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send event to WildFly s2i repo
+        run: |
+          curl \
+            -X POST \
+            -H "Authorization: token $WF_S2I_TOKEN" \
+            -H "Accept: application/vnd.github.ant-man-preview+json" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/repos/wildfly/wildfly-s2i/dispatches \
+            --data '{"event_type": "push-in-wf-cekit-modules-v2"}'
