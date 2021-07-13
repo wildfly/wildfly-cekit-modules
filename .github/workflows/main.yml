@@ -98,4 +98,9 @@ jobs:
       - name: List containers
         if: failure()
         run: |
+            echo === RUNNING CONTAINERS ===
             docker container ls
+            echo === RUNNING PROCESSES ===
+            top -b -n1
+            echo === DISK USAGE ===
+             df -h
