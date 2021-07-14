@@ -9,8 +9,10 @@ function configure_json_logging() {
   getConfigurationMode "##CONSOLE-FORMATTER##" "configureMode"
   if [ "${configureMode}" = "xml" ]; then
     configureByMarkers
+    configurePatternFormatterByMarkers
   elif [ "${configureMode}" = "cli" ]; then
     configureByCLI
+    configurePatternFormatterByCLI >> ${CLI_SCRIPT_FILE}
   else
     sed -i 's|##CONSOLE-FORMATTER##|COLOR-PATTERN|' $LOGGING_FILE
   fi
@@ -64,5 +66,31 @@ function consoleHandlerName() {
     end-if
 EOF
 
+  echo "$result"
+}
+
+function configurePatternFormatterByMarkers(){
+  local pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%e%n"
+  if [ "x${LOGGER_PATTERN}" != "x" ]; then
+        pattern=${LOGGER_PATTERN}
+  fi
+  sed -i 's|##PATTERN_FORMATTER##|${PATTERN_FORMATTER}|' $CONFIG_FILE
+  sed -i 's|##PATTERN_FORMATTER##|${PATTERN_FORMATTER}|' $LOGGING_FILE
+}
+
+
+function configurePatternFormatterByCLI() {
+  local pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%e%n"
+  local result=""
+
+  if [ "x${LOGGER_PATTERN}" != "x" ]; then
+        pattern=${LOGGER_PATTERN}
+  fi
+
+  read -r -d '' result <<EOF
+    if (outcome == success) of /subsystem=logging/console-handler=CONSOLE:read-resource
+        /subsystem=logging/console-handler=CONSOLE:write-attribute(name="formatter", value=${pattern})
+    end-if
+EOF
   echo "$result"
 }
