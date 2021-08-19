@@ -61,6 +61,7 @@ function inject_jdbc_store() {
   init_node_name
 
   local prefix="os${JBOSS_NODE_NAME//-/}"
+  prefix="${prefix//.}"
 
   local dsConfMode
   getConfigurationMode "<!-- ##JDBC_STORE## -->" "dsConfMode"
