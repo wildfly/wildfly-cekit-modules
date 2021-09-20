@@ -6,9 +6,6 @@ execute:
 - script: configure.sh
   user: '185'
 envs:
-    - name: "CONFIGURE_ELYTRON_SSL"
-      example: "true"
-      description: "Use Elytron to configure TLS and associated configuration elements."
     - name: ELYTRON_SECDOMAIN_NAME
       description: "Elytron application security domain to configure undertow and ejb3."
     - name: ELYTRON_SECDOMAIN_USERS_PROPERTIES
@@ -32,6 +29,3 @@ envs:
     - name: "HTTPS_KEYSTORE_TYPE"
       example: "JKS"
       description: "The underlying type of the keystore (JKS, JCEKS, etc.). Defaults to JCEKS"
-    - name: "SECDOMAIN_NAME"
-      example: "MySecurityDomain"
-      description: "The name of the Elytron security domain."

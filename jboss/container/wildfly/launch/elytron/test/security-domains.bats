@@ -37,6 +37,16 @@ teardown() {
   fi
 }
 
+@test "Set invalid SECDOMAIN_NAME " {
+  SECDOMAIN_NAME=foo
+
+  run configure
+  echo "${output}"
+  [ "${output}" = "WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE
+ERROR SECDOMAIN_NAME env variable can't be set, use ELYTRON_SECDOMAIN_NAME env variable to configure authentication using Elytron.
+ERROR Exiting..." ]
+}
+
 @test "Configure CLI elytron core realms security domain " {
   expected=$(cat <<EOF
     if (outcome != success) of /subsystem=undertow:read-resource
