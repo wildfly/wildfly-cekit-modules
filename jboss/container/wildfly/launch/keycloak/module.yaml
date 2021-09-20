@@ -54,5 +54,3 @@ envs:
     description: The URL for the SSO server.
   - name: "SSO_USERNAME"
     description: The username used to access the SSO service.
-  - name: SSO_FORCE_LEGACY_SECURITY
-    description: In order to use legacy security subsystem if present.

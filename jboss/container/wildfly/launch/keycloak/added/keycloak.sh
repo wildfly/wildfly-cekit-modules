@@ -43,12 +43,6 @@ function configure() {
   fi
 }
 
-KEYCLOAK_REALM_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/keycloak-realm-subsystem
-KEYCLOAK_SAML_REALM_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/keycloak-saml-realm-subsystem
-KEYCLOAK_DEPLOYMENT_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/keycloak-deployment-subsystem
-KEYCLOAK_SAML_DEPLOYMENT_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/keycloak-saml-deployment-subsystem
-KEYCLOAK_SAML_SP_SUBSYSTEM_FILE=$JBOSS_HOME/bin/launch/keycloak-saml-sp-subsystem
-KEYCLOAK_SECURITY_DOMAIN_FILE=$JBOSS_HOME/bin/launch/keycloak-security-domain
 OPENIDCONNECT="KEYCLOAK"
 SAML="KEYCLOAK-SAML"
 SECURE_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-deployments
@@ -77,11 +71,11 @@ function configure_cli_keycloak() {
     local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
     testXpathExpression "${xpath}" "has_security_subsystem"
 
-    useLegacySecurity=false;
-
-    # In some context we want to use legacy subsystem only.
-    if [ "x${SSO_FORCE_LEGACY_SECURITY}" == "xtrue"  ] && [ "${has_security_subsystem}" -eq 0 ]; then
-      useLegacySecurity=true;
+    # No more supported
+    if [ -n "${SSO_FORCE_LEGACY_SECURITY}" ]; then
+      log_error "SSO_FORCE_LEGACY_SECURITY env variable can't be set, Elytron is used to configure keycloak integration."
+      log_error "Exiting..."
+      exit
     fi
 
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='application-security-domains']/*[local-name()='application-security-domain' and @name='other' and @security-domain='ApplicationDomain']\""
@@ -103,12 +97,10 @@ function configure_cli_keycloak() {
           oidc_elytron="$(configure_OIDC_elytron $id)"
           ejb_config="$(configure_ejb $id $app_sec_domain)"
 
-          if [ "$useLegacySecurity" == "false" ]; then
-            echo " 
-              $elytron_assert
-              $oidc_elytron
-              $ejb_config" >> ${CLI_SCRIPT_FILE}
-          fi
+          echo " 
+            $elytron_assert
+            $oidc_elytron
+            $ejb_config" >> ${CLI_SCRIPT_FILE}
           echo " 
               $oidc_extension
               /subsystem=keycloak:add
@@ -123,11 +115,9 @@ function configure_cli_keycloak() {
         if [ "${ret_saml}" -ne 0 ]; then
           saml_extension="$(configure_SAML_extension)"
           saml_elytron="$(configure_SAML_elytron $id)"
-          if [ "$useLegacySecurity" == "false" ]; then
-            echo "
-              $elytron_assert
-              $saml_elytron"  >> ${CLI_SCRIPT_FILE}
-          fi
+          echo "
+            $elytron_assert
+            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
           echo " 
             $saml_extension
             /subsystem=keycloak-saml:add
@@ -138,20 +128,14 @@ function configure_cli_keycloak() {
           log_warning "keycloak saml subsystem already exists, no configuration applied"
         fi
       fi
-      if [ "$useLegacySecurity" == "false" ]; then
-        if [ "$other_exists" == "true" ]; then
-          other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
-          echo "
-           $other_config" >> ${CLI_SCRIPT_FILE}
-        fi
-        undertow_config="$(configure_undertow $id $app_sec_domain)"
+      if [ "$other_exists" == "true" ]; then
+        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
         echo "
-         $undertow_config" >> ${CLI_SCRIPT_FILE}
-      else
-        legacy_security="$(configure_security_domain_cli)"
-        echo "
-            $legacy_security"  >> ${CLI_SCRIPT_FILE}
+         $other_config" >> ${CLI_SCRIPT_FILE}
       fi
+      undertow_config="$(configure_undertow $id $app_sec_domain)"
+      echo "
+       $undertow_config" >> ${CLI_SCRIPT_FILE}
       enable_keycloak_deployments
     elif [ -f "$SECURE_DEPLOYMENTS" ] || [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
 
@@ -166,12 +150,10 @@ function configure_cli_keycloak() {
 
           oidc_elytron="$(configure_OIDC_elytron $id)"
           ejb_config="$(configure_ejb $id $app_sec_domain)"
-          if [ "$useLegacySecurity" == "false" ]; then
-            echo " 
-              $elytron_assert
-              $oidc_elytron
-              $ejb_config" >> ${CLI_SCRIPT_FILE}
-          fi
+          echo " 
+            $elytron_assert
+            $oidc_elytron
+            $ejb_config" >> ${CLI_SCRIPT_FILE}
           is_oidc="true"
         else
           log_warning "keycloak subsystem already exists, no configuration applied"
@@ -186,30 +168,22 @@ function configure_cli_keycloak() {
           sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
 
           saml_elytron="$(configure_SAML_elytron $id)"
-          if [ "$useLegacySecurity" == "false" ]; then
-            echo "
-              $elytron_assert
-              $saml_elytron"  >> ${CLI_SCRIPT_FILE}
-          fi
+          echo "
+            $elytron_assert
+            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
           is_saml="true"
         else
           log_warning "keycloak saml subsystem already exists, no configuration applied"
         fi
       fi
-      if [ "$useLegacySecurity" == "false" ]; then
-        if [ "$other_exists" == "true" ]; then
-          other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
-          echo "
-           $other_config" >> ${CLI_SCRIPT_FILE}
-        fi
-        undertow_config="$(configure_undertow $id $app_sec_domain)"
+      if [ "$other_exists" == "true" ]; then
+        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
         echo "
-         $undertow_config" >> ${CLI_SCRIPT_FILE}
-      else
-        legacy_security="$(configure_security_domain_cli)"
-        echo "
-            $legacy_security"  >> ${CLI_SCRIPT_FILE}
+         $other_config" >> ${CLI_SCRIPT_FILE}
       fi
+      undertow_config="$(configure_undertow $id $app_sec_domain)"
+      echo "
+       $undertow_config" >> ${CLI_SCRIPT_FILE}
       configure_extensions_no_marker
       enable_keycloak_deployments
   elif [ -n "$SSO_URL" ]; then
@@ -244,18 +218,12 @@ function configure_cli_keycloak() {
 
     if [ ! -z "${oidc}" ]; then
       if [ "${ret_oidc}" -ne 0 ]; then
-        if [ "$useLegacySecurity" == "true" ]; then
-          echo "
-            $oidc_extension
-            $oidc" >> ${CLI_SCRIPT_FILE}
-        else
-          echo " 
-            $elytron_assert
-            $oidc_extension
-            $oidc_elytron
-            $oidc
-            $ejb_config" >> ${CLI_SCRIPT_FILE}
-        fi
+        echo " 
+          $elytron_assert
+          $oidc_extension
+          $oidc_elytron
+          $oidc
+          $ejb_config" >> ${CLI_SCRIPT_FILE}
         is_oidc="true"
       else
           log_warning "keycloak subsystem already exists, no configuration applied"
@@ -264,49 +232,26 @@ function configure_cli_keycloak() {
     
     if [ ! -z "${saml}" ]; then
       if [ "${ret_saml}" -ne 0 ]; then
-        if [ "$useLegacySecurity" == "true" ]; then
-          echo "
-            $saml_extension
-            $saml"  >> ${CLI_SCRIPT_FILE}
-        else
-          echo "
-            $elytron_assert
-            $saml_extension
-            $saml_elytron
-            $saml"  >> ${CLI_SCRIPT_FILE}
-        fi
+        echo "
+          $elytron_assert
+          $saml_extension
+          $saml_elytron
+          $saml"  >> ${CLI_SCRIPT_FILE}
         is_saml="true"
       else
         log_warning "keycloak saml subsystem already exists, no configuration applied"
       fi
     fi
 
-    if [ "$useLegacySecurity" == "false" ]; then
-      if [ "$other_exists" == "true" ]; then
-        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
-        echo "
-        $other_config" >> ${CLI_SCRIPT_FILE}
-      fi
+    if [ "$other_exists" == "true" ]; then
+      other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
       echo "
-       $undertow_config" >> ${CLI_SCRIPT_FILE}
-    else
-      legacy_security="$(configure_security_domain_cli)"
-      echo "
-       $legacy_security"  >> ${CLI_SCRIPT_FILE}
+      $other_config" >> ${CLI_SCRIPT_FILE}
     fi
+    echo "
+     $undertow_config" >> ${CLI_SCRIPT_FILE}
   fi
   
-}
-
-function configure_security_domain_cli() {
-  cli="if (outcome != success) of /subsystem=security/security-domain=keycloak:read-resource
-          /subsystem=security/security-domain=keycloak:add
-          /subsystem=security/security-domain=keycloak/authentication=classic:add(login-modules=[{code=org.keycloak.adapters.jboss.KeycloakLoginModule, flag=required}])
-        else
-          echo You have set environment variables to configure the keycloak security domain. However, your base configuration already contains a security domain with that name. >> \${error_file}
-          quit
-        end-if"
-  echo "$cli"
 }
 
 function configure_existing_other_cli() {
@@ -509,7 +454,7 @@ end-if"
 
 function configure_OIDC_subsystem() {
   cli=
-  configure_subsystem $OPENIDCONNECT ${KEYCLOAK_REALM_SUBSYSTEM_FILE} "##KEYCLOAK_SUBSYSTEM##" "openid-connect" ${KEYCLOAK_DEPLOYMENT_SUBSYSTEM_FILE} true
+  configure_subsystem $OPENIDCONNECT "openid-connect"
   secure_deployments="$cli"
   if [ ! -z "$secure_deployments" ]; then
     subsystem=/subsystem=keycloak
@@ -538,7 +483,7 @@ function configure_OIDC_subsystem() {
 
 function configure_SAML_subsystem() {
   cli=
-  configure_subsystem $SAML ${KEYCLOAK_SAML_REALM_SUBSYSTEM_FILE} "##KEYCLOAK_SAML_SUBSYSTEM##" "saml" ${KEYCLOAK_SAML_DEPLOYMENT_SUBSYSTEM_FILE} true
+  configure_subsystem $SAML "saml"
   secure_deployments="$cli"
   if [ ! -z "$secure_deployments" ]; then
     cli="
@@ -546,80 +491,6 @@ function configure_SAML_subsystem() {
        ${secure_deployments}
 "
   fi
-}
-
-function configure_keycloak() {
-  if [ -f $SECURE_DEPLOYMENTS ] || [ -f $SECURE_SAML_DEPLOYMENTS ]; then
-    if [ -f $SECURE_DEPLOYMENTS ]; then
-      keycloak_subsystem=$(cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
-      keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>"
-
-      sed -i "s|<!-- ##KEYCLOAK_SUBSYSTEM## -->|${keycloak_subsystem}|" "${CONFIG_FILE}"
-    fi
-
-    if [ -f $SECURE_SAML_DEPLOYMENTS ]; then
-      keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
-      keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>"
-
-      sed -i "s|<!-- ##KEYCLOAK_SAML_SUBSYSTEM## -->|${keycloak_subsystem}|" "${CONFIG_FILE}"
-    fi
-
-    enable_keycloak_deployments
-    configure_extension
-    configure_security_domain
-
-  elif [ -n "$SSO_URL" ]; then
-    enable_keycloak_deployments
-    configure_extension
-    configure_security_domain
-
-    sso_service="$SSO_URL"
-    if [ -n "$SSO_SERVICE_URL" ]; then
-      sso_service="$SSO_SERVICE_URL"
-    fi
-
-    if [ ! -n "${SSO_REALM}" ]; then
-      log_warning "Missing SSO_REALM. Defaulting to ${SSO_REALM:=master} realm"
-    fi
-
-    set_curl
-    get_token
-
-    configure_subsystem $OPENIDCONNECT ${KEYCLOAK_REALM_SUBSYSTEM_FILE} "##KEYCLOAK_SUBSYSTEM##" "openid-connect" ${KEYCLOAK_DEPLOYMENT_SUBSYSTEM_FILE}
-
-    keycloak_saml_sp=$(cat "${KEYCLOAK_SAML_SP_SUBSYSTEM_FILE}" | sed ':a;N;$!ba;s|\n|\\n|g')
-    configure_subsystem $SAML ${KEYCLOAK_SAML_REALM_SUBSYSTEM_FILE} "##KEYCLOAK_SAML_SUBSYSTEM##" "saml" ${KEYCLOAK_SAML_DEPLOYMENT_SUBSYSTEM_FILE}
-
-    sed -i "s|##KEYCLOAK_REALM##|${SSO_REALM}|g" "${CONFIG_FILE}"
-
-    if [ -n "$SSO_PUBLIC_KEY" ]; then
-      sed -i "s|<!-- ##KEYCLOAK_PUBLIC_KEY## -->|<realm-public-key>${SSO_PUBLIC_KEY}</realm-public-key>|g" "${CONFIG_FILE}"
-    fi
-
-    if [ -n "$SSO_TRUSTSTORE" ] && [ -n "$SSO_TRUSTSTORE_DIR" ]; then
-      sed -i "s|<!-- ##KEYCLOAK_TRUSTSTORE## -->|<truststore>${SSO_TRUSTSTORE_DIR}/${SSO_TRUSTSTORE}</truststore><truststore-password>${SSO_TRUSTSTORE_PASSWORD}</truststore-password>|g" "${CONFIG_FILE}"
-      sed -i "s|##KEYCLOAK_DISABLE_TRUST_MANAGER##|false|g" "${CONFIG_FILE}"
-    else
-      sed -i "s|##KEYCLOAK_DISABLE_TRUST_MANAGER##|true|g" "${CONFIG_FILE}"
-    fi
-
-    sed -i "s|##KEYCLOAK_URL##|${SSO_URL}|g" "${CONFIG_FILE}"
-
-    if [ -n "$SSO_SAML_CERTIFICATE_NAME" ]; then
-      sed -i "s|##SSO_SAML_CERTIFICATE_NAME##|${SSO_SAML_CERTIFICATE_NAME}|g" "${CONFIG_FILE}"
-    fi
-
-    if [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
-      sed -i "s|##SSO_SAML_KEYSTORE_PASSWORD##|${SSO_SAML_KEYSTORE_PASSWORD}|g" "${CONFIG_FILE}"
-    fi
-
-    if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ]; then
-      sed -i "s|##SSO_SAML_KEYSTORE##|${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE}|g" "${CONFIG_FILE}"
-    fi
-  else
-    log_warning "Missing SSO_URL. Unable to properly configure SSO-enabled applications"
-  fi
-
 }
 
 function set_curl() {
@@ -689,30 +560,14 @@ function get_token() {
 
 }
 
-function configure_extension() {
-  sed -i 's|<!-- ##KEYCLOAK_EXTENSION## -->|<extension module="org.keycloak.keycloak-adapter-subsystem"/><extension module="org.keycloak.keycloak-saml-adapter-subsystem"/>|' "${CONFIG_FILE}"
-}
 
 function configure_extensions_no_marker() {
   sed -i "s|${EXTENSIONS_END_MARKER}|<extension module=\"org.keycloak.keycloak-adapter-subsystem\"/><extension module=\"org.keycloak.keycloak-saml-adapter-subsystem\"/>${EXTENSIONS_END_MARKER}|" "${CONFIG_FILE}"
 }
 
-function configure_security_domain() {
-  keycloak_security_domain=$(cat "${KEYCLOAK_SECURITY_DOMAIN_FILE}" | sed ':a;N;$!ba;s|\n|\\n|g')
-  sed -i "s|<!-- ##KEYCLOAK_SECURITY_DOMAIN## -->|${keycloak_security_domain%$'\n'}|" "${CONFIG_FILE}"
-}
-
 function configure_subsystem() {
   auth_method=$1
-  subsystem_file=$2
-  subsystem_marker=$3
-  protocol=$4
-  deployment_file=$5
-  is_cli=$6
-
-  keycloak_subsystem=$(cat "${subsystem_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
-
-  keycloak_deployment_subsystem=$(cat "${deployment_file}" | sed ':a;N;$!ba;s|\n|\\n|g')
+  protocol=$2
 
   pushd $JBOSS_HOME/standalone/deployments
   files=*.war
@@ -742,19 +597,6 @@ function configure_subsystem() {
       if [ -n "$web_xml" ]; then
         requested_auth_method=$(echo $web_xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
         if [[ $requested_auth_method == "${auth_method}" ]]; then
-
-            if [ -z "$subsystem" ]; then
-              subsystem="${keycloak_subsystem}"
-            fi
-
-          if [[ $web_xml == *"<auth-method>${SAML}</auth-method>"* ]]
-          then
-              SPs="${SPs}${keycloak_saml_sp}"
-
-              keycloak_deployment_subsystem=$(echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_SAML_SP##|${SPs}|")
-          fi
-
-          deployment=$(echo "${keycloak_deployment_subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT##|${f}|")
           if [ $auth_method == ${SAML} ]; then
             cli="$cli
               /subsystem=keycloak-saml/secure-deployment=${f}:add()"
@@ -815,10 +657,8 @@ function configure_subsystem() {
           fi
 
           if [ -n "$APPLICATION_NAME" ]; then
-            deployment=$(echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${APPLICATION_NAME}-${module_name}|")
             entity_id=${APPLICATION_NAME}-${module_name}
           else
-            deployment=$(echo "${deployment}" | sed "s|##KEYCLOAK_ENTITY_ID##|${module_name}|")
             entity_id=${module_name}
           fi
           if [ $auth_method == ${SAML} ]; then
@@ -858,24 +698,18 @@ function configure_subsystem() {
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-alias,value=${SSO_SAML_CERTIFICATE_NAME})"
               fi
           fi
-          deployments="${deployments} ${deployment}"
-
-          deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_CLIENT##|${keycloak_client}|" )
           if [ $auth_method == $OPENIDCONNECT ]; then
             cli="$cli
                /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=resource, value=${keycloak_client})"
           fi
-          deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_SECRET##|${SSO_SECRET}|" )
           if [ $auth_method == $OPENIDCONNECT ] && [ -n "${SSO_SECRET}" ]; then
             cli="$cli
               /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"
           fi
 
           if [ -n "$SSO_ENABLE_CORS" ]; then
-            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|${SSO_ENABLE_CORS}|" )
             cors=${SSO_ENABLE_CORS}
           else
-            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_ENABLE_CORS##|false|" )
             cors=false
           fi
 
@@ -885,10 +719,8 @@ function configure_subsystem() {
           fi
 
           if [ -n "$SSO_BEARER_ONLY" ]; then
-            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|${SSO_BEARER_ONLY}|" )
             bearer=${SSO_BEARER_ONLY}
           else
-            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_BEARER_ONLY##|false|" )
             bearer=false
           fi
           if [ $auth_method == $OPENIDCONNECT ]; then
@@ -897,10 +729,8 @@ function configure_subsystem() {
           fi
 
           if [ -n "$SSO_SAML_LOGOUT_PAGE" ]; then
-            deployments=$(echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|${SSO_SAML_LOGOUT_PAGE}|" )
             logoutPage="${SSO_SAML_LOGOUT_PAGE}"
           else
-            deployments=$(echo "${deployments}" | sed "s|##SSO_SAML_LOGOUT_PAGE##|/|" )
             logoutPage=/
           fi
 
@@ -910,13 +740,10 @@ function configure_subsystem() {
           fi
 
           if [ -n "$SSO_PRINCIPAL_ATTRIBUTE" ]; then
-            deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##|<principal-attribute>${SSO_PRINCIPAL_ATTRIBUTE}</principal-attribute>|" )
             if [ $auth_method == $OPENIDCONNECT ]; then
               cli="$cli
               /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=principal-attribute, value=${SSO_PRINCIPAL_ATTRIBUTE})"
             fi
-          else
-              deployments=$(echo "${deployments}" | sed "s|##KEYCLOAK_PRINCIPAL_ATTRIBUTE##||" )
           fi
 
           log_info "Configured keycloak subsystem for $protocol module $module_name from $f"
@@ -926,28 +753,6 @@ function configure_subsystem() {
   done
 
   popd
-
-  subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_DEPLOYMENT_SUBSYSTEM##|${deployments}|" )
-
-  if [ -n "$realm_certificate" ]; then
-    keys="<Keys><Key signing=\"true\" ><CertificatePem>${realm_certificate}</CertificatePem></Key></Keys>"
-    subsystem=$(echo "${subsystem}" | sed "s|<!-- ##KEYCLOAK_REALM_CERTIFICATE## -->|${keys}|g")
-
-    validate_signature=true
-    if [ -n "$SSO_SAML_VALIDATE_SIGNATURE" ]; then
-      validate_signature="$SSO_SAML_VALIDATE_SIGNATURE"
-    fi
-
-    subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|${validate_signature}|g")
-  else
-    subsystem=$(echo "${subsystem}" | sed "s|##KEYCLOAK_VALIDATE_SIGNATURE##|false|g")
-  fi
-
-  if [ -z "$is_cli" ]; then
-    if [ -n "$subsystem" ]; then
-      sed -i "s|<!-- ${subsystem_marker} -->|${subsystem%$'\n'}|" "${CONFIG_FILE}"
-    fi
-  fi
 }
 
 function configure_client() {
