@@ -32,8 +32,10 @@ function configure_administration() {
     fi
 
     if [ "${mode}" = "xml" ]; then
-      local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
-      sed -i "s|><!-- ##MGMT_IFACE_REALM## -->| ${mgmt_iface_replace_str}>|" "$CONFIG_FILE"
+      # No more supported
+      log_error "XML marker <!-- ##MGMT_IFACE_REALM## --> is no more supported, remove the marker from the configuration."
+      log_error "Exiting..."
+      exit
     elif [ "${mode}" = "cli" ]; then
       cat << EOF >> "${CLI_SCRIPT_FILE}"
       if (outcome != success) of /core-service=management/management-interface=http-interface:read-resource
@@ -41,7 +43,7 @@ function configure_administration() {
         exit
       end-if
       if (result == undefined) of /core-service=management/management-interface=http-interface:read-attribute(name=http-authentication-factory)
-        /core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)
+        /core-service=management/management-interface=http-interface:write-attribute(name=http-authentication-factory, value=management-http-authentication)
       end-if
 EOF
     fi
