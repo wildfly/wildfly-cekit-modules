@@ -1,0 +1,19 @@
+schema_version: 1
+name: jboss.container.wildfly.s2i.legacy
+version: '1.0'
+description: Ability to provision a server thanks to env variables, legacy workflow
+
+envs:
+- name: JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE
+  value: "/opt/jboss/container/wildfly/s2i/galleon"
+- name: GALLEON_VERSION
+  value: "4.2.8.Final"
+- name: S2I_SOURCE_DEPLOYMENTS_FILTER
+  value: "*.war *.ear *.rar *.jar"
+
+execute:
+- script: configure.sh
+
+modules:
+  install:
+  - name: jboss.container.wildfly.s2i.bash
