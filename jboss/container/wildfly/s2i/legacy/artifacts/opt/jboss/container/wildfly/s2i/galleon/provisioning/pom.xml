@@ -38,6 +38,7 @@
     </properties>
     <modules>
         <module>generic_layers</module>
+        <module>default_config</module>
     </modules>
     <build>
         <pluginManagement>

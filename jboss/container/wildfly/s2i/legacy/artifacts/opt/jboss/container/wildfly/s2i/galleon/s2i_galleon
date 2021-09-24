@@ -1,4 +1,5 @@
 GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/provisioning/generic_layers
+GALLEON_DEFAULT_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/provisioning/default_config
 
 function galleon_patch_generic_config() {
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
@@ -26,6 +27,9 @@ function galleon_patch_generic_config() {
    fi
 }
 
+function galleon_patch_default_config() {
+   sed -i "s|<!-- ##GALLEON_FEATURE_PACK## -->|${1}|" $GALLEON_DEFAULT_DEFINITION/pom.xml
+}
 
 function galleon_init_mvn_env() {
     # store original MAVEN_ARGS, MAVEN_ARGS_APPEND and MAVEN_LOCAL_REPO
@@ -137,6 +141,22 @@ function galleon_provision_server() {
       GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
       if [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
         echo "Galleon provisioning of layers overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
+      fi
+    else
+      # default config, only 1 FP expected.
+      nb=0
+      for fp in $(echo "${GALLEON_PROVISION_FEATURE_PACKS}" | sed "s/,/ /g"); do
+        nb=$((nb+1))
+        main_fp=$fp
+      done
+      if [ $nb -gt 1 ]; then
+        log_error "Error, more than one feature-pack provided in GALLEON_PROVISION_FEATURE_PACKS, can't provision default config."
+        exit 1
+      fi
+      galleon_patch_default_config $main_fp
+      GALLEON_DESCRIPTION_LOCATION="$GALLEON_DEFAULT_DEFINITION"
+      if [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
+        echo "Galleon provisioning of default config overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
       fi
     fi
       
