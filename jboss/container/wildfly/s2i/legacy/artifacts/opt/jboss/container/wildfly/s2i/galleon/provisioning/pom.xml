@@ -39,6 +39,7 @@
     <modules>
         <module>generic_layers</module>
         <module>default_config</module>
+        <module>generic_provisioning</module>
     </modules>
     <build>
         <pluginManagement>
