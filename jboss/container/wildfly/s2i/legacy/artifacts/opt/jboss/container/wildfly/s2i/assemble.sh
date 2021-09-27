@@ -11,7 +11,7 @@ if [ -n "${GALLEON_PROVISION_LAYERS}" ]; then
 fi
 
 if [ -n "${GALLEON_PROVISION_FEATURE_PACKS}" ] || [ -n "${GALLEON_USE_LOCAL_FILE}" ]; then
-  log_warning "You have activated legacy s2i workflow by setting GALLEON_PROVISION_FEATURE_PACKS env variable."
+  log_warning "You have activated legacy s2i workflow by setting GALLEON_PROVISION_FEATURE_PACKS or GALLEON_USE_LOCAL_FILE env variable."
   log_warning "This support is deprecated and will be removed in a future release. Provision and configure your server during s2i from your pom.xml file by using the dedicated Maven plugin."
   # Legacy s2i workflow integration
   #For backward compatibility
