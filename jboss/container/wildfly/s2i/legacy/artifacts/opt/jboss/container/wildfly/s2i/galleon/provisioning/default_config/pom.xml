@@ -23,11 +23,11 @@
         <artifactId>galleon-s2i-parent</artifactId>
         <version>1.0.0.Final</version>
     </parent>
-    <artifactId>layers-provisioning</artifactId>
+    <artifactId>default-config</artifactId>
     <packaging>pom</packaging>
-    <name>Provision a set of Galleon layers from s2i feature-pack</name>
+    <name>Provision the default standalone config</name>
   
-    <description>Provision a set of Galleon layers from s2i feature-pack</description>
+    <description>Provision the default standalone config</description>
 
     <licenses>
         <license>
@@ -44,7 +44,7 @@
                 <artifactId>galleon-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>wildfly-provisioning-layers ${env.GALLEON_PROVISION_LAYERS}</id>
+                        <id>wildfly-provisioning-default-config</id>
                         <goals>
                             <goal>provision</goal>
                         </goals>
@@ -59,9 +59,18 @@
                                 <optional-packages>passive+</optional-packages>
                             </plugin-options>
                             <feature-packs>
-                                <!-- ##GALLEON_FEATURE_PACKS## -->
+                                <feature-pack>
+                                    <location><!-- ##GALLEON_FEATURE_PACK## --></location>
+                                    <inherit-packages>true</inherit-packages>
+                                    <inherit-configs>false</inherit-configs>
+                                    <included-configs>
+                                        <config>
+                                            <model>standalone</model>
+                                            <name>standalone.xml</name>
+                                        </config>
+                                    </included-configs>
+                                </feature-pack>
                             </feature-packs>
-                            <customConfig>config.xml</customConfig>
                         </configuration>
                     </execution>
                 </executions>
