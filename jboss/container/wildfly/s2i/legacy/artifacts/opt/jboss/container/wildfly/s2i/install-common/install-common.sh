@@ -69,7 +69,7 @@ function configure_drivers(){
         driver_class=$(find_env "${driver_prefix}_DRIVER_CLASS")
         datasource_class=$(find_env "${driver_prefix}_XA_DATASOURCE_CLASS")
         if [ -z "$driver_class" ] && [ -z "$datasource_class" ]; then
-          echo "Warning - ${driver_prefix}_DRIVER_NAME and ${driver_prefix}_XA_DATASOURCE_CLASS is missing from driver configuration. At least one is required. Driver will not be configured"
+          echo "Warning - ${driver_prefix}_DRIVER_CLASS and ${driver_prefix}_XA_DATASOURCE_CLASS is missing from driver configuration. At least one is required. Driver will not be configured"
           continue
         fi
 
