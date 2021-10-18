@@ -791,7 +791,7 @@ function configure_client() {
       client_config="${client_config},\"attributes\":{\"saml.signing.certificate\":\"${pem}\"${server_signature}}"
     fi
   else
-    service_addr=$(hostname -i)
+    service_addr=$(get_host_ipv4)
     client_config="{\"redirectUris\":[${redirects}]"
 
     if [ -n "$HOSTNAME_HTTP" ]; then

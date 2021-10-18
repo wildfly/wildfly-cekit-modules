@@ -287,7 +287,7 @@ generate_dns_ping_config() {
 
 configure_ha_args() {
   # Set HA args
-  IP_ADDR=`hostname -i`
+  IP_ADDR=$(get_host_ipv4)
   JBOSS_HA_ARGS="-b ${JBOSS_HA_IP:-${IP_ADDR}} -bprivate ${JBOSS_HA_IP:-${IP_ADDR}}"
 
   init_node_name

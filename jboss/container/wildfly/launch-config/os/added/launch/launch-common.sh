@@ -116,3 +116,32 @@ function splitAttributesStringIntoLines() {
   temp=$(echo $input | sed "s|\" ${attribute_name}=\"|\" \n${attribute_name}=\"|g" | awk -F "\"" '{print $2}')
   echo "${temp}"
 }
+
+#
+# Find the ipv4 address of the host
+# The host could have 1 or more ipv4 and/or ipv6 addresses
+# For this function we need to return a single ipv4 address
+#
+# /proc/net/fib_tree contains the Forwarding Information Base table
+#
+# awk is using a block-pattern to filter lines with 32 or host
+#
+# python or other languages can not be used and it must be /bin/sh compatible
+#
+# depends on the following tools:
+# sh, awk, sort, uniq, grep, wc, head
+function get_host_ipv4() {
+
+ local COUNT_IP=$(awk '/32 host/ { print f } {f=$2}' <<< "$(</proc/net/fib_trie)" | sort -n | uniq | grep -v '127.0.0.' | wc -l)
+
+ local FOUND_IP=$(awk '/32 host/ { print f } {f=$2}' <<< "$(</proc/net/fib_trie)" | sort -n | uniq | grep -v '127.0.0.' | head -n1)
+
+ if [[ "$COUNT_IP" != "1" ]]
+ then
+  echo "WARNING: get_host_ipv4() returned $COUNT_IP ipv4 addresses, only the first $FOUND_IP will be used. To override this value, please set JBOSS_HA_IP."
+ fi
+
+ echo $FOUND_IP
+
+}
+
