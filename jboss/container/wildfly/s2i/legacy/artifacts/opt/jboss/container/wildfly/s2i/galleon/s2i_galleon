@@ -33,16 +33,13 @@ function galleon_patch_default_config() {
 }
 
 function galleon_init_mvn_env() {
-    # store original MAVEN_ARGS, MAVEN_ARGS_APPEND and MAVEN_LOCAL_REPO
+    # store original maven envs
     if [ -n "$MAVEN_ARGS" ]; then
       ORIGINAL_MAVEN_ARGS=${MAVEN_ARGS}
     fi
     if [ -n "$MAVEN_ARGS_APPEND" ]; then
       ORIGINAL_MAVEN_ARGS_APPEND=${MAVEN_ARGS_APPEND}
       unset MAVEN_ARGS_APPEND
-    fi
-    if [ -n "$MAVEN_LOCAL_REPO" ]; then
-      ORIGINAL_MAVEN_LOCAL_REPO=$MAVEN_LOCAL_REPO
     fi
     if [ -n "$MAVEN_SETTINGS_XML" ]; then
       ORIGINAL_MAVEN_SETTINGS_XML=$MAVEN_SETTINGS_XML
@@ -76,7 +73,7 @@ function galleon_init_mvn_env() {
     fi
     source "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/maven.sh
     # Initialize Maven
-    maven_init
+    maven_s2i_init
     unset MAVEN_ARGS
     maven_init_var_MAVEN_ARGS    
     # GALLEON_MAVEN_ARGS is mainly to enable nexus profile 
@@ -84,11 +81,6 @@ function galleon_init_mvn_env() {
 }
 
 function galleon_reset_mvn_env() {
-    # restore MAVEN_LOCAL_REPO
-    unset MAVEN_LOCAL_REPO
-    if [ -n "$ORIGINAL_MAVEN_LOCAL_REPO" ]; then
-      MAVEN_LOCAL_REPO=$ORIGINAL_MAVEN_LOCAL_REPO
-    fi
 
     # restore MAVEN_SETTINGS_XML
     unset MAVEN_SETTINGS_XML
