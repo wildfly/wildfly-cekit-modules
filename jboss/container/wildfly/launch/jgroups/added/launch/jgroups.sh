@@ -127,12 +127,10 @@ create_jgroups_encrypt_asym_cli() {
             missingNAKACK2="true"
             continue
         fi
+        local protocolProperties="sym_keylength=\"${sym_keylength:-128}\", sym_algorithm=\"${sym_algorithm:-AES/ECB/PKCS5Padding}\","
+        protocolProperties="$protocolProperties asym_keylength=\"${asym_keylength:-512}\", asym_algorithm=\"${asym_algorithm:-RSA}\", change_key_on_leave=\"${change_key_on_leave:-true}\""
         op=("/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT:add(add-index=${index})"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value=\"${sym_keylength:-128}\")"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value=\"${sym_algorithm:-AES/ECB/PKCS5Padding}\")"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value=\"${asym_keylength:-512}\")"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value=\"${asym_algorithm:-RSA}\")"
-            "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value=\"${change_key_on_leave:-true}\")"
+                "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
         )
         config="${config} $(configure_protocol_cli_helper "${stack}" "ASYM_ENCRYPT" "${op[@]}")"
         add_protocol_at_prosition "${stack}" "ASYM_ENCRYPT" ${index}
@@ -189,13 +187,10 @@ create_jgroups_elytron_legacy_cli() {
         missingNAKACK2="true"
         continue
       fi
+      local protocolProperties="provider=SunJCE, sym_algorithm=AES, encrypt_entire_message=true,"
+      protocolProperties="$protocolProperties keystore_name=\"${jg_encrypt_keystore_dir}/${jg_encrypt_keystore}\", store_password=\"${jg_encrypt_password}\", alias=\"${jg_encrypt_name}\""
       op=("/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:add(add-index=${index})"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=encrypt_entire_message:add(value=true)"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=keystore_name:add(value=\"${jg_encrypt_keystore_dir}/${jg_encrypt_keystore}\")"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=store_password:add(value=\"${jg_encrypt_password}\")"
-          "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT/property=alias:add(value=\"${jg_encrypt_name}\")"
+              "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
         )
       config="${config} $(configure_protocol_cli_helper "${stack}" "SYM_ENCRYPT" "${op[@]}")"
       add_protocol_at_prosition "${stack}" "SYM_ENCRYPT" ${index}
