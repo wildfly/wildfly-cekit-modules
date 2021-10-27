@@ -1,0 +1,127 @@
+name: Wildfly Cekit OpenShift Modules - Build/Test WildFly s2i V2 image on the changes introduced in the PR. 
+on:
+  pull_request:
+     branches: [ master ]
+env:
+  LANG: en_US.UTF-8
+  S2I_URI: https://api.github.com/repos/openshift/source-to-image/releases/latest
+  CEKIT_VERSION: 3.2.1
+  FORK_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+jobs:
+  wfci:
+    name: Wildfly-s2i Build and Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+    steps:
+      - name: Update hosts - linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cat /etc/hosts
+          sudo bash -c "echo '127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4' > /etc/hosts"
+          sudo bash -c "echo '::1         localhost localhost.localdomain localhost6 localhost6.localdomain6' >> /etc/hosts"
+          sudo sysctl -w fs.file-max=2097152
+      - uses: actions/checkout@v2
+        with:
+          path: wildfly-cekit-modules
+      - uses: actions/checkout@v2
+        with:
+            repository: wildfly/wildfly-s2i
+            ref: v2
+            path: wildfly-s2i
+      - uses: actions/checkout@v2
+        with:
+            repository: wildfly-extras/wildfly-cloud-galleon-pack
+            ref: main
+            path: wildfly-cloud-galleon-pack
+      - uses: n1hility/cancel-previous-runs@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build cloud FP
+        run: |
+          echo Using "${FORK_REPO%%/*}" and "${GITHUB_HEAD_REF##*/}" to build cloud feature-pack
+          mvn clean install -DskipTests -Dwildfly.cekit.modules.fork="${FORK_REPO%%/*}" -Dwildfly.cekit.modules.tag="${GITHUB_HEAD_REF##*/}"
+          cloudVersion=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          echo "CLOUD_FP_VERSION=${cloudVersion}" >> $GITHUB_ENV
+          mkdir -p custom-cloud-image
+          mkdir -p custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-cloud-galleon-pack/$cloudVersion
+          mkdir -p custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-preview-cloud-galleon-pack/$cloudVersion
+          cp wildfly-cloud-galleon-pack/target/wildfly-cloud-galleon-pack-$cloudVersion.zip custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-cloud-galleon-pack/$cloudVersion
+          cp wildfly-preview-cloud-galleon-pack/target/wildfly-preview-cloud-galleon-pack-$cloudVersion.zip custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-preview-cloud-galleon-pack/$cloudVersion
+          docker_file=custom-cloud-image/docker/Dockerfile
+            cat <<EOF > $docker_file
+             FROM wildfly/wildfly-s2i-jdk11:latest
+             RUN mkdir -p /tmp/artifacts/m2
+             COPY --chown=jboss:root repository /tmp/artifacts/m2
+          EOF
+        working-directory: wildfly-cloud-galleon-pack
+      - name: Verify latest ubi8-minimal
+        run: |
+          docker pull registry.access.redhat.com/ubi8/ubi-minimal
+          docker image ls | grep ubi8
+      - name: Setup required system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install krb5-multidev
+      - name: Setup Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: Setup virtualenv and install cekit and required packages
+        run: |
+          python --version
+          sudo pip install virtualenv
+          mkdir ~/cekit${{ env.CEKIT_VERSION }}
+          python3 -m venv ~/cekit${{ env.CEKIT_VERSION }}
+          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          pip install cekit==${{ env.CEKIT_VERSION }} docker docker-squash odcs behave lxml 
+      - name: install s2i binary
+        run: |
+          echo ===== Installing s2i from ${{ env.S2I_URL }} =====
+          mkdir /tmp/s2i/ && cd /tmp/s2i/
+          curl -s ${{ env.S2I_URI }} \
+           | grep browser_download_url \
+           | grep linux-amd64 \
+           | cut -d '"' -f 4 \
+           | wget -qi -
+           tar xvf source-to-image*.gz
+           sudo mv s2i /usr/bin
+           which s2i
+           s2i version
+      - name: Build image
+        run: |
+          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          pushd wildfly-builder-image
+          cekit build docker
+          popd
+          docker image ls
+        working-directory: wildfly-s2i
+      - name: Build and test extended image containing custom WildFly cloud feature-pack
+        run: |
+          docker build -t wildfly/wildfly-s2i-jdk11:dev-${{ env.CLOUD_FP_VERSION }} ./custom-cloud-image/docker
+          cp -r ../wildfly-s2i/wildfly-builder-image ./custom-cloud-image
+          cp -r ../wildfly-s2i/wildfly-modules ./custom-cloud-image
+          comment="### PLACEHOLDER FOR CLOUD CUSTOM TESTING ###"
+          replacement="\|MAVEN_ARGS_APPEND\|-Dversion.wildfly.cloud.galleon.pack=${{ env.CLOUD_FP_VERSION }}\|"
+          legacyReplacement="org.wildfly.cloud:wildfly-cloud-galleon-pack:${{ env.CLOUD_FP_VERSION }}\|"
+          legacyPlaceHolder="org.wildfly.cloud:wildfly-cloud-galleon-pack:.*\|"
+          for feature in custom-cloud-image/wildfly-builder-image/tests/features/*.feature; do
+            sed -i "s|$comment|$replacement|" "$feature"
+            sed -i "s|$legacyPlaceHolder|$legacyReplacement|" "$feature"
+          done
+          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          pushd custom-cloud-image/wildfly-builder-image
+            cekit test --image=wildfly/wildfly-s2i-jdk11:dev-${{ env.CLOUD_FP_VERSION }} behave
+          popd
+        working-directory: wildfly-cloud-galleon-pack
+      - name: List containers
+        if: failure()
+        run: |
+            echo === RUNNING CONTAINERS ===
+            docker container ls
+            echo === RUNNING PROCESSES ===
+            top -b -n1
+            echo === DISK USAGE ===
+             df -h

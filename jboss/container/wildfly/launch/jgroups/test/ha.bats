@@ -156,7 +156,7 @@ EOF
 # check that non-empty OPENSHIFT_DNS_PING_SERVICE_NAME is present when using dns.DNS_PING
 @test "Generate JGroups ping config - dns.DNS_PING requires service name" {
     expected=$(cat <<EOF
-/tmp/jboss_home/bin/launch/ha.sh: line 295: init_node_name: command not found
+/tmp/jboss_home/bin/launch/ha.sh: line 293: init_node_name: command not found
 ERROR Environment variable OPENSHIFT_DNS_PING_SERVICE_NAME is required when using dns.DNS_PING ping protocol. Please refer to the documentation for configuration.
 EOF
 )
@@ -361,8 +361,7 @@ EOF
       if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="dns.DNS_PING":read-resource
           batch
               /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING:add(add-index=0)
-              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
-              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+              /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING:write-attribute(name=properties, value={dns_query="service_name", async_discovery_use_separate_thread_per_request=true})
         run-batch
       end-if
 
@@ -374,8 +373,7 @@ EOF
       if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="dns.DNS_PING":read-resource
           batch
               /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING:add(add-index=0)
-              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
-              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+              /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING:write-attribute(name=properties, value={dns_query="service_name", async_discovery_use_separate_thread_per_request=true})
         run-batch
       end-if
 EOF

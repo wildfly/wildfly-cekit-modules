@@ -186,8 +186,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="dns.DNS_PING":read-resource
            batch
                /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING:add(add-index=0)
-               /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
-               /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+               /subsystem=jgroups/stack=udp/protocol=dns.DNS_PING:write-attribute(name=properties, value={dns_query="service_name", async_discovery_use_separate_thread_per_request=true})
           run-batch
        end-if
        if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="dns.DNS_PING":read-resource
@@ -198,8 +197,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="dns.DNS_PING":read-resource
            batch
                /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING:add(add-index=0)
-               /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=dns_query:add(value="service_name")
-               /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING/property=async_discovery_use_separate_thread_per_request:add(value=true)
+               /subsystem=jgroups/stack=tcp/protocol=dns.DNS_PING:write-attribute(name=properties, value={dns_query="service_name", async_discovery_use_separate_thread_per_request=true})
           run-batch
        end-if
 
@@ -212,11 +210,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=12)
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
        if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
@@ -227,11 +221,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=11)
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
+               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
 EOF

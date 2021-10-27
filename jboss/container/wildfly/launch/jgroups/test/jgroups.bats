@@ -314,11 +314,7 @@ EOF
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=4)
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
 
@@ -330,11 +326,7 @@ EOF
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=4)
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_keylength:add(value="128")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=sym_algorithm:add(value="AES/ECB/PKCS5Padding")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_keylength:add(value="512")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=asym_algorithm:add(value="RSA")
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT/property=change_key_on_leave:add(value="true")
+               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
 EOF
@@ -471,12 +463,7 @@ EOF
         if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="SYM_ENCRYPT":read-resource
             batch
                 /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:add(add-index=10)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=encrypt_entire_message:add(value=true)
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=keystore_name:add(value="keystore_dir/encrypt_keystore")
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=store_password:add(value="encrypt_password")
-                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT/property=alias:add(value="encrypt_name")
+                /subsystem=jgroups/stack=udp/protocol=SYM_ENCRYPT:write-attribute(name=properties, value={provider=SunJCE, sym_algorithm=AES, encrypt_entire_message=true, keystore_name="keystore_dir/encrypt_keystore", store_password="encrypt_password", alias="encrypt_name"})
           run-batch
         end-if
 
@@ -488,12 +475,7 @@ EOF
         if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="SYM_ENCRYPT":read-resource
             batch
                 /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT:add(add-index=0)
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=provider:add(value=SunJCE)
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=sym_algorithm:add(value=AES)
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=encrypt_entire_message:add(value=true)
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=keystore_name:add(value="keystore_dir/encrypt_keystore")
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=store_password:add(value="encrypt_password")
-                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT/property=alias:add(value="encrypt_name")
+                /subsystem=jgroups/stack=tcp/protocol=SYM_ENCRYPT:write-attribute(name=properties, value={provider=SunJCE, sym_algorithm=AES, encrypt_entire_message=true, keystore_name="keystore_dir/encrypt_keystore", store_password="encrypt_password", alias="encrypt_name"})
           run-batch
         end-if
 
@@ -514,6 +496,7 @@ EOF
   init_protocol_list_store
   run configure_jgroups_encryption
   output=$(cat "${CLI_SCRIPT_FILE}")
+  echo $output
   normalize_spaces_new_lines
 
   [ "${output}" = "${expected}" ]

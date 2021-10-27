@@ -270,14 +270,12 @@ generate_dns_ping_config() {
               op="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:add(add-index=0, socket-binding=${socket_binding})"
             fi
 
-            local op_prop1=""
-            local op_prop2=""
+            local opProperties=""
             if [ "${ping_protocol}" = "dns.DNS_PING" ]; then
-              op_prop1="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=dns_query:add(value=\"${ping_service_name}\")"
-              op_prop2="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}/property=async_discovery_use_separate_thread_per_request:add(value=true)"
+              opProperties="/subsystem=jgroups/stack=$stack/protocol=${ping_protocol}:write-attribute(name=properties, value={dns_query=\"${ping_service_name}\", async_discovery_use_separate_thread_per_request=true})"
             fi
 
-            config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${op_prop1}" "${op_prop2}")"
+            config="${config} $(configure_protocol_cli_helper "$stack" "${ping_protocol}" "${op}" "${opProperties}")"
             add_protocol_at_prosition "${stack}" "${ping_protocol}" 0
           done <<< "${stackNames}"
         fi
