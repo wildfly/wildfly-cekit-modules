@@ -5,7 +5,6 @@ on:
 env:
   LANG: en_US.UTF-8
   S2I_URI: https://api.github.com/repos/openshift/source-to-image/releases/latest
-  CEKIT_VERSION: 3.2.1
 jobs:
   wfci:
     name: Wildfly-s2i Build and Test
@@ -50,10 +49,10 @@ jobs:
         run: |
           python --version
           sudo pip install virtualenv
-          mkdir ~/cekit${{ env.CEKIT_VERSION }}
-          python3 -m venv ~/cekit${{ env.CEKIT_VERSION }}
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
-          pip install cekit==${{ env.CEKIT_VERSION }} docker docker-squash odcs behave lxml 
+          mkdir ~/cekit
+          python3 -m venv ~/cekit
+          . ~/cekit/bin/activate
+          pip install cekit docker docker-squash odcs behave lxml 
       - name: install s2i binary
         run: |
           echo ===== Installing s2i from ${{ env.S2I_URL }} =====
@@ -69,7 +68,7 @@ jobs:
            s2i version
       - name: Build 
         run: |
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          . ~/cekit/bin/activate
           overrides="{\"modules\": {\"repositories\": [{\"name\":\"wildfly-cekit-modules\",\"path\":\"../../wildfly-cekit-modules\"}]}}"
           pushd wildfly-builder-image
           cekit build --overrides "$overrides" docker
@@ -81,7 +80,7 @@ jobs:
         working-directory: wildfly-s2i
       - name: Behave Tests
         run: |
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          . ~/cekit/bin/activate
           pushd wildfly-builder-image
           cekit -v test behave
           popd
@@ -92,7 +91,7 @@ jobs:
           export NAMESPACE=wildfly
           export IMAGE_NAME=${NAMESPACE}/wildfly-s2i-jdk11
           export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime-jre11
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          . ~/cekit/bin/activate
           ./test/run
         working-directory: wildfly-s2i
       - name: List containers
