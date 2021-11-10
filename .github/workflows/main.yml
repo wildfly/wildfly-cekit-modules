@@ -32,9 +32,8 @@ jobs:
       - uses: n1hility/cancel-previous-runs@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verify latest ubi8-minimal and openjdk-11-runtime images are present
+      - name: Verify latest ubi8-minimal is present
         run: |
-          docker pull registry.access.redhat.com/ubi8/openjdk-11-runtime
           docker pull registry.access.redhat.com/ubi8/ubi-minimal
           docker image ls | grep ubi8
       - name: Setup required system packages
@@ -90,7 +89,7 @@ jobs:
           export IMAGE_VERSION=dev
           export NAMESPACE=wildfly
           export IMAGE_NAME=${NAMESPACE}/wildfly-s2i-jdk11
-          export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime-jre11
+          export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime-jdk11
           . ~/cekit/bin/activate
           ./test/run
         working-directory: wildfly-s2i
