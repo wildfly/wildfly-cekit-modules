@@ -40,36 +40,23 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.jboss.galleon</groupId>
-                <artifactId>galleon-maven-plugin</artifactId>
+                <groupId>${s2i.provisioning.maven.plugin.groupId}</groupId>
+                <artifactId>${s2i.provisioning.maven.plugin.artifactId}</artifactId>
                 <executions>
                     <execution>
-                        <id>wildfly-provisioning-default-config</id>
+                        <id>provisioning-default-config</id>
                         <goals>
-                            <goal>provision</goal>
+                            <goal>package</goal>
                         </goals>
                         <phase>compile</phase>
                         <configuration>
-                            <install-dir>${project.build.directory}/server</install-dir>
-                            <record-state>true</record-state>
-                            <offline>false</offline>
-                            <plugin-options>
+                            <record-provisioning-state>true</record-provisioning-state>
+                            <galleon-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
-                                <optional-packages>passive+</optional-packages>
-                            </plugin-options>
+                            </galleon-options>
                             <feature-packs>
-                                <feature-pack>
-                                    <location><!-- ##GALLEON_FEATURE_PACK## --></location>
-                                    <inherit-packages>true</inherit-packages>
-                                    <inherit-configs>false</inherit-configs>
-                                    <included-configs>
-                                        <config>
-                                            <model>standalone</model>
-                                            <name>standalone.xml</name>
-                                        </config>
-                                    </included-configs>
-                                </feature-pack>
+                                <!-- ##GALLEON_FEATURE_PACKS## -->
                             </feature-packs>
                         </configuration>
                     </execution>

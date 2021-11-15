@@ -3,17 +3,22 @@ GALLEON_DEFAULT_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/
 GALLEON_GENERIC_PROVISIONING_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/provisioning/generic_provisioning
 
 function galleon_patch_generic_config() {
+   included_layers=
+   excluded_layers=
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
      for layer in $(echo $GALLEON_PROVISION_LAYERS | sed "s/,/ /g"); do
        if [[ "$layer" =~ ^-.* ]]; then
          layer="${layer:1}"
-         layers="$layers<exclude name=\"$layer\"/>"
+         excluded_layers="$excluded_layers<layer> $layer</layer>"
        else
-         layers="$layers<include name=\"$layer\"/>"
+         included_layers="$included_layers<layer> $layer</layer>"
        fi
      done
-     if [ -n "$layers" ]; then
-       sed -i "s|<!-- ##GALLEON_LAYERS## -->|${layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/config.xml
+     if [ -n "$included_layers" ]; then
+       sed -i "s|<!-- ##GALLEON_INCLUDED_LAYERS## -->|${included_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+     fi
+     if [ -n "$excluded_layers" ]; then
+       sed -i "s|<!-- ##GALLEON_EXCLUDED_LAYERS## -->|${excluded_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
      fi
    fi
    if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
@@ -29,7 +34,21 @@ function galleon_patch_generic_config() {
 }
 
 function galleon_patch_default_config() {
-   sed -i "s|<!-- ##GALLEON_FEATURE_PACK## -->|${1}|" $GALLEON_DEFAULT_DEFINITION/pom.xml
+  # default config, use the latest fp default configs.
+  feature_packs_content=
+  fps_array=()
+  for fp in $(echo "${GALLEON_PROVISION_FEATURE_PACKS}" | sed "s/,/ /g"); do
+    fps_array+=($fp)
+  done
+  lastIndex=$((${#fps_array[@]} -1))
+  for index in "${!fps_array[@]}"; do
+    inherit_configs="false";
+    if [ $index == $lastIndex ]; then
+      inherit_configs="true";
+    fi
+    feature_packs_content="$feature_packs_content<feature-pack><location>${fps_array[$index]}</location><inherit-packages>true</inherit-packages><inherit-configs>$inherit_configs</inherit-configs></feature-pack>"
+  done
+  sed -i "s|<!-- ##GALLEON_FEATURE_PACKS## -->|${feature_packs_content}|" $GALLEON_DEFAULT_DEFINITION/pom.xml
 }
 
 function galleon_init_mvn_env() {
@@ -137,17 +156,7 @@ function galleon_provision_server() {
       fi
     else
       if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
-        # default config, only 1 FP expected.
-        nb=0
-        for fp in $(echo "${GALLEON_PROVISION_FEATURE_PACKS}" | sed "s/,/ /g"); do
-          nb=$((nb+1))
-          main_fp=$fp
-        done
-        if [ $nb -gt 1 ]; then
-          log_error "Error, more than one feature-pack provided in GALLEON_PROVISION_FEATURE_PACKS, can't provision default config."
-          exit 1
-        fi
-        galleon_patch_default_config $main_fp
+        galleon_patch_default_config
         GALLEON_DESCRIPTION_LOCATION="$GALLEON_DEFAULT_DEFINITION"
         if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
           log_warning "Galleon provisioning of default config overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
@@ -155,7 +164,8 @@ function galleon_provision_server() {
       else
         if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" ]; then
           log_info "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
-          cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$GALLEON_GENERIC_PROVISIONING_DEFINITION"
+          mkdir -p "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
+          cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
           GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_PROVISIONING_DEFINITION"
         else
           log_error "No provisioning.xml file exists in $GALLEON_LOCAL_PROVISIONING, invalid galleon configuration."
