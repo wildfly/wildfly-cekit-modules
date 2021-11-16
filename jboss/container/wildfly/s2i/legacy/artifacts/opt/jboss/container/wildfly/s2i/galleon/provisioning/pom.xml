@@ -34,7 +34,9 @@
         </license>
     </licenses>
     <properties>
-        <version.org.jboss.galleon>${env.GALLEON_VERSION}</version.org.jboss.galleon>
+        <s2i.provisioning.maven.plugin.artifactId>${env.PROVISIONING_MAVEN_PLUGIN_ARTIFACT_ID}</s2i.provisioning.maven.plugin.artifactId>
+        <s2i.provisioning.maven.plugin.groupId>${env.PROVISIONING_MAVEN_PLUGIN_GROUP_ID}</s2i.provisioning.maven.plugin.groupId>
+        <version.s2i.provisioning.maven.plugin>${env.PROVISIONING_MAVEN_PLUGIN_VERSION}</version.s2i.provisioning.maven.plugin>
     </properties>
     <modules>
         <module>generic_layers</module>
@@ -45,9 +47,9 @@
         <pluginManagement>
             <plugins>
                 <plugin>
-                    <groupId>org.jboss.galleon</groupId>
-                    <artifactId>galleon-maven-plugin</artifactId>
-                    <version>${version.org.jboss.galleon}</version>
+                    <groupId>${s2i.provisioning.maven.plugin.groupId}</groupId>
+                    <artifactId>${s2i.provisioning.maven.plugin.artifactId}</artifactId>
+                    <version>${version.s2i.provisioning.maven.plugin}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

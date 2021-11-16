@@ -39,24 +39,21 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.jboss.galleon</groupId>
-                <artifactId>galleon-maven-plugin</artifactId>
+                <groupId>${s2i.provisioning.maven.plugin.groupId}</groupId>
+                <artifactId>${s2i.provisioning.maven.plugin.artifactId}</artifactId>
                 <executions>
                     <execution>
                         <id>provision a provisioning.xml file</id>
                         <goals>
-                            <goal>provision-file</goal>
+                            <goal>package</goal>
                         </goals>
                         <phase>compile</phase>
                         <configuration>
-                            <install-dir>${project.build.directory}/server</install-dir>
-                            <record-state>true</record-state>
-                            <offline>false</offline>
-                            <plugin-options>
+                            <record-provisioning-state>true</record-provisioning-state>
+                            <galleon-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
-                            </plugin-options>
-                            <provisioningFile>provisioning.xml</provisioningFile>
+                            </galleon-options>
                         </configuration>
                     </execution>
                 </executions>

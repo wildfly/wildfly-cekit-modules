@@ -40,28 +40,30 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.jboss.galleon</groupId>
-                <artifactId>galleon-maven-plugin</artifactId>
+                <groupId>${s2i.provisioning.maven.plugin.groupId}</groupId>
+                <artifactId>${s2i.provisioning.maven.plugin.artifactId}</artifactId>
                 <executions>
                     <execution>
-                        <id>wildfly-provisioning-layers ${env.GALLEON_PROVISION_LAYERS}</id>
+                        <id>provisioning-layers ${env.GALLEON_PROVISION_LAYERS}</id>
                         <goals>
-                            <goal>provision</goal>
+                            <goal>package</goal>
                         </goals>
                         <phase>compile</phase>
                         <configuration>
-                            <install-dir>${project.build.directory}/server</install-dir>
-                            <record-state>true</record-state>
-                            <offline>false</offline>
-                            <plugin-options>
+                            <record-provisioning-state>true</record-provisioning-state>
+                            <galleon-options>
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
-                                <optional-packages>passive+</optional-packages>
-                            </plugin-options>
+                            </galleon-options>
                             <feature-packs>
                                 <!-- ##GALLEON_FEATURE_PACKS## -->
                             </feature-packs>
-                            <customConfig>config.xml</customConfig>
+                            <layers>
+                                <!-- ##GALLEON_INCLUDED_LAYERS## -->
+                            </layers>
+                            <excluded-layers>
+                                <!-- ##GALLEON_EXCLUDED_LAYERS## -->
+                            </excluded-layers>
                         </configuration>
                     </execution>
                 </executions>
