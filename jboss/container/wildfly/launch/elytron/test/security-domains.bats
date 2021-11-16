@@ -42,7 +42,7 @@ teardown() {
 
   run configure
   echo "${output}"
-  [ "${output}" = "WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE
+  [ "${output}" = "WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE
 ERROR SECDOMAIN_NAME env variable can't be set, use ELYTRON_SECDOMAIN_NAME env variable to configure authentication using Elytron.
 ERROR Exiting..." ]
 }
