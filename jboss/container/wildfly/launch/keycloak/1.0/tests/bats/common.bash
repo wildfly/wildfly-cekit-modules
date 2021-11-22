@@ -1,5 +1,5 @@
 echo $BATS_TEST_DIRNAME
-load $BATS_TEST_DIRNAME/../../../../../../../test-common/log_utils.bash
+load $BATS_TEST_DIRNAME/../../../../../../../../test-common/log_utils.bash
 
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 export K8S_ENV=false
@@ -14,7 +14,7 @@ fi
 mkdir -p $JBOSS_HOME/bin/launch
 mkdir -p $JBOSS_HOME/responses
 cp $BATS_TEST_DIRNAME/../../added/keycloak.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/server/shinatra.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/mock_responses/* $JBOSS_HOME/responses
 
