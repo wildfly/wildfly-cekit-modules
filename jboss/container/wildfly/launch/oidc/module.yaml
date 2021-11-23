@@ -1,0 +1,42 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.oidc
+version: '1.0'
+description: OIDC support. keycloak provider.
+execute:
+- script: configure.sh
+  user: '185'
+envs:
+  - name: "APPLICATION_NAME"
+    description: "Application name"
+  - name: "OIDC_DISABLE_SSL_CERTIFICATE_VALIDATION"
+    description: "true or false. Enable/disable validation."
+  - name: "OIDC_HOSTNAME_HTTP"
+    description: "Custom http Route Hostname"
+  - name: "OIDC_HOSTNAME_HTTPS"
+    description: "Custom https Route Hostname"
+  - name: "OIDC_PROVIDER_NAME"
+    description: "The name of the provider. 'keycloak' must be used when interacting with keycloak server."
+  - name: "OIDC_PROVIDER_TRUSTSTORE"
+    description: "The name of the truststore file."
+  - name: "OIDC_PROVIDER_TRUSTSTORE_CERTIFICATE_ALIAS"
+    description: "Certificate alias."
+  - name: "OIDC_PROVIDER_TRUSTSTORE_DIR"
+    description: "Location of truststore."
+  - name: "OIDC_PROVIDER_TRUSTSTORE_PASSWORD"
+    description: "The password for the truststore and certificate (e.g. mykeystorepass)."
+  - name: "OIDC_PROVIDER_SSL_REQUIRED"
+    description: "Require HTTPS. By default 'external' (private and local address no https)."
+  - name: "OIDC_PROVIDER_URL"
+    description: "The URL for the SSO provider."
+  - name: "OIDC_SECURE_DEPLOYMENT_BEARER_ONLY"
+    description: "true or false. SSO Client Access Type."
+  - name: "OIDC_SECURE_DEPLOYMENT_ENABLE_CORS"
+    description: "true or false. Enable CORS for SSO applications."
+  - name: "OIDC_SECURE_DEPLOYMENT_PRINCIPAL_ATTRIBUTE"
+    description: "Principal attribute."
+  - name: "OIDC_SECURE_DEPLOYMENT_SECRET"
+    description: "The SSO Client Secret."
+  - name: "OIDC_USER_NAME"
+    description: "The username used to access the SSO service."
+  - name: "OIDC_USER_PASSWORD"
+    description: "The password for the keycloak service user."
