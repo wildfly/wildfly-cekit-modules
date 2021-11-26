@@ -574,13 +574,43 @@ function configure_subsystem() {
   redirect_path=
 
  # We need it to be retrieved prior to iterate the web deployments, needed by CLI
- if [ -n "$token" ]; then
+  if [ -n "$token" ]; then
+    ### CIAM-690 -- Start of RH-SSO add-on:
+    ### -----------------------------------
+    ### Add support for RH-SSO 7.5
+
+    realm_signing_key_certificate="xx"
     # SSO Server 7.0
-    realm_certificate=$($CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM} | grep -Po '(?<="certificate":")[^"]*')
-    if [ -z "$realm_certificate" ]; then
-      #SSO Server 7.1
-      realm_certificate=$($CURL -H "Accept: application/json" -H "Authorization: Bearer ${token}" ${sso_service}/admin/realms/${SSO_REALM}/keys | grep -Po '(?<="certificate":")[^"]*')
+    realm_certificate_url="${sso_service}/admin/realms/${SSO_REALM}"
+    response=$(${CURL} -H "Accept: application/json" -H "Authorization: Bearer ${token}" "${realm_certificate_url}")
+    if ! grep -q '"certificate":' <<< "${response}"; then
+      # SSO Server 7.1+
+      realm_certificate_url="${sso_service}/admin/realms/${SSO_REALM}/keys"
+      response=$(${CURL} -H "Accept: application/json" -H "Authorization: Bearer ${token}" "${realm_certificate_url}")
+      if ! grep -q '"certificate":' <<< "${response}"; then
+        echo "Failed to retrieve signing key PEM certificate of the ${SSO_REALM}"
+        exit 1
+      else
+        # SSO Server 7.1 up to 7.4
+        if ! grep -q '"use":"SIG"' <<< "${response}"; then
+          realm_signing_key_certificate=$(grep -Po '(?<="certificate":")[^"]*' <<< "${response}")
+        # SSO Server 7.5+
+        else
+          realm_signing_key_certificate=$(grep -Po '(?<="certificate":")[^"]*(?=","use":"SIG")' <<< "${response}")
+        fi
+      fi
+    # SSO Server 7.0
+    else
+     realm_signing_key_certificate=$(grep -Po '(?<="certificate":")[^"]*' <<< "${response}")
     fi
+
+    if [ "x${realm_signing_key_certificate}x" == "xx" ]; then
+      echo "Failed to retrieve signing key PEM certificate of the ${SSO_REALM}"
+      exit 1
+    fi
+
+     ### CIAM-690 -- End of RH-SSO add-on
+     ### --------------------------------
   fi
 
   pushd $JBOSS_HOME/standalone/deployments &> /dev/null
@@ -589,12 +619,12 @@ function configure_subsystem() {
   for f in $files
   do
     if [[ $f != "*.war" ]];then
-      keycloak_configure_secure_deployment "$f" "$realm_certificate"
+      keycloak_configure_secure_deployment "$f" "$realm_signing_key_certificate"
     fi
   done
   popd &> /dev/null
   # discover deployments in $JBOSS_HOME/standalone/data/content
-  keycloak_discover_deployed_deployments "$realm_certificate"
+  keycloak_discover_deployed_deployments "$realm_signing_key_certificate"
 }
 
 function keycloak_discover_deployed_deployments() {
