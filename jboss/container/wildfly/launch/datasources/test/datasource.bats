@@ -18,7 +18,7 @@ mkdir -p $JBOSS_HOME/standalone/configuration
 
 # Set up the environment variables and load dependencies
 WILDFLY_SERVER_CONFIGURATION=standalone-openshift.xml
-source $BATS_TEST_DIRNAME/../../../launch-config/config/added/launch/openshift-common.sh
+source $BATS_TEST_DIRNAME/../../../launch-config/config/1.0/added/launch/openshift-common.sh
 source $JBOSS_HOME/bin/launch/datasource.sh
 
 
