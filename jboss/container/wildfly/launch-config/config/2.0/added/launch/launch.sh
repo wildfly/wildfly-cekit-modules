@@ -132,6 +132,7 @@ function setupShutdownHook() {
 
 function launchServer() {
   local cmd=$1
+ local customArgs=$2
 
   move_history_directory
   configure_server
@@ -140,7 +141,8 @@ function launchServer() {
   local imgVersion=${JBOSS_IMAGE_VERSION:-$IMAGE_VERSION}
   log_info "Running $imgName image, version $imgVersion"
 
-  ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_HA_ARGS} ${JBOSS_MESSAGING_ARGS} ${CLI_EXECUTION_OPTS}  &
+# The cmd or customArgs are expected to have set the interface addresses.
+  ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_MESSAGING_ARGS} ${CLI_EXECUTION_OPTS} ${customArgs} &
 
   local pid=$!
 
@@ -148,7 +150,7 @@ function launchServer() {
   handleExtensions
   if [ $? -ne 0 ]; then
     log_info "Restarting the server"
-    ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_HA_ARGS} ${JBOSS_MESSAGING_ARGS} &
+    ${cmd} ${JAVA_PROXY_OPTIONS} ${JBOSS_MESSAGING_ARGS} ${customArgs} &
     pid=$!
   fi
   wait $pid 2>/dev/null
