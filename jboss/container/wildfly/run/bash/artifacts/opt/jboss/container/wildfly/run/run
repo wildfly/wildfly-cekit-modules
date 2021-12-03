@@ -165,10 +165,8 @@ else
     fi
     log_info "Starting server with arguments: ${SERVER_ARGS}"
 
-    export JAVA_OPTS
-
     # The script must be launched in background for the server to not receive directly signals and allowing for CLI shutdown processed from this script.
-    $JBOSS_HOME/bin/${actual_launcher} ${SERVER_ARGS} &
+    JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} ${SERVER_ARGS} &
     pid=$!
     wait $pid 2>/dev/null
 fi
