@@ -41,7 +41,7 @@ if [ -n "${SERVER_LAUNCH_SCRIPT_OVERRIDE}" ]; then
   echo "Using custom launcher ${SERVER_LAUNCH_SCRIPT_OVERRIDE}."
   actual_launcher="${SERVER_LAUNCH_SCRIPT_OVERRIDE}"
 elif [ -f "${JBOSS_HOME}/bin/openshift-launch.sh" ]; then
-    echo "Using legacy openshift launcher."
+    echo "Using openshift launcher."
     actual_launcher=openshift-launch.sh
 elif [ -f "${JBOSS_HOME}/bin/standalone-cloud.sh" ]; then
     echo "Using cloud launcher."
