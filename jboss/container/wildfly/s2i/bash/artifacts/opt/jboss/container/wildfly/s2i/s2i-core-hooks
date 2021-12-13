@@ -3,10 +3,12 @@ source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 
 function maven_s2i_deploy_artifacts_override() {
  local artifact_dirs=${1:-${MAVEN_S2I_ARTIFACT_DIRS}}
- echo S2I_SOURCE_DIR $S2I_SOURCE_DIR
+ echo "Installing server. S2I_SOURCE_DIR $S2I_SOURCE_DIR, ARTIFACT DIRS ${artifact_dirs}" 
+ echo  "$S2I_SOURCE_DIR content:"
  ls $S2I_SOURCE_DIR
- echo ARTIFACT DIRS ${artifact_dirs}
+ echo  "$S2I_SOURCE_DIR/$artifact_dirs content:"
  ls -l $S2I_SOURCE_DIR/$artifact_dirs
+
  local server_dir=${S2I_SERVER_DIR:-server}
  provisioned_server="$S2I_SOURCE_DIR/$artifact_dirs/${server_dir}";
 

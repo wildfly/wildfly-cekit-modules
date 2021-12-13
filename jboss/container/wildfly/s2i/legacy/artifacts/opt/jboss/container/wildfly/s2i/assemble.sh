@@ -23,9 +23,6 @@ if [ -n "${GALLEON_PROVISION_FEATURE_PACKS}" ] || [ -n "${GALLEON_USE_LOCAL_FILE
 else
   # include our overrides/extensions
   source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/s2i-core-hooks"
-
-  # inject our overridden maven_s2i_*() functions
-  source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/maven-s2i-overrides"
 fi
 # invoke the build
 maven_s2i_build
