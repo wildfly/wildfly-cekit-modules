@@ -18,7 +18,7 @@ if [ -n "${GALLEON_PROVISION_FEATURE_PACKS}" ] || [ -n "${GALLEON_USE_LOCAL_FILE
   export CONFIG_ADJUSTMENT_MODE=cli
   source "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}/s2i-core-hooks"
   source "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}/s2i_galleon"
-  
+  galleon_legacy=true;
   galleon_provision_server
 else
   # include our overrides/extensions
@@ -26,3 +26,10 @@ else
 fi
 # invoke the build
 maven_s2i_build
+
+# We must then copy the /deployments to the server
+if [ -n "$galleon_legacy" ]; then
+  log_info "Copying /deployments to $JBOSS_HOME/standalone/"
+  cp -prf /deployments $JBOSS_HOME/standalone/
+  rm -rf /deployments/*
+fi
