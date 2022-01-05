@@ -323,8 +323,7 @@ configure_https() {
       create_elytron_https_connector_cli "https" "https" "LocalhostSslContext" "true"
     fi
 
-  else
-
+  elif [ -n "${HTTPS_PASSWORD}" ] || [ -n "${HTTPS_KEYSTORE}" ]; then
     if [ -z "${HTTPS_PASSWORD}" ]; then
       missing_msg="$missing_msg HTTPS_PASSWORD"
     fi

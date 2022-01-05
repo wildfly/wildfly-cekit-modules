@@ -295,8 +295,7 @@ EOF
     CONFIGURE_ELYTRON_SSL=true
     run configure_https
     echo "OUTPUT ${output}"
-    [ "${output}" = "WARN CONFIGURE_ELYTRON_SSL env variable is set to true, that is no more needed, SSL can only be configured using Elytron.
-WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE" ]
+    [ "${output}" = "WARN CONFIGURE_ELYTRON_SSL env variable is set to true, that is no more needed, SSL can only be configured using Elytron." ]
 }
 
 @test "Configure HTTPS - set CONFIGURE_ELYTRON_SSL=false" {
@@ -309,10 +308,10 @@ WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Mi
 ERROR Exiting..." ]
 }
 
-@test "Configure HTTPS - missing all required vars" {
+@test "Configure HTTPS - missing all required vars, no warning" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE'
+    expected=''
     HTTPS_PASSWORD=
     HTTPS_KEYSTORE=
     HTTPS_KEYSTORE_TYPE=
