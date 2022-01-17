@@ -1,0 +1,22 @@
+source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
+
+function maven_s2i_custom_binary_build() {
+  local serverDir="${S2I_SOURCE_DIR}/${S2I_SERVER_DIR:-server}"
+  if [ -d "${serverDir}" ]; then
+    log_info "S2I binary build, found server ${serverDir}"
+    log_info "Copying server from $serverDir to $JBOSS_HOME..."
+    cp -r "$serverDir" "$JBOSS_HOME"
+  else
+     log_info "S2I binary build, ${serverDir} not found, root dir must be a server home directory."
+     if [ -f "${S2I_SOURCE_DIR}/jboss-modules.jar" ] && [ -d "${S2I_SOURCE_DIR}/modules" ]; then
+       log_info "S2I binary build, server home detected, installing server."
+       cp -r "${S2I_SOURCE_DIR}" "$JBOSS_HOME"
+       # No copy can be operated in next steps, the binary content is only the server content. 
+       source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/disabled-copy-hooks"
+     else
+      log_error "Not a server home directory, exiting."
+      exit 1
+     fi
+  fi
+  chmod -R ug+rwX $JBOSS_HOME
+} 
