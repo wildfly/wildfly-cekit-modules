@@ -9,6 +9,12 @@ if [ -n "${GALLEON_PROVISION_LAYERS}" ]; then
      exit 1
    fi
 fi
+if [ -n "${GALLEON_PROVISION_FEATURE_PACKS}" ]; then
+   if [ -z "${GALLEON_PROVISION_LAYERS}" ]; then
+     log_error "GALLEON_PROVISION_LAYERS env variable must be set when GALLEON_PROVISION_FEATURE_PACKS is set"
+     exit 1
+   fi
+fi
 # This is required in all cases
 # Needed in case some drivers are installed during s2i, the CLI execution must occurs during s2i.
 export CONFIG_ADJUSTMENT_MODE=cli
