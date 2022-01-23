@@ -946,7 +946,9 @@ EOF
         sed -i "s|##DEFAULT_JMS##||" $CONFIG_FILE
       fi
     elif [ "${default_jms_config_mode}" = "cli" ]; then
-      if ([ "$REMOTE_AMQ_BROKER" = "true" ] || ([ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ]) && [ -n "${defaultJmsConnectionFactoryJndi}" ]; then
+      if [ "$REMOTE_AMQ_BROKER" = "true" ] && [ -n "${defaultJmsConnectionFactoryJndi}" ]; then
+        echo "/subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value=\"${defaultJmsConnectionFactoryJndi}\")" >> "${CLI_SCRIPT_FILE}"
+      elif ([ -n "${MQ_QUEUES}" ] || [ -n "${HORNETQ_QUEUES}" ] || [ -n "${MQ_TOPICS}" ] || [ -n "${HORNETQ_TOPICS}" ] || [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xtrue" ]) && [ "x${DISABLE_EMBEDDED_JMS_BROKER}" != "xalways" ] && [ -n "${defaultJmsConnectionFactoryJndi}" ]; then
         echo "/subsystem=ee/service=default-bindings:write-attribute(name=jms-connection-factory, value=\"${defaultJmsConnectionFactoryJndi}\")" >> "${CLI_SCRIPT_FILE}"
       else
         echo "/subsystem=ee/service=default-bindings:undefine-attribute(name=jms-connection-factory)" >> "${CLI_SCRIPT_FILE}"
@@ -1088,7 +1090,7 @@ can_add_embedded(){
   local has_remoting_subsystem
   local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:remoting:')]\""
   testXpathExpression "${xpath}" "has_remoting_subsystem"
-
+￼
   if [ "${has_remoting_subsystem}" -ne 0 ]; then
       # Just ignore
       return 1
