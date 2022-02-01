@@ -13,7 +13,7 @@ envs:
 - name: PROVISIONING_MAVEN_PLUGIN_GROUP_ID
   value: "org.wildfly.plugins"
 - name: PROVISIONING_MAVEN_PLUGIN_VERSION
-  value: "3.0.0.Alpha3"
+  value: "3.0.0.Beta1"
 - name: GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO
   description: "DEPRECATED API. Absolute path to a maven repo directory containing custom galleon feature-packs. By default the directory 'galleon/repository' is used."
 - name: GALLEON_DIR
