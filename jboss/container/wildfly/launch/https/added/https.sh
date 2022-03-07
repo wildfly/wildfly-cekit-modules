@@ -24,7 +24,13 @@ function configure_https() {
     log_info "Using Elytron for SSL configuration."
     return
   fi
-
+  if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+    if [ -n "${HTTPS_PASSWORD}" -o -n "${HTTPS_KEYSTORE_DIR}" -o -n "${HTTPS_KEYSTORE}" ]; then
+      log_error "HTTPS can only be configured using elytron. Set CONFIGURE_ELYTRON_SSL=true"
+      log_error "Exiting..."
+      exit
+   fi
+  fi
   local sslConfMode
   getConfigurationMode "<!-- ##SSL## -->" "sslConfMode"
 

@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.launch.https
 version: '1.0'
-description: Configures legacy SSL
+description: Deprecated. Configures legacy SSL
 execute:
   - script: configure.sh
     user: '185'

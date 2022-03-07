@@ -73,8 +73,23 @@ EOF
     HTTPS_KEYSTORE="ssl.key"
 
     run configure_https
-
     output=$(<"${CLI_SCRIPT_FILE}")
     normalize_spaces_new_lines
     [ "${output}" = "${expected}" ]
+}
+
+@test "Disabled legacy security" {
+    DISABLE_LEGACY_SECURITY=true
+    CONFIG_ADJUSTMENT_MODE="cli"
+    CONFIGURE_ELYTRON_SSL=false
+    HTTPS_PASSWORD="p@ssw0rd"
+    HTTPS_KEYSTORE_DIR="/jboss_home"
+    HTTPS_KEYSTORE="ssl.key"
+
+    run configure_https
+    expected="ERROR HTTPS can only be configured using elytron. Set CONFIGURE_ELYTRON_SSL=true
+ERROR Exiting..."
+    echo "${output}"
+    [ "${output}" = "${expected}" ]
+    [ ! -s "${CLI_SCRIPT_FILE}" ]
 }

@@ -5,6 +5,11 @@ source $JBOSS_HOME/bin/launch/launch-common.sh
 # Arguments:
 # $1 - realm
 function add_management_interface_realm() {
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      log_error "Calling add_management_interface_realm function is not supported."
+      log_error "Exiting..." 
+      exit
+    fi
     local mgmt_iface_realm="${1}"
     local mgmt_iface_replace_str
     local mode

@@ -194,3 +194,16 @@ EOF
   run configure
   [ "$status" -eq 1 ]
 }
+
+@test "Disabled legacy security" {
+    DISABLE_LEGACY_SECURITY=true
+    CONFIG_ADJUSTMENT_MODE="cli"
+    SECDOMAIN_NAME=Foo
+
+    run configure
+    expected="ERROR SECDOMAIN_NAME env variable can't be set, use ELYTRON_SECDOMAIN_NAME env variable to configure authentication using Elytron.
+ERROR Exiting..."
+    echo "${output}"
+    [ "${output}" = "${expected}" ]
+    [ ! -s "${CLI_SCRIPT_FILE}" ]
+}

@@ -242,7 +242,15 @@ EOF
 configure_https() {
 
   if [ "${CONFIGURE_ELYTRON_SSL}" != "true" ]; then
-    log_info "Using PicketBox SSL configuration."
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      if [ -n "${HTTPS_PASSWORD}" -o -n "${HTTPS_KEYSTORE_TYPE}" -o -n "${HTTPS_KEYSTORE}" ]; then
+        log_error "HTTPS can only be configured using elytron. Set CONFIGURE_ELYTRON_SSL=true."
+        log_error "Exiting..."
+        exit
+      fi
+    else
+      log_info "Using PicketBox SSL configuration."
+    fi
     return
   fi
 
@@ -330,6 +338,11 @@ configure_https() {
 
 configure_security_domains() {
   if [ -n "${SECDOMAIN_NAME}" ]; then
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      log_error "SECDOMAIN_NAME env variable can't be set, use ELYTRON_SECDOMAIN_NAME env variable to configure authentication using Elytron."
+      log_error "Exiting..."
+      exit
+    fi
     configure_elytron_integration
     configure_elytron_security_domain
     configure_http_authentication_factory

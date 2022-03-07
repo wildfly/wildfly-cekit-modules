@@ -7,6 +7,11 @@ source $JBOSS_HOME/bin/launch/launch-common.sh
 # $2 - flag
 # $3 - module
 function configure_login_modules() {
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      log_error "Calling configure_login_modules function is not supported."
+      log_error "Exiting..."
+      exit
+    fi
     local login_module_code="${1}"
     local login_module_flag="${2}"
     local login_module_module="${3}"
@@ -32,6 +37,11 @@ function configure_login_modules() {
 }
 
 configure_login_module_cli() {
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      log_error "Calling configure_login_module_cli function is not supported."
+      log_error "Exiting..."
+      exit
+    fi
     sec_subsystem="/subsystem=security"
     sec_domain="${sec_subsystem}/security-domain=other"
     sec_domain_auth="${sec_domain}/authentication=classic"
