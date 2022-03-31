@@ -1,4 +1,7 @@
 #!/bin/sh
+
+set -e
+
 source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 source "${JBOSS_CONTAINER_MAVEN_S2I_MODULE}/maven-s2i"
 
