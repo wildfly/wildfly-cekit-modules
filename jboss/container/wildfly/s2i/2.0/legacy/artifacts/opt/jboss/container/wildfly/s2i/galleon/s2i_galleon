@@ -1,0 +1,186 @@
+GALLEON_GENERIC_LAYERS_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/provisioning/generic_layers
+GALLEON_GENERIC_PROVISIONING_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE"/provisioning/generic_provisioning
+
+function galleon_patch_generic_config() {
+   included_layers=
+   excluded_layers=
+   if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
+     for layer in $(echo $GALLEON_PROVISION_LAYERS | sed "s/,/ /g"); do
+       if [[ "$layer" =~ ^-.* ]]; then
+         layer="${layer:1}"
+         excluded_layers="$excluded_layers<layer> $layer</layer>"
+       else
+         included_layers="$included_layers<layer> $layer</layer>"
+       fi
+     done
+     if [ -n "$included_layers" ]; then
+       sed -i "s|<!-- ##GALLEON_INCLUDED_LAYERS## -->|${included_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+     fi
+     if [ -n "$excluded_layers" ]; then
+       sed -i "s|<!-- ##GALLEON_EXCLUDED_LAYERS## -->|${excluded_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+     fi
+   fi
+   if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
+     log_info Provisioning Galleon feature-packs: $GALLEON_PROVISION_FEATURE_PACKS
+     for fp in $(echo "${GALLEON_PROVISION_FEATURE_PACKS}" | sed "s/,/ /g"); do
+       featurepacks="$featurepacks<feature-pack><inherit-packages>false</inherit-packages><inherit-configs>false</inherit-configs>"
+       featurepacks="$featurepacks<location>$fp</location></feature-pack>"
+     done
+     if [ -n "$featurepacks" ]; then
+       sed -i "s|<!-- ##GALLEON_FEATURE_PACKS## -->|${featurepacks}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+     fi
+   fi
+}
+
+function galleon_init_mvn_env() {
+    # store original maven envs
+    if [ -n "$MAVEN_ARGS" ]; then
+      ORIGINAL_MAVEN_ARGS=${MAVEN_ARGS}
+    fi
+    if [ -n "$MAVEN_ARGS_APPEND" ]; then
+      ORIGINAL_MAVEN_ARGS_APPEND=${MAVEN_ARGS_APPEND}
+      unset MAVEN_ARGS_APPEND
+    fi
+    if [ -n "$MAVEN_SETTINGS_XML" ]; then
+      ORIGINAL_MAVEN_SETTINGS_XML=$MAVEN_SETTINGS_XML
+    fi
+
+    # Need to compute the project src root dir.
+    dest_dir="${S2I_DESTINATION_DIR:-/tmp}"
+    GALLEON_PROJECT_SRC_DIR="${dest_dir}/src"
+    
+    # Identify custom galleon content directory
+    if [ -n "${GALLEON_DIR}" ]; then
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/${GALLEON_DIR}"
+      if [ ! -d "${GALLEON_LOCAL_PROVISIONING}" ]; then
+        log_error "$GALLEON_DIR directory referenced by GALLEON_DIR env variable doesn't exist in the project. Exiting."
+        exit 1
+      fi
+    else
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/galleon"
+    fi
+    # Set galleon settings prior to init maven.
+    # Doing so default settings.xml are untouched.
+    if [ -f "${GALLEON_LOCAL_PROVISIONING}/settings.xml" ]; then
+      MAVEN_SETTINGS_XML="${GALLEON_LOCAL_PROVISIONING}/settings.xml"
+      log_info "Using ${MAVEN_SETTINGS_XML} when provisioning server."
+    else
+      cp $HOME/.m2/settings.xml /tmp/galleon-settings.xml
+      MAVEN_SETTINGS_XML=/tmp/galleon-settings.xml
+    fi
+    if test -r "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/scl-enable-maven; then
+      source "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/scl-enable-maven
+    fi
+    source "${JBOSS_CONTAINER_MAVEN_DEFAULT_MODULE}"/maven.sh
+    # Initialize Maven
+    maven_s2i_init
+    unset MAVEN_ARGS
+    maven_init_var_MAVEN_ARGS    
+    # GALLEON_MAVEN_ARGS is mainly to enable nexus profile 
+    MAVEN_ARGS="$MAVEN_ARGS $GALLEON_MAVEN_ARGS"
+}
+
+function galleon_reset_mvn_env() {
+
+    # restore MAVEN_SETTINGS_XML
+    unset MAVEN_SETTINGS_XML
+    if [ -n "$ORIGINAL_MAVEN_SETTINGS_XML" ]; then
+      MAVEN_SETTINGS_XML=$ORIGINAL_MAVEN_SETTINGS_XML
+    fi
+
+    # reset args to be clean when consumed by s2i
+    # MAVEN_ARGS could contain Galleon local repository
+    unset MAVEN_ARGS
+    if [ -n "$ORIGINAL_MAVEN_ARGS" ]; then
+      MAVEN_ARGS=${ORIGINAL_MAVEN_ARGS}
+    fi
+
+    if [ -n "$ORIGINAL_MAVEN_ARGS_APPEND" ]; then
+      MAVEN_ARGS_APPEND=${ORIGINAL_MAVEN_ARGS_APPEND}
+    fi
+}
+
+
+function install_custom_fps() {
+  if [ -n "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO" ]; then
+    if [ -d "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO" ]; then
+      copy_custom_fps "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO"
+    else
+      log_error "$GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO directory referenced by GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO env variable doesn't exist. Exiting."
+      exit 1
+    fi
+  else
+    if [ -d "$GALLEON_LOCAL_PROVISIONING/repository" ]; then
+      copy_custom_fps "$GALLEON_LOCAL_PROVISIONING/repository"
+    fi
+  fi
+}
+
+function copy_custom_fps() {
+  pushd "$1" &> /dev/null
+  log_info "Copying custom fp in $1 to $MAVEN_LOCAL_REPO"
+  mkdir -p "$MAVEN_LOCAL_REPO"
+  cp -r * "$MAVEN_LOCAL_REPO"
+  popd &> /dev/null
+}
+
+function galleon_provision_server() {
+    galleon_init_mvn_env
+    install_custom_fps
+    GALLEON_ROOT_DIR=${GALLEON_DEFINITIONS}
+
+    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
+      galleon_patch_generic_config
+      GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
+      if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
+        log_warning "Galleon provisioning of layers overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
+      fi
+    else
+      if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" ]; then
+        log_info "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
+        mkdir -p "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
+        cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
+        GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_PROVISIONING_DEFINITION"
+      else
+        log_error "No provisioning.xml file exists in $GALLEON_LOCAL_PROVISIONING, invalid galleon configuration."
+        exit 1
+      fi
+    fi
+      
+    if [ -f "$GALLEON_DESCRIPTION_LOCATION/pom.xml" ]; then
+      log_info "Provisioning WildFly server..."
+      maven_build "$GALLEON_DESCRIPTION_LOCATION" package
+
+      ERR=$?
+      if [ $ERR -ne 0 ]; then
+        log_error "Aborting due to error code $ERR from mvn install"
+        exit $ERR
+      fi
+      targetDir=$GALLEON_DESCRIPTION_LOCATION/target/server
+      if [ -d $targetDir ]; then
+        galleon_replace_server $targetDir
+        rm -rf $targetDir
+      else
+        log_error "Error, no server provisioned in $targetDir"
+        exit 1
+      fi
+    else
+      log_error "Not a valid galleon description $GALLEON_DESCRIPTION_LOCATION exiting"
+      exit 1
+    fi
+    galleon_reset_mvn_env
+}
+
+function galleon_replace_server() {
+  log_info "Installing server"
+  srcDir=$1
+  mkdir -p $JBOSS_HOME
+  cp -prf $srcDir/* $JBOSS_HOME
+  cp -prf $srcDir/.galleon $JBOSS_HOME/.galleon
+  cp -prf $JBOSS_HOME/standalone/deployments/* /deployments
+  rm -rf $JBOSS_HOME/standalone/deployments
+  # CLOUD-3855 - in certain cases when deploying onto the same image in openshift, we don't have permissions
+  # to chown from our running, random UID to the jboss user. So just chown to the current user (which will be root in a docker build
+  # and a random uid elsewhere)
+  chown -R ${USER}:root $JBOSS_HOME && chmod -R ug+rwX $JBOSS_HOME
+}
