@@ -1,0 +1,6 @@
+source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
+
+function s2i_core_copy_artifacts_hook() {
+ # NO-OP.
+ log_info "No custom content to copy, binary content contains only a server root directory"
+}

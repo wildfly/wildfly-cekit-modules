@@ -1,0 +1,33 @@
+schema_version: 1
+name: jboss.container.wildfly.s2i.legacy
+version: '2.0'
+description: Deprecated module. Ability to provision a server thanks to env variables. This is the legacy s2i workflow.
+
+envs:
+- name: JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE
+  value: "/opt/jboss/container/wildfly/s2i/galleon"
+- name: S2I_SOURCE_DEPLOYMENTS_FILTER
+  value: "*.war *.ear *.rar *.jar"
+- name: PROVISIONING_MAVEN_PLUGIN_ARTIFACT_ID
+  value: "wildfly-maven-plugin"
+- name: PROVISIONING_MAVEN_PLUGIN_GROUP_ID
+  value: "org.wildfly.plugins"
+- name: PROVISIONING_MAVEN_PLUGIN_VERSION
+  value: "3.0.0.Beta1"
+- name: GALLEON_CUSTOM_FEATURE_PACKS_MAVEN_REPO
+  description: "DEPRECATED API. Absolute path to a maven repo directory containing custom galleon feature-packs. By default the directory 'galleon/repository' is used."
+- name: GALLEON_DIR
+  description: "DEPRECATED API. Used during s2i build to locate the directory relative to the application project directory that contains galleon custom content. By default the directory 'galleon' is used."
+- name: GALLEON_USE_LOCAL_FILE
+  description: "DEPRECATED API. Value true or false. Advertise to the s2i build that a Galleon provisioning file has to be looked-up in the application project."
+- name: GALLEON_PROVISION_FEATURE_PACKS
+  description: "DEPRECATED API. A comma separated list of custom galleon feature-packs GAV.  Can be used when a set of Galleon layers has been set in GALLEON_PROVISION_LAYERS."
+- name: GALLEON_PROVISION_LAYERS
+  description: "DEPRECATED API. Used during s2i to provision a custom galleon server. Comma separated list of layers to compose the configuration."
+execute:
+- script: configure.sh
+
+modules:
+  install:
+  - name: jboss.container.wildfly.s2i.bash
+    version: "2.0"
