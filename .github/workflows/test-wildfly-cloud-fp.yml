@@ -19,7 +19,7 @@ jobs:
         uses: jitterbit/get-changed-files@v1
       - run: |
           for changed_file in ${{ steps.files.outputs.all }}; do
-            if [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]]; then
+            if [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]] && [[ "${changed_file}" =~ ^jboss/container/wildfly/.* ]]; then
               echo "Change detected in ${changed_file}, will build cloud feature-pack and test images."
               echo "IMPACT_CLOUD_FP=true" >> "$GITHUB_ENV"
               exit 0
