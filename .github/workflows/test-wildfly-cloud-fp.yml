@@ -5,7 +5,6 @@ on:
 env:
   LANG: en_US.UTF-8
   S2I_URI: https://api.github.com/repos/openshift/source-to-image/releases/latest
-  CEKIT_VERSION: 3.2.1
   FORK_REPO: ${{ github.event.pull_request.head.repo.full_name }}
 jobs:
   wfci:
@@ -20,7 +19,7 @@ jobs:
         uses: jitterbit/get-changed-files@v1
       - run: |
           for changed_file in ${{ steps.files.outputs.all }}; do
-            if [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]]; then
+            if [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]] && [[ "${changed_file}" =~ ^jboss/container/wildfly/.* ]]; then
               echo "Change detected in ${changed_file}, will build cloud feature-pack and test images."
               echo "IMPACT_CLOUD_FP=true" >> "$GITHUB_ENV"
               exit 0
@@ -92,10 +91,10 @@ jobs:
         run: |
           python --version
           sudo pip install virtualenv
-          mkdir ~/cekit${{ env.CEKIT_VERSION }}
-          python3 -m venv ~/cekit${{ env.CEKIT_VERSION }}
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
-          pip install cekit==${{ env.CEKIT_VERSION }} docker docker-squash odcs behave lxml 
+          mkdir ~/cekit
+          python3 -m venv ~/cekit
+          . ~/cekit/bin/activate
+          pip install cekit docker docker-squash odcs behave lxml 
       - name: install s2i binary
         if: env.IMPACT_CLOUD_FP == 'true'
         run: |
@@ -113,7 +112,7 @@ jobs:
       - name: Build image
         if: env.IMPACT_CLOUD_FP == 'true'
         run: |
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          . ~/cekit/bin/activate
           pushd wildfly-builder-image
           cekit build docker
           popd
@@ -133,7 +132,7 @@ jobs:
             sed -i "s|$comment|$replacement|" "$feature"
             sed -i "s|$legacyPlaceHolder|$legacyReplacement|" "$feature"
           done
-          . ~/cekit${{ env.CEKIT_VERSION }}/bin/activate
+          . ~/cekit/bin/activate
           pushd custom-cloud-image/wildfly-builder-image
             cekit test --image=wildfly/wildfly-s2i-jdk11:dev-${{ env.CLOUD_FP_VERSION }} behave
           popd
