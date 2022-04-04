@@ -18,7 +18,7 @@ jobs:
         uses: jitterbit/get-changed-files@v1
       - run: |
           for changed_file in ${{ steps.files.outputs.all }}; do
-            if [[ "${changed_file}" =~ ^jboss/container/wildfly/s2i/.* ]]; then
+            if [[ "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] || [[ "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]]; then
               echo "Change detected in ${changed_file}, will test image."
               echo "IMPACT_IMAGE=true" >> "$GITHUB_ENV"
               exit 0
