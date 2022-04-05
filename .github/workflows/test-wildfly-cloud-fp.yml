@@ -1,7 +1,7 @@
 name: Wildfly Cekit OpenShift Modules - Build WildFly cloud galleon feature-pack and Test WildFly s2i image if the changes introduced in the PR impact it. 
 on:
   pull_request:
-     branches: [ master ]
+     branches: [ main ]
 env:
   LANG: en_US.UTF-8
   S2I_URI: https://api.github.com/repos/openshift/source-to-image/releases/latest
