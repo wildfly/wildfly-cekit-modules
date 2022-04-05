@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.s2i.bash
 version: '2.0'
-description: Customization of common Maven S2I for WildFly S2I images.
+description: Customization of common Maven S2I for WildFly S2I images. FAKE CHANGE DO NOT MERGE
 
 envs:
 - name: JBOSS_CONTAINER_WILDFLY_S2I_MODULE
