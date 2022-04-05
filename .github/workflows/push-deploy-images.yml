@@ -2,7 +2,7 @@ name: Send event to Wildfly s2i to Build and Deploy images when pushing changes 
 on:
   push:
     branches:
-      - "master"
+      - "main"
 env:
   LANG: en_US.UTF-8
   WF_S2I_TOKEN: ${{ secrets.WILDFLY_S2I_BUILD_DEPLOY_TOKEN }}
