@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.run.api
 version: '1.0'
-description: Env variable to configure the server for cloud execution. JVM is automatically configured, all Java related env variables are supported.
+description: Env variable to configure the server for cloud execution. JVM is automatically configured, all Java VM related env variables are supported.
 
 envs:
 - name: JAVA_OPTS_APPEND
