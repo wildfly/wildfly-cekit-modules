@@ -1,0 +1,8 @@
+schema_version: 1
+name: jboss.container.wildfly.galleon.cloud-galleon-pack.config
+version: '1.0'
+description: Galleon standalone model.xml
+
+execute:
+- script: configure.sh
+  user: 185

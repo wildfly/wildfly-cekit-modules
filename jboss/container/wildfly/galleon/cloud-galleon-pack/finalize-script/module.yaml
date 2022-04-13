@@ -1,0 +1,8 @@
+schema_version: 1
+name: jboss.container.wildfly.galleon.cloud-galleon-pack.finalize-script
+version: '1.0'
+description: CLI script run after provisioning to remove content.
+
+execute:
+- script: configure.sh
+  user: 185

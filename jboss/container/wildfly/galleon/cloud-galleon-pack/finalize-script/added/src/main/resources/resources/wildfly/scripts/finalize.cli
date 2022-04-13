@@ -1,0 +1,35 @@
+embed-server
+
+# clustering adjustments
+
+if (outcome == success) of /subsystem=jgroups/stack=udp/protocol=PING:read-resource
+  /subsystem=jgroups/stack=udp/protocol=PING:remove
+end-if
+
+if (outcome == success) of /subsystem=jgroups/stack=tcp/protocol=MPING:read-resource
+  /subsystem=jgroups/stack=tcp/protocol=MPING:remove
+end-if
+
+if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=jgroups-udp-fd:read-resource
+  /socket-binding-group=standard-sockets/socket-binding=jgroups-udp-fd:remove
+end-if
+
+if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=jgroups-tcp-fd:read-resource
+  /socket-binding-group=standard-sockets/socket-binding=jgroups-tcp-fd:remove
+end-if
+
+# logging removal
+if (outcome == success) of /subsystem=logging/periodic-rotating-file-handler=FILE:read-resource
+  /subsystem=logging/periodic-rotating-file-handler=FILE:remove
+end-if
+
+if (outcome == success) of /subsystem=logging/pattern-formatter=PATTERN:read-resource
+  /subsystem=logging/pattern-formatter=PATTERN:remove
+end-if
+
+#remove ajp
+if (outcome == success) of /socket-binding-group=standard-sockets/socket-binding=ajp:read-resource
+  /socket-binding-group=standard-sockets/socket-binding=ajp:remove
+end-if
+
+stop-embedded-server

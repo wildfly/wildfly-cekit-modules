@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<!-- Once we get rid-off of WildFly s2i v1, this feature-group can be moved to wildfly-cekit-modules for sharing -->
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="undertow">
+    <feature-group name="os-undertow"/>
+</layer-spec>
+

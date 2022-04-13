@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Once we get rid-off of WildFly s2i v1, this feature-group can be moved to wildfly-cekit-modules for sharing -->
+<feature-group-spec name="os-undertow" xmlns="urn:jboss:galleon:feature-group:1.0">
+    <feature spec="subsystem.undertow">
+        <feature spec="subsystem.undertow.server">
+            <param name="server" value="default-server" />
+            <feature spec="subsystem.undertow.server.http-listener">
+                <param name="http-listener" value="default"/>
+                <param name="proxy-address-forwarding" value="true"/>
+            </feature>
+        </feature>
+    </feature>
+</feature-group-spec>
