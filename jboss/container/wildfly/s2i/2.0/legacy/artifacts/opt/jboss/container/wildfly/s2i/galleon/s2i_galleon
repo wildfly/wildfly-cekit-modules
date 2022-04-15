@@ -45,20 +45,8 @@ function galleon_init_mvn_env() {
       ORIGINAL_MAVEN_SETTINGS_XML=$MAVEN_SETTINGS_XML
     fi
 
-    # Need to compute the project src root dir.
-    dest_dir="${S2I_DESTINATION_DIR:-/tmp}"
-    GALLEON_PROJECT_SRC_DIR="${dest_dir}/src"
-    
-    # Identify custom galleon content directory
-    if [ -n "${GALLEON_DIR}" ]; then
-      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/${GALLEON_DIR}"
-      if [ ! -d "${GALLEON_LOCAL_PROVISIONING}" ]; then
-        log_error "$GALLEON_DIR directory referenced by GALLEON_DIR env variable doesn't exist in the project. Exiting."
-        exit 1
-      fi
-    else
-      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/galleon"
-    fi
+    init_GALLEON_LOCAL_PROVISIONING
+
     # Set galleon settings prior to init maven.
     # Doing so default settings.xml are untouched.
     if [ -f "${GALLEON_LOCAL_PROVISIONING}/settings.xml" ]; then
@@ -78,6 +66,23 @@ function galleon_init_mvn_env() {
     maven_init_var_MAVEN_ARGS    
     # GALLEON_MAVEN_ARGS is mainly to enable nexus profile 
     MAVEN_ARGS="$MAVEN_ARGS $GALLEON_MAVEN_ARGS"
+}
+
+function init_GALLEON_LOCAL_PROVISIONING() {
+    # Need to compute the project src root dir.
+    dest_dir="${S2I_DESTINATION_DIR:-/tmp}"
+    GALLEON_PROJECT_SRC_DIR="${dest_dir}/src"
+    
+    # Identify custom galleon content directory
+    if [ -n "${GALLEON_DIR}" ]; then
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/${GALLEON_DIR}"
+      if [ ! -d "${GALLEON_LOCAL_PROVISIONING}" ]; then
+        log_error "$GALLEON_DIR directory referenced by GALLEON_DIR env variable doesn't exist in the project. Exiting."
+        exit 1
+      fi
+    else
+      GALLEON_LOCAL_PROVISIONING="${GALLEON_PROJECT_SRC_DIR}/galleon"
+    fi
 }
 
 function galleon_reset_mvn_env() {
@@ -110,6 +115,9 @@ function install_custom_fps() {
       exit 1
     fi
   else
+    if [ -z "$GALLEON_LOCAL_PROVISIONING" ]; then
+      init_GALLEON_LOCAL_PROVISIONING
+    fi
     if [ -d "$GALLEON_LOCAL_PROVISIONING/repository" ]; then
       copy_custom_fps "$GALLEON_LOCAL_PROVISIONING/repository"
     fi
@@ -117,6 +125,10 @@ function install_custom_fps() {
 }
 
 function copy_custom_fps() {
+  if [ -z "$MAVEN_LOCAL_REPO" ]; then
+   # Required to have a configured local maven repo.
+    maven_s2i_init
+  fi
   pushd "$1" &> /dev/null
   log_info "Copying custom fp in $1 to $MAVEN_LOCAL_REPO"
   mkdir -p "$MAVEN_LOCAL_REPO"
