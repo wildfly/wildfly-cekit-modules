@@ -1090,8 +1090,8 @@ can_add_embedded(){
   testXpathExpression "${xpath}" "has_remoting_subsystem"
 
   if [ "${has_remoting_subsystem}" -ne 0 ]; then
-      # Just ignore
-      return 1
+      log_warning "There is a problem with your service configuration!"
+      log_warning "The remoting subsystem is missing which might be required for the http connection to the embedded broker."
   fi
 
   local has_messaging_subsystem
