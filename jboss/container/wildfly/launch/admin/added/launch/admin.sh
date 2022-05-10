@@ -32,16 +32,25 @@ function configure_administration() {
     fi
 
     if [ "${mode}" = "xml" ]; then
-      local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
+      if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+        local mgmt_iface_replace_str="http-authentication-factory=\"management-http-authentication\""
+      else
+        local mgmt_iface_replace_str="security-realm=\"ManagementRealm\""
+      fi
       sed -i "s|><!-- ##MGMT_IFACE_REALM## -->| ${mgmt_iface_replace_str}>|" "$CONFIG_FILE"
     elif [ "${mode}" = "cli" ]; then
+      if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+        local op="/core-service=management/management-interface=http-interface:write-attribute(name=http-authentication-factory, value=management-http-authentication)"
+      else
+        local op="/core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)"
+      fi
       cat << EOF >> "${CLI_SCRIPT_FILE}"
       if (outcome != success) of /core-service=management/management-interface=http-interface:read-resource
         echo You have set environment variables to configure http-interface security-realm. Fix your configuration to contain the http-interface for this to happen. >> \${error_file}
         exit
       end-if
       if (result == undefined) of /core-service=management/management-interface=http-interface:read-attribute(name=http-authentication-factory)
-        /core-service=management/management-interface=http-interface:write-attribute(name=security-realm, value=ManagementRealm)
+        $op
       end-if
 EOF
     fi

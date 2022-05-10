@@ -690,3 +690,16 @@ EOF
     echo "${expected}"
     [ "${output}" = "${expected}" ]
 }
+
+@test "Disabled legacy security" {
+    DISABLE_LEGACY_SECURITY=true
+    HTTPS_PASSWORD=foo
+    HTTPS_KEYSTORE=bar
+    HTTPS_KEYSTORE_DIR=mydir
+    run configure_https
+    expected="ERROR HTTPS can only be configured using elytron. Set CONFIGURE_ELYTRON_SSL=true.
+ERROR Exiting..."
+    echo "${output}"
+    [ "${output}" = "${expected}" ]
+    [ ! -s "${CLI_SCRIPT_FILE}" ]
+}

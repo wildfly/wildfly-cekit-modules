@@ -16,6 +16,13 @@ function configureEnv() {
 }
 
 configure_security_domains() {
+  if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+    if [ -n "$SECDOMAIN_NAME" ]; then
+      log_error "You have set SECDOMAIN_NAME environment variable to configure a security subsystem domain that is not supported."
+      log_error "Exiting..."
+      exit
+    fi
+  fi
   local usersProperties="\${jboss.server.config.dir}/${SECDOMAIN_USERS_PROPERTIES}"
   local rolesProperties="\${jboss.server.config.dir}/${SECDOMAIN_ROLES_PROPERTIES}"
 

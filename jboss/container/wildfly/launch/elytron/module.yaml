@@ -34,4 +34,4 @@ envs:
       description: "The underlying type of the keystore (JKS, JCEKS, etc.). Defaults to JCEKS"
     - name: "SECDOMAIN_NAME"
       example: "MySecurityDomain"
-      description: "The name of the Elytron security domain."
+      description: "Deprecated. The name of the Elytron security domain."

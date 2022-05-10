@@ -115,3 +115,9 @@ EOF
   normalize_spaces_new_lines
   [ "${output}" = "${expected}" ]
 }
+
+@test "Disabled legacy security " {
+  DISABLE_LEGACY_SECURITY=true
+  run configure_login_modules "Foo" "something" "org.foo.bar"
+  [ ! -s "${CLI_SCRIPT_FILE}" ]
+}

@@ -1,9 +1,9 @@
 name: Wildfly Cekit OpenShift Modules - Bats
 on:
   push:
-    branches: [ master ]
+    branches: [ 0.23.x ]
   pull_request:
-     branches: [ master ]
+     branches: [ 0.23.x ]
 env:
   LANG: en_US.UTF-8
   STANDALONE_CONFIG_URL: https://raw.githubusercontent.com/jboss-container-images/jboss-eap-modules/7.3.x-legacy/jboss-eap-config-openshift/CD17.0/added/standalone-openshift.xml

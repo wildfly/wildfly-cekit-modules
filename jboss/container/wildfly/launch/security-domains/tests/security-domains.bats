@@ -57,3 +57,19 @@ EOF
   echo "Result: ${result}"
   [ "${result}" = "${expected}" ]
 }
+
+@test "check disabled legacy security" {
+  expected=""
+  SECDOMAIN_NAME=HiThere
+  SECDOMAIN_LOGIN_MODULE=RealmUsersRoles
+  SECDOMAIN_PASSWORD_STACKING=true
+  SECDOMAIN_USERS_PROPERTIES=my.user.properties
+  SECDOMAIN_ROLES_PROPERTIES=my.roles.properties
+  DISABLE_LEGACY_SECURITY=true
+  run configure
+  expected="ERROR You have set SECDOMAIN_NAME environment variable to configure a security subsystem domain that is not supported.
+ERROR Exiting..."
+  echo "${output}"
+  [ "${output}" = "${expected}" ]
+  [ ! -s "${CLI_SCRIPT_FILE}" ]
+}
