@@ -3,6 +3,7 @@
 # set -euo pipefail
 # IFS=$'\n\t'
 
+source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
 export BATS_TEST_SKIPPED=
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 
@@ -299,7 +300,8 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing all required vars" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE HTTPS_KEYSTORE_TYPE'
+    expected='WARN No keystore type has been provided, using default keystore type.
+WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_PASSWORD HTTPS_KEYSTORE'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD=
     HTTPS_KEYSTORE=
@@ -329,7 +331,8 @@ EOF
 @test "Configure HTTPS - CONFIGURE_ELYTRON_SSL=true, missing HTTPS_KEYSTORE_TYPE" {
     echo '<!-- ##ELYTRON_TLS## -->' > ${CONFIG_FILE}
     echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
-    expected='WARN Partial HTTPS configuration, the https connector WILL NOT be configured. Missing: HTTPS_KEYSTORE_TYPE'
+    expected='WARN No keystore type has been provided, using default keystore type.
+WARN No HTTPS_KEY_PASSWORD was provided; using HTTPS_PASSWORD for Elytron LocalhostKeyManager.'
     CONFIGURE_ELYTRON_SSL=true
     HTTPS_PASSWORD="password"
     HTTPS_KEYSTORE="ks"
@@ -404,6 +407,47 @@ EOF
     HTTPS_PASSWORD="password"
     HTTPS_KEYSTORE="keystore.ks"
     HTTPS_KEYSTORE_TYPE="ks"
+    HTTPS_KEY_PASSWORD=
+    HTTPS_KEYSTORE_DIR=
+    run configure_https
+    cat "${CONFIG_FILE}"
+    output=$(cat "${CONFIG_FILE}" | xmllint --format --noblanks -)
+    echo "${output}"
+    expected=$(echo "${expected}" | sed 's|\\n||g' | xmllint --format --noblanks -)
+    [ "${output}" = "${expected}" ]
+}
+
+@test "Configure HTTPS - Basic config, no keystore type" {
+    echo '<?xml version="1.0"?>' > ${CONFIG_FILE}
+    echo '<!-- ##ELYTRON_TLS## -->' >> ${CONFIG_FILE}
+    echo '<!-- ##TLS## -->' >> ${CONFIG_FILE}
+
+expected=$(cat <<EOF
+<?xml version="1.0"?>
+   <tls>
+     <key-stores>
+       <key-store name="LocalhostKeyStore">
+         <credential-reference clear-text="password"/>
+         <file path="keystore.ks" relative-to="jboss.server.config.dir"/>
+       </key-store>
+       <!-- ##ELYTRON_KEY_STORE## -->
+     </key-stores>
+     <key-managers>
+       <key-manager name="LocalhostKeyManager" key-store="LocalhostKeyStore">
+         <credential-reference clear-text="password"/>
+       </key-manager>
+       <!-- ##ELYTRON_KEY_MANAGER## -->
+     </key-managers>
+     <server-ssl-contexts>
+       <server-ssl-context name="LocalhostSslContext" key-manager="LocalhostKeyManager"/>
+       <!-- ##ELYTRON_SERVER_SSL_CONTEXT## -->
+     </server-ssl-contexts>
+   </tls>
+EOF
+)
+    CONFIGURE_ELYTRON_SSL=true
+    HTTPS_PASSWORD="password"
+    HTTPS_KEYSTORE="keystore.ks"
     HTTPS_KEY_PASSWORD=
     HTTPS_KEYSTORE_DIR=
     run configure_https
@@ -702,4 +746,95 @@ ERROR Exiting..."
     echo "${output}"
     [ "${output}" = "${expected}" ]
     [ ! -s "${CLI_SCRIPT_FILE}" ]
+}
+
+@test "Configure HTTPS - CLI Basic config" {
+
+expected=$(cat <<EOF
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/key-store="LocalhostKeyStore":add(credential-reference={clear-text="password"}, path="keystore.ks", relative-to="jboss.server.config.dir")
+      else
+        echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+        quit
+      end-if
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/key-manager="LocalhostKeyManager":add(key-store="LocalhostKeyStore", credential-reference={clear-text="password"})
+      else
+        echo "Cannot configure Elytron Key Manager. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      end-if
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/server-ssl-context="LocalhostSslContext":add(key-manager="LocalhostKeyManager")
+      else
+        echo "Cannot configure Elytron Server SSL Context. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      end-if
+      for serverName in /subsystem=undertow:read-children-names(child-type=server)
+        if (result == []) of /subsystem=undertow/server=\$serverName:read-children-names(child-type=https-listener)
+          /subsystem=undertow/server=\$serverName/https-listener="https":add(ssl-context="LocalhostSslContext", socket-binding="https", proxy-address-forwarding="true")
+        else
+          echo There is already an undertow https-listener for the '\$serverName' server so we are not adding it >> \${warning_file}
+        end-if
+      done
+EOF
+)
+    cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+    CONFIG_FILE=$JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+    CONFIG_ADJUSTMENT_MODE="cli"
+    CONFIGURE_ELYTRON_SSL=true
+    HTTPS_PASSWORD="password"
+    HTTPS_KEYSTORE="keystore.ks"
+    HTTPS_KEY_PASSWORD=
+    HTTPS_KEYSTORE_DIR=
+    run configure_https
+    echo "CONSOLE:${output}"
+    output=$(cat "${CLI_SCRIPT_FILE}")
+    normalize_spaces_new_lines
+    echo "${output}" > /tmp/output.txt
+    echo "${expected}" > /tmp/expected.txt
+    [ "${output}" = "${expected}" ]
+}
+
+@test "Configure HTTPS - CLI Basic config with keystore type" {
+
+expected=$(cat <<EOF
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/key-store="LocalhostKeyStore":add(credential-reference={clear-text="password"}, path="keystore.ks", type="PKCS12", relative-to="jboss.server.config.dir")
+      else
+        echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+        quit
+      end-if
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/key-manager="LocalhostKeyManager":add(key-store="LocalhostKeyStore", credential-reference={clear-text="password"})
+      else
+        echo "Cannot configure Elytron Key Manager. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      end-if
+      if (outcome == success) of /subsystem=elytron:read-resource
+        /subsystem=elytron/server-ssl-context="LocalhostSslContext":add(key-manager="LocalhostKeyManager")
+      else
+        echo "Cannot configure Elytron Server SSL Context. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
+      end-if
+      for serverName in /subsystem=undertow:read-children-names(child-type=server)
+        if (result == []) of /subsystem=undertow/server=\$serverName:read-children-names(child-type=https-listener)
+          /subsystem=undertow/server=\$serverName/https-listener="https":add(ssl-context="LocalhostSslContext", socket-binding="https", proxy-address-forwarding="true")
+        else
+          echo There is already an undertow https-listener for the '\$serverName' server so we are not adding it >> \${warning_file}
+        end-if
+      done
+EOF
+)
+    cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+    CONFIG_FILE=$JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+    CONFIG_ADJUSTMENT_MODE="cli"
+    CONFIGURE_ELYTRON_SSL=true
+    HTTPS_PASSWORD="password"
+    HTTPS_KEYSTORE="keystore.ks"
+    HTTPS_KEYSTORE_TYPE=PKCS12
+    HTTPS_KEY_PASSWORD=
+    HTTPS_KEYSTORE_DIR=
+    run configure_https
+    echo "CONSOLE:${output}"
+    output=$(cat "${CLI_SCRIPT_FILE}")
+    normalize_spaces_new_lines
+    echo "${output}" > /tmp/output.txt
+    echo "${expected}" > /tmp/expected.txt
+    [ "${output}" = "${expected}" ]
 }

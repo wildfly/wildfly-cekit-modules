@@ -128,9 +128,13 @@ create_elytron_keystore() {
     fi
 
     local key_store="<key-store name=\"${encrypt_keystore_name}\">\n\
-              <credential-reference clear-text=\"${encrypt_password}\"/>\n\
-              <implementation type=\"${encrypt_keystore_type:-JCEKS}\"/>\n\
-              <file ${keystore_path} ${keystore_rel_to} />\n\
+                    <credential-reference clear-text=\"${encrypt_password}\"/>\n"
+
+    if [ ! "x${encrypt_keystore_type}" = "x" ]; then
+      key_store=$key_store"<implementation type=\"${encrypt_keystore_type}\"/>\n"
+    fi
+
+    key_store=$key_store"<file ${keystore_path} ${keystore_rel_to} />\n\
             </key-store>"
     echo ${key_store}
 }
@@ -157,7 +161,10 @@ create_elytron_keystore_cli() {
     keystore_rel_to="${encrypt_keystore_dir}"
   fi
 
-  local cli_key_store_op="/subsystem=elytron/key-store=\"${encrypt_keystore_name}\":add(credential-reference={clear-text=\"${encrypt_password}\"},type=\"${encrypt_keystore_type:-JCEKS}\",path=\"${keystore_path}\""
+  local cli_key_store_op="/subsystem=elytron/key-store=\"${encrypt_keystore_name}\":add(credential-reference={clear-text=\"${encrypt_password}\"}, path=\"${keystore_path}\""
+  if [ ! "x${encrypt_keystore_type}" = "x" ]; then
+    cli_key_store_op=${cli_key_store_op}", type=\"${encrypt_keystore_type}\""
+  fi
   if [ ! "x${keystore_rel_to}" = "x" ]; then
     cli_key_store_op=${cli_key_store_op}", relative-to=\"${keystore_rel_to}\""
   fi
@@ -279,7 +286,11 @@ configure_https() {
     return
   fi
 
-  if [ -n "${HTTPS_PASSWORD}" -a -n "${HTTPS_KEYSTORE}" -a -n "${HTTPS_KEYSTORE_TYPE}" ]; then
+  if [ -z "${HTTPS_KEYSTORE_TYPE}" ]; then
+    log_warning "No keystore type has been provided, using default keystore type."
+  fi
+
+  if [ -n "${HTTPS_PASSWORD}" -a -n "${HTTPS_KEYSTORE}" ]; then
     if [ -n "${HTTPS_KEY_PASSWORD}" ]; then
       key_password="${HTTPS_KEY_PASSWORD}"
     else
@@ -327,9 +338,6 @@ configure_https() {
     fi
     if [ -z "${HTTPS_KEYSTORE}" ]; then
       missing_msg="$missing_msg HTTPS_KEYSTORE"
-    fi
-    if [ -z "${HTTPS_KEYSTORE_TYPE}" ]; then
-      missing_msg="$missing_msg HTTPS_KEYSTORE_TYPE"
     fi
 
     log_warning "${missing_msg}"

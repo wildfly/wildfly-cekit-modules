@@ -245,10 +245,10 @@ validate_keystore_and_create() {
 
   if [ "${valid_state}" = "valid" ]; then
     if [ "${mode}" = "xml" ]; then
-      key_store=$(create_elytron_keystore "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
+      key_store=$(create_elytron_keystore "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE:-JCEKS}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
       jgroups_encrypt=$(create_jgroups_elytron_encrypt "${protocol}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}")
     elif [ "${mode}" = "cli" ]; then
-      key_store=$(create_elytron_keystore_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
+      key_store=$(create_elytron_keystore_cli "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE_TYPE:-JCEKS}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
       jgroups_encrypt=$(create_jgroups_elytron_encrypt_cli "${protocol}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}")
     fi
   fi
