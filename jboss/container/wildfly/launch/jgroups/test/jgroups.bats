@@ -357,7 +357,7 @@ EOF
 @test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT with Elytron" {
   expected=$(cat <<EOF
     if (outcome == success) of /subsystem=elytron:read-resource
-      /subsystem=elytron/key-store="jgroups.jceks":add(credential-reference={clear-text="p@ssw0rd"},type="JCEKS",path="jgroups.jceks", relative-to="jboss.server.config.dir")
+      /subsystem=elytron/key-store="jgroups.jceks":add(credential-reference={clear-text="p@ssw0rd"}, path="jgroups.jceks", type="JCEKS", relative-to="jboss.server.config.dir")
     else
       echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
       quit
@@ -412,7 +412,7 @@ EOF
 @test "Configure CLI JGROUPS_PROTOCOL=SYM_ENCRYPT - Using Elytron to configure the keystore" {
     expected=$(cat <<EOF
       if (outcome == success) of /subsystem=elytron:read-resource
-         /subsystem=elytron/key-store="encrypt_keystore":add(credential-reference={clear-text="encrypt_password"},type="JCEKS",path="encrypt_keystore", relative-to="keystore_dir")
+         /subsystem=elytron/key-store="encrypt_keystore":add(credential-reference={clear-text="encrypt_password"}, path="encrypt_keystore", type="JCEKS", relative-to="keystore_dir")
        else
          echo "Cannot configure Elytron Key Store. The Elytron subsystem is not present in the server configuration file." >> \${error_file}
          quit
