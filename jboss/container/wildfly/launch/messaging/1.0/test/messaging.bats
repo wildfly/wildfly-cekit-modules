@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source $BATS_TEST_DIRNAME/../../../../../../../test-common/cli_utils.sh
 
 export BATS_TEST_SKIPPED=
 
@@ -10,9 +10,9 @@ rm -rf $JBOSS_HOME
 mkdir -p $JBOSS_HOME/bin/launch
 
 # copy scripts we are going to use
-cp $BATS_TEST_DIRNAME/../../../launch-config/config/1.0/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../launch-config/config/1.0/added/launch/openshift-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../launch-config/os/added/launch/launch-common.sh $JBOSS_HOME/bin/launch
+cp $BATS_TEST_DIRNAME/../../../../../../../test-common/logging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/messaging.sh $JBOSS_HOME/bin/launch
 cp $BATS_TEST_DIRNAME/../added/launch/activemq-subsystem.xml $JBOSS_HOME/bin/launch
 mkdir -p $JBOSS_HOME/standalone/configuration
@@ -34,7 +34,7 @@ SOCKET_BINDING_ONLY_OUTPUT_CONTENT='<test-content><socket-binding name="messagin
 
 
 setup() {
-  cp $BATS_TEST_DIRNAME/../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
+  cp $BATS_TEST_DIRNAME/../../../../../../../test-common/configuration/standalone-openshift.xml $JBOSS_HOME/standalone/configuration
 }
 
 teardown() {
