@@ -4,6 +4,7 @@ GALLEON_GENERIC_PROVISIONING_DEFINITION="$JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GAL
 function galleon_patch_generic_config() {
    included_layers=
    excluded_layers=
+   target_pom_file="${1}"
    if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
      for layer in $(echo $GALLEON_PROVISION_LAYERS | sed "s/,/ /g"); do
        if [[ "$layer" =~ ^-.* ]]; then
@@ -14,10 +15,10 @@ function galleon_patch_generic_config() {
        fi
      done
      if [ -n "$included_layers" ]; then
-       sed -i "s|<!-- ##GALLEON_INCLUDED_LAYERS## -->|${included_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+       sed -i "s|<!-- ##GALLEON_INCLUDED_LAYERS## -->|${included_layers}|" "${target_pom_file}"
      fi
      if [ -n "$excluded_layers" ]; then
-       sed -i "s|<!-- ##GALLEON_EXCLUDED_LAYERS## -->|${excluded_layers}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+       sed -i "s|<!-- ##GALLEON_EXCLUDED_LAYERS## -->|${excluded_layers}|" "${target_pom_file}"
      fi
    fi
    if [ -n "$GALLEON_PROVISION_FEATURE_PACKS" ]; then
@@ -27,9 +28,53 @@ function galleon_patch_generic_config() {
        featurepacks="$featurepacks<location>$fp</location></feature-pack>"
      done
      if [ -n "$featurepacks" ]; then
-       sed -i "s|<!-- ##GALLEON_FEATURE_PACKS## -->|${featurepacks}|" $GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml
+       sed -i "s|<!-- ##GALLEON_FEATURE_PACKS## -->|${featurepacks}|" "${target_pom_file}"
      fi
    fi
+   channels=$(galleon_parse_channels)
+   if [ -n "$channels" ]; then
+     sed -i "s|<!-- ##GALLEON_WF_CHANNELS## -->|${channels}|" "${target_pom_file}"
+   fi
+}
+
+function galleon_parse_channels() {
+    local channels="${GALLEON_PROVISION_CHANNELS}"
+    if [ ! -z "${channels}" ]; then
+        local channelsXml=
+        for channel in $(echo "${channels}" | sed "s/,/ /g"); do
+          if [[ "$channel" =~ .*"://".* ]]; then
+            channelsXml="$channelsXml<channel><url>$channel</url></channel>"
+          else
+              local groupId=
+              local artifactId=
+              local version=
+              local channelXml="<channel>"
+              for coord in $(echo "${channel}" | sed "s/:/ /g"); do
+                if [ -z "${groupId}" ]; then
+                  groupId=${coord}
+                  channelXml="$channelXml<groupId>${coord}</groupId>"
+                  continue
+                fi
+                if [ -z "${artifactId}" ]; then
+                  artifactId=${coord}
+                  channelXml="$channelXml<artifactId>${coord}</artifactId>"
+                  continue
+                fi
+                if [ -z "${version}" ]; then
+                  version=${coord}
+                  channelXml="$channelXml<version>${coord}</version>"
+                  continue
+                fi
+              done
+              channelXml="$channelXml</channel>"
+              channelsXml="$channelsXml$channelXml"
+          fi
+        done
+    fi
+    if [ -n "${channelsXml}" ]; then
+        local channelsListXml="<channels>${channelsXml}</channels>"
+        echo "${channelsListXml}"
+    fi
 }
 
 function galleon_init_mvn_env() {
@@ -142,7 +187,7 @@ function galleon_provision_server() {
     GALLEON_ROOT_DIR=${GALLEON_DEFINITIONS}
 
     if [ -n "$GALLEON_PROVISION_LAYERS" ]; then
-      galleon_patch_generic_config
+      galleon_patch_generic_config "$GALLEON_GENERIC_LAYERS_DEFINITION/pom.xml"
       GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_LAYERS_DEFINITION"
       if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f $GALLEON_LOCAL_PROVISIONING/provisioning.xml ]; then
         log_warning "Galleon provisioning of layers overrides Galleon provisioning.xml located in $GALLEON_LOCAL_PROVISIONING"
@@ -150,6 +195,7 @@ function galleon_provision_server() {
     else
       if [ -n "${GALLEON_USE_LOCAL_FILE}" ] && [ -f "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" ]; then
         log_info "Provisioning server with Galleon description in $GALLEON_LOCAL_PROVISIONING"
+        galleon_patch_generic_config "$GALLEON_GENERIC_PROVISIONING_DEFINITION/pom.xml"
         mkdir -p "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
         cp "$GALLEON_LOCAL_PROVISIONING/provisioning.xml" "$GALLEON_GENERIC_PROVISIONING_DEFINITION"/galleon
         GALLEON_DESCRIPTION_LOCATION="$GALLEON_GENERIC_PROVISIONING_DEFINITION"
@@ -170,7 +216,7 @@ function galleon_provision_server() {
       fi
       targetDir=$GALLEON_DESCRIPTION_LOCATION/target/server
       if [ -d $targetDir ]; then
-        galleon_replace_server $targetDir
+        galleon_install_server $targetDir
         rm -rf $targetDir
       else
         log_error "Error, no server provisioned in $targetDir"
@@ -183,12 +229,9 @@ function galleon_provision_server() {
     galleon_reset_mvn_env
 }
 
-function galleon_replace_server() {
+function galleon_install_server() {
   log_info "Installing server"
-  srcDir=$1
-  mkdir -p $JBOSS_HOME
-  cp -prf $srcDir/* $JBOSS_HOME
-  cp -prf $srcDir/.galleon $JBOSS_HOME/.galleon
+  cp -r "${1}" $JBOSS_HOME
   cp -prf $JBOSS_HOME/standalone/deployments/* /deployments
   rm -rf $JBOSS_HOME/standalone/deployments
   # CLOUD-3855 - in certain cases when deploying onto the same image in openshift, we don't have permissions

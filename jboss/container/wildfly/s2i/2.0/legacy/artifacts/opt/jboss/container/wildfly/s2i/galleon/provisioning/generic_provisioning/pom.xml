@@ -49,6 +49,7 @@
                         </goals>
                         <phase>compile</phase>
                         <configuration>
+                            <!-- ##GALLEON_WF_CHANNELS## -->
                             <record-provisioning-state>true</record-provisioning-state>
                             <galleon-options>
                                 <!-- required when running on JDK 11 -->
