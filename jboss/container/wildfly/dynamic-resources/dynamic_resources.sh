@@ -6,48 +6,16 @@ if [ "${SCRIPT_DEBUG}" = "true" ] ; then
 fi
 
 # For backward compatibility: CONTAINER_HEAP_PERCENT is old variable name
-JAVA_MAX_MEM_RATIO=${JAVA_MAX_MEM_RATIO:-$(echo "${CONTAINER_HEAP_PERCENT:-0.5}" "100" | awk '{ printf "%d", $1 * $2 }')}
+JAVA_MAX_MEM_RATIO=${JAVA_MAX_MEM_RATIO:-${CONTAINER_HEAP_PERCENT:+$(echo "${CONTAINER_HEAP_PERCENT}" "100" | awk '{ printf "%d", $1 * $2 }')}}
 JAVA_INITIAL_MEM_RATIO=${JAVA_INITIAL_MEM_RATIO:-${INITIAL_HEAP_PERCENT:+$(echo "${INITIAL_HEAP_PERCENT}" "100" | awk '{ printf "%d", $1 * $2 }')}}
 
 function source_java_run_scripts() {
     local java_scripts_dir="/opt/run-java"
-    # set CONTAINER_MAX_MEMORY and CONTAINER_CORE_LIMIT
-    source "${java_scripts_dir}/container-limits"
     # load java options functions
     source "${java_scripts_dir}/java-default-options"
 }
 
 source_java_run_scripts
-
-# deprecated, left for backward compatibility
-function get_heap_size {
-    echo $(max_memory)
-}
-
-# deprecated, left for backward compatibility
-get_initial_heap_size() {
-    local max_heap="$1"
-    echo "$max_heap" "${INITIAL_HEAP_PERCENT-1.0}" | awk '{ printf "%d", $1 * $2 }'
-}
-
-# deprecated, left for backward compatibility
-adjust_java_heap_settings() {
-    local java_scripts_dir="/opt/run-java"
-    
-    # nuke any hard-coded memory settings.  java-default-options won't add these
-    # if they're already specified
-    JAVA_OPTS="$(echo $JAVA_OPTS| sed -re 's/(-Xmx[^ ]*|-Xms[^ ]*)//g')"
-    local java_options=$(source "${java_scripts_dir}/java-default-options")
-    local max_heap=$(echo "${java_options}" | grep -Eo "\-Xmx[^ ]* ")
-    local initial_heap=$(echo "${java_options}" | grep -Eo "\-Xms[^ ]* ")
-
-    if [ -n "$max_heap" ]; then
-        JAVA_OPTS=$(echo $JAVA_OPTS | sed -e "s/-Xmx[^ ]*/${max_heap} /")
-    fi
-    if [ -n "$initial_heap" ]; then
-        JAVA_OPTS=$(echo $JAVA_OPTS | sed -e "s/-Xms[^ ]* /${initial_heap} /")
-    fi
-}
 
 # Returns a set of options that are not supported by the current jvm.  The idea
 # is that java-default-options always configures settings for the latest jvm.
