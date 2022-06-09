@@ -6,8 +6,6 @@
     </props> 
     <packages>
         <package name="wildfly.s2i.common"/>
-        <!-- packages that append content to standalone.conf -->
-        <package name="wildfly.s2i.java"/>
     </packages>
     <layers>
         <!-- required for termination and script execution -->

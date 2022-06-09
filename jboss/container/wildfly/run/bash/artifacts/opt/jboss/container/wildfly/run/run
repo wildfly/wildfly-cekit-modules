@@ -27,8 +27,51 @@ elif  [ -f "${JBOSS_HOME}/bin/standalone.sh" ]; then
     actual_launcher=standalone.sh
 fi
 
+# HANDLE JAVA OPTIONS
+source /usr/local/dynamic-resources/dynamic_resources.sh > /dev/null
+GC_METASPACE_SIZE=${GC_METASPACE_SIZE:-96}
+
+JAVA_OPTS="$(adjust_java_options ${JAVA_OPTS})"
+
+# If JAVA_DIAGNOSTICS and there is jvm_specific_diagnostics, move the settings to PREPEND_JAVA_OPTS
+# to bypass the specific EAP checks done on JAVA_OPTS in standalone.sh that could remove the GC EAP specific log configurations
+JVM_SPECIFIC_DIAGNOSTICS=$(jvm_specific_diagnostics)
+if [ "x$JAVA_DIAGNOSTICS" != "x" ] && [ "x{JVM_SPECIFIC_DIAGNOSTICS}" != "x" ]; then
+  JAVA_OPTS=${JAVA_OPTS/${JVM_SPECIFIC_DIAGNOSTICS} /}
+  PREPEND_JAVA_OPTS="${JVM_SPECIFIC_DIAGNOSTICS} ${PREPEND_JAVA_OPTS}"
+fi
+
+# Make sure that we use /dev/urandom (CLOUD-422)
+JAVA_OPTS="${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom"
+
+JAVA_OPTS="${JAVA_OPTS} -Djava.net.preferIPv4Stack=true"
+
+if [ -z "$JBOSS_MODULES_SYSTEM_PKGS" ]; then
+  JBOSS_MODULES_SYSTEM_PKGS="jdk.nashorn.api,com.sun.crypto.provider"
+fi
+
+if [ -n "$JBOSS_MODULES_SYSTEM_PKGS_APPEND" ]; then
+  JBOSS_MODULES_SYSTEM_PKGS="$JBOSS_MODULES_SYSTEM_PKGS,$JBOSS_MODULES_SYSTEM_PKGS_APPEND"
+fi
+
+ JAVA_OPTS="${JAVA_OPTS} -Djboss.modules.system.pkgs=${JBOSS_MODULES_SYSTEM_PKGS}"
+
+# DO WE KEEP?
+# White list packages for use in ObjectMessages: CLOUD-703
+if [ -n "$MQ_SERIALIZABLE_PACKAGES" ]; then
+  JAVA_OPTS="${JAVA_OPTS} -Dorg.apache.activemq.SERIALIZABLE_PACKAGES=${MQ_SERIALIZABLE_PACKAGES}"
+fi
+
+# Append to JAVA_OPTS.
+JAVA_OPTS="$JAVA_OPTS $JAVA_OPTS_APPEND"
+
+#Handle proxy options
+source /opt/run-java/proxy-options
+eval preConfigure
+eval configure
+
 if [ "${actual_launcher}" == "openshift-launch.sh" ]; then
-    $JBOSS_HOME/bin/${actual_launcher} &
+    JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} &
     pid=$!
     wait $pid 2>/dev/null
 else
@@ -36,49 +79,6 @@ else
     imgVersion=${JBOSS_IMAGE_VERSION:-$IMAGE_VERSION}
 
     log_info "Running $imgName image, version $imgVersion"
-
-    # HANDLE JAVA OPTIONS
-    source /usr/local/dynamic-resources/dynamic_resources.sh > /dev/null
-    GC_METASPACE_SIZE=${GC_METASPACE_SIZE:-96}
-
-    JAVA_OPTS="$(adjust_java_options ${JAVA_OPTS})"
-
-    # If JAVA_DIAGNOSTICS and there is jvm_specific_diagnostics, move the settings to PREPEND_JAVA_OPTS
-    # to bypass the specific EAP checks done on JAVA_OPTS in standalone.sh that could remove the GC EAP specific log configurations
-    JVM_SPECIFIC_DIAGNOSTICS=$(jvm_specific_diagnostics)
-    if [ "x$JAVA_DIAGNOSTICS" != "x" ] && [ "x{JVM_SPECIFIC_DIAGNOSTICS}" != "x" ]; then
-      JAVA_OPTS=${JAVA_OPTS/${JVM_SPECIFIC_DIAGNOSTICS} /}
-      PREPEND_JAVA_OPTS="${JVM_SPECIFIC_DIAGNOSTICS} ${PREPEND_JAVA_OPTS}"
-    fi
-
-    # Make sure that we use /dev/urandom (CLOUD-422)
-    JAVA_OPTS="${JAVA_OPTS} -Djava.security.egd=file:/dev/./urandom"
-
-    JAVA_OPTS="${JAVA_OPTS} -Djava.net.preferIPv4Stack=true"
-
-    if [ -z "$JBOSS_MODULES_SYSTEM_PKGS" ]; then
-      JBOSS_MODULES_SYSTEM_PKGS="jdk.nashorn.api,com.sun.crypto.provider"
-    fi
-
-    if [ -n "$JBOSS_MODULES_SYSTEM_PKGS_APPEND" ]; then
-      JBOSS_MODULES_SYSTEM_PKGS="$JBOSS_MODULES_SYSTEM_PKGS,$JBOSS_MODULES_SYSTEM_PKGS_APPEND"
-    fi
-
-     JAVA_OPTS="${JAVA_OPTS} -Djboss.modules.system.pkgs=${JBOSS_MODULES_SYSTEM_PKGS}"
-
-    # DO WE KEEP?
-    # White list packages for use in ObjectMessages: CLOUD-703
-    if [ -n "$MQ_SERIALIZABLE_PACKAGES" ]; then
-      JAVA_OPTS="${JAVA_OPTS} -Dorg.apache.activemq.SERIALIZABLE_PACKAGES=${MQ_SERIALIZABLE_PACKAGES}"
-    fi
-
-    # Append to JAVA_OPTS.
-    JAVA_OPTS="$JAVA_OPTS $JAVA_OPTS_APPEND"
-
-    #Handle proxy options
-    source /opt/run-java/proxy-options
-    eval preConfigure
-    eval configure
 
     # Handle port offset
     if [ -n "${PORT_OFFSET}" ]; then
