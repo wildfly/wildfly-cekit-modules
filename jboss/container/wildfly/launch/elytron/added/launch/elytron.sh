@@ -259,6 +259,13 @@ configure_https() {
       log_info "Using PicketBox SSL configuration."
     fi
     return
+  else
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      # Do nothing if no env variable set
+      if [ -z "${HTTPS_PASSWORD}" -a -z "${HTTPS_KEYSTORE_TYPE}" -a -z "${HTTPS_KEYSTORE}" ]; then
+        return
+      fi
+    fi
   fi
 
   local ssl="<!-- No SSL configuration discovered -->"

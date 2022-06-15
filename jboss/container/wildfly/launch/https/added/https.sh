@@ -21,7 +21,13 @@ function configureEnv() {
 
 function configure_https() {
   if [ "${CONFIGURE_ELYTRON_SSL}" = "true" ]; then
-    log_info "Using Elytron for SSL configuration."
+    if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
+      if [ -n "${HTTPS_PASSWORD}" -o -n "${HTTPS_KEYSTORE_TYPE}" -o -n "${HTTPS_KEYSTORE}" ]; then
+        log_info "Using Elytron for SSL configuration."
+      fi
+    else
+      log_info "Using Elytron for SSL configuration."
+    fi
     return
   fi
   if [ "x${DISABLE_LEGACY_SECURITY}" == "xtrue"  ]; then
