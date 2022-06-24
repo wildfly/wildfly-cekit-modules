@@ -71,7 +71,7 @@ eval preConfigure
 eval configure
 
 if [ "${actual_launcher}" == "openshift-launch.sh" ]; then
-    JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} &
+    PREPEND_JAVA_OPTS=$PREPEND_JAVA_OPTS JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} &
     pid=$!
     wait $pid 2>/dev/null
 else
@@ -123,7 +123,7 @@ else
     log_info "Starting server with arguments: ${SERVER_ARGS}"
 
     # The script must be launched in background for the server to not receive directly signals and allowing for CLI shutdown processed from this script.
-    JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} ${SERVER_ARGS} &
+    PREPEND_JAVA_OPTS=$PREPEND_JAVA_OPTS JAVA_OPTS=$JAVA_OPTS $JBOSS_HOME/bin/${actual_launcher} ${SERVER_ARGS} &
     pid=$!
     wait $pid 2>/dev/null
 fi
