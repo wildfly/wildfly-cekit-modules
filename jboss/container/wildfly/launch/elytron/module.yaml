@@ -28,4 +28,4 @@ envs:
       description: "If defined along with HTTPS_PASSWORD and HTTPS_KEYSTORE_DIR, sets the name of the keystore containing the key to use for TLS."
     - name: "HTTPS_KEYSTORE_TYPE"
       example: "JKS"
-      description: "The underlying type of the keystore (JKS, JCEKS, etc.). Defaults to JCEKS"
+      description: "Optional. The underlying type of the keystore (JKS, JCEKS, etc.). The keystore type is automatically discovered by elytron."
