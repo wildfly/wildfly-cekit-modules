@@ -1,4 +1,12 @@
-# only processes a single environment as the placeholder is not preserved
+#!/bin/sh
+
+function prepareEnv() {
+  unset WILDFLY_TRACING_ENABLED
+}
+
+function configureEnv() {
+  configure
+}
 
 configure() {
   local configureExtensionMode
