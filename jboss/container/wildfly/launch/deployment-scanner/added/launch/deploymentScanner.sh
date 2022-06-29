@@ -1,5 +1,13 @@
 #!/bin/sh
 
+function prepareEnv() {
+  unset AUTO_DEPLOY_EXPLODED
+}
+
+function configureEnv() {
+  configure
+}
+
 function configure() {
   configure_deployment_scanner
 }
