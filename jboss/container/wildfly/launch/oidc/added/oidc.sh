@@ -29,6 +29,10 @@ function prepareEnv() {
   oidc_keycloak_prepareEnv
 }
 
+function configureEnv() {
+  configure
+}
+
 function configure() {
   oidc_configure
 }
