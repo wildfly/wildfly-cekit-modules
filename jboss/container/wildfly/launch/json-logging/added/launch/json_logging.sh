@@ -1,3 +1,12 @@
+#!/bin/sh
+
+function prepareEnv() {
+  unset ENABLE_JSON_LOGGING
+}
+
+function configureEnv() {
+  configure
+}
 
 function configure() {
   configure_json_logging
