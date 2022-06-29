@@ -1,3 +1,14 @@
+#!/bin/sh
+
+function prepareEnv() {
+  unset MICROPROFILE_CONFIG_DIR
+  unset MICROPROFILE_CONFIG_DIR_ORDINAL
+}
+
+function configureEnv() {
+  configure
+}
+
 configure() {
   configure_microprofile_config_source
 }

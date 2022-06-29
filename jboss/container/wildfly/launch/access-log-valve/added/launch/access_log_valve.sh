@@ -31,6 +31,15 @@
 
 source $JBOSS_HOME/bin/launch/logging.sh
 
+function prepareEnv() {
+  unset ENABLE_ACCESS_LOG
+  unset ENABLE_ACCESS_LOG_TRACE
+}
+
+function configureEnv() {
+  configure
+}
+
 function configure() {
   configure_access_log_valve
   configure_access_log_handler

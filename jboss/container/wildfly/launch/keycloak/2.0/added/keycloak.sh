@@ -33,6 +33,10 @@ function prepareEnv() {
   unset SSO_USERNAME
 }
 
+function configureEnv() {
+  configure
+}
+
 function configure() {
   if [ ! -n "$SSO_USE_LEGACY" ] || [ "$SSO_USE_LEGACY" != "true" ]; then
     return

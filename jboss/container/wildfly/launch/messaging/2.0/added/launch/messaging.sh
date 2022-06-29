@@ -55,6 +55,10 @@ function prepareEnv() {
   unset MQ_SERVICE_PREFIX_MAPPING
 }
 
+function configureEnv() {
+  configure
+}
+
 function configure() {
   configure_artemis_address
   inject_brokers
