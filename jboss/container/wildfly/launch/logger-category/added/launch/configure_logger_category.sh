@@ -19,6 +19,10 @@ prepareEnv() {
   unset LOGGER_CATEGORIES
 }
 
+function configureEnv() {
+  configure
+}
+
 configure() {
   add_logger_category
 }
