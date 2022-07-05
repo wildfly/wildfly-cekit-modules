@@ -12,12 +12,8 @@ envs:
     description: Custom http Route Hostname
   - name: "HOSTNAME_HTTPS"
     description: Custom https Route Hostname
-  - name: "SSO_BEARER_ONLY"
-    description: true or false. SSO Client Access Type.
   - name: "SSO_DISABLE_SSL_CERTIFICATE_VALIDATION"
     description: true or false. Enable/disable validation.
-  - name: "SSO_ENABLE_CORS"
-    description: true or false. Enable CORS for SSO applications.
   - name: "SSO_PASSWORD"
     description: The password for the keycloak service user.
   - name: "SSO_PRINCIPAL_ATTRIBUTE"
@@ -54,5 +50,3 @@ envs:
     description: The URL for the SSO server.
   - name: "SSO_USERNAME"
     description: The username used to access the SSO service.
-  - name: "SSO_USE_LEGACY"
-    description: This env variable must be set to true to activate the use of SSO_* env variables with keycloak client adapters.

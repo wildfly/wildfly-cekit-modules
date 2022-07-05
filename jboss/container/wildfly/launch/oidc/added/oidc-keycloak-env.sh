@@ -16,5 +16,7 @@ function oidc_keycloak_prepareEnv() {
   unset SSO_TRUSTSTORE_DIR
   unset SSO_TRUSTSTORE_PASSWORD
   unset SSO_URL
+  unset SSO_SERVICE_URL
   unset SSO_USERNAME
+  unset SSO_OPENIDCONNECT_DEPLOYMENTS
 }

@@ -1,6 +1,8 @@
 #!/bin/bash
 source $JBOSS_HOME/bin/launch/logging.sh
 
+OIDC_AUTH_METHOD="OIDC"
+
 function oidc_keycloak_mapEnvVariables {
   OIDC_PROVIDER_NAME=${OIDC_PROVIDER_NAME:-${SSO_DEFAULT_PROVIDER_NAME}}
   OIDC_PROVIDER_URL=${OIDC_PROVIDER_URL:-${SSO_URL}/realms/${SSO_REALM:-master}}
@@ -18,19 +20,48 @@ function oidc_keycloak_mapEnvVariables {
   OIDC_HOSTNAME_HTTP=${OIDC_HOSTNAME_HTTP:-${HOSTNAME_HTTP}}
   OIDC_HOSTNAME_HTTPS=${OIDC_HOSTNAME_HTTPS:-${HOSTNAME_HTTPS}}
 
-  if [ -n "${SSO_URL}" ]; then
-    log_warning "The usage of SSO_* env variables is deprecated and would be removed in a futur release. You must use OIDC_* env variables."
-  fi
-
   if [ -n "${SSO_PUBLIC_KEY}" ]; then
-    log_warning "The realm public key set in SSO_PUBLIC_KEY is being ignored, public key is automatically retrieved from the authorization server."
+    log_warning "The realm public key set in SSO_PUBLIC_KEY is being ignored by OIDC subsystem, public key is automatically retrieved from the authorization server."
   fi
 }
 
 function oidc_init_hook {
+  enable_oidc_deployments
   set_curl
   get_token
-  get_application_routes
+}
+
+function oidc_found_deployments() {
+  if [ -n "${SSO_URL}" ]; then
+    log_warning "The usage of SSO_* env variables for OIDC configuration is deprecated and would be removed in a future release. You must use OIDC_* env variables."
+  fi 
+}
+
+function enable_oidc_deployments() {
+  if [ -n "$SSO_OPENIDCONNECT_DEPLOYMENTS" ]; then
+    explode_oidc_deployments $SSO_OPENIDCONNECT_DEPLOYMENTS
+  fi
+}
+
+function explode_oidc_deployments() {
+  local sso_deployments="${1}"
+
+  for sso_deployment in $(echo $sso_deployments | sed "s/,/ /g"); do
+    if [ ! -d "${JBOSS_HOME}/standalone/deployments/${sso_deployment}" ]; then
+      mkdir ${JBOSS_HOME}/standalone/deployments/tmp
+      unzip -o ${JBOSS_HOME}/standalone/deployments/${sso_deployment} -d ${JBOSS_HOME}/standalone/deployments/tmp
+      rm -f ${JBOSS_HOME}/standalone/deployments/${sso_deployment}
+      mv ${JBOSS_HOME}/standalone/deployments/tmp ${JBOSS_HOME}/standalone/deployments/${sso_deployment}
+      if [ ! -f ${JBOSS_HOME}/standalone/deployments/${sso_deployment}.dodeploy ]; then
+        touch ${JBOSS_HOME}/standalone/deployments/${sso_deployment}.dodeploy
+      fi
+    fi
+
+    if [ -f "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml" ]; then
+      requested_auth_method=$(cat ${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
+      sed -i "s|${requested_auth_method}|${OIDC_AUTH_METHOD}|" "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml"
+    fi
+  done
 }
 
 function set_curl() {
@@ -115,3 +146,4 @@ function keycloak_create_client_config() {
   client_config="${client_config}}"
   echo "${client_config}"
 }
+

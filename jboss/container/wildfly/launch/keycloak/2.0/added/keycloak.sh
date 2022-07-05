@@ -7,14 +7,9 @@ function prepareEnv() {
   unset APPLICATION_ROUTES
   unset HOSTNAME_HTTP
   unset HOSTNAME_HTTPS
-  unset SECURE_DEPLOYMENTS
   unset SECURE_SAML_DEPLOYMENTS
-  unset SSO_BEARER_ONLY
   unset SSO_DISABLE_SSL_CERTIFICATE_VALIDATION
-  unset SSO_ENABLE_CORS
   unset SSO_PASSWORD
-  unset SSO_PRINCIPAL_ATTRIBUTE
-  unset SSO_PUBLIC_KEY
   unset SSO_REALM
   unset SSO_SAML_CERTIFICATE_NAME
   unset SSO_SAML_KEYSTORE
@@ -38,39 +33,21 @@ function configureEnv() {
 }
 
 function configure() {
-  if [ ! -n "$SSO_USE_LEGACY" ] || [ "$SSO_USE_LEGACY" != "true" ]; then
-    return
-  fi
   configure_cli_keycloak
 }
 
-OPENIDCONNECT="KEYCLOAK"
 SAML="KEYCLOAK-SAML"
-SECURE_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-deployments
+SAML_PROTOCOL="saml"
 SECURE_SAML_DEPLOYMENTS=$JBOSS_HOME/standalone/configuration/secure-saml-deployments
-SECURE_DEPLOYMENTS_CLI=$JBOSS_HOME/standalone/configuration/secure-deployments.cli
 SECURE_SAML_DEPLOYMENTS_CLI=$JBOSS_HOME/standalone/configuration/secure-saml-deployments.cli
 
 SUBSYSTEM_END_MARKER="</profile>"
 EXTENSIONS_END_MARKER="</extensions>"
 
 function configure_cli_keycloak() {
-    # We cannot have nested if sentences in CLI, so we use Xpath here to see if the subsystem=keycloak is in the file
-    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:keycloak:')]\""
-    local ret_oidc
-    testXpathExpression "${xpath}" "ret_oidc"
-
-    # We cannot have nested if sentences in CLI, so we use Xpath here to see if the subsystem=keycloak-saml is in the file
-    xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:keycloak-saml:')]\""
-    local ret_saml
-    testXpathExpression "${xpath}" "ret_saml"
 
     app_sec_domain=${SSO_SECURITY_DOMAIN:-keycloak}
     id=$(date +%s)
-
-    local has_security_subsystem
-    local xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:security:')]\""
-    testXpathExpression "${xpath}" "has_security_subsystem"
 
     # No more supported
     if [ -n "${SSO_FORCE_LEGACY_SECURITY}" ]; then
@@ -82,103 +59,47 @@ function configure_cli_keycloak() {
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:undertow:')]/*[local-name()='application-security-domains']/*[local-name()='application-security-domain' and @name='other' and @security-domain='ApplicationDomain']\""
     local ret_domain
     testXpathExpression "${xpath}" "ret_domain"
-    is_saml="false"
-    is_oidc="false"
     other_exists="false"
     if [ "${ret_domain}" -eq 0 ]; then
       other_exists="true"
     fi
-    if [ -f "$SECURE_DEPLOYMENTS_CLI" ] || [ -f "$SECURE_SAML_DEPLOYMENTS_CLI" ]; then
+    if [ -f "$SECURE_SAML_DEPLOYMENTS_CLI" ]; then
 
       elytron_assert="$(elytron_common_assert $app_sec_domain)"
-
-      if [ -f "$SECURE_DEPLOYMENTS_CLI" ]; then
-        if [ "${ret_oidc}" -ne 0 ]; then
-          oidc_extension="$(configure_OIDC_extension)"
-          oidc_elytron="$(configure_OIDC_elytron $id)"
-          ejb_config="$(configure_ejb $id $app_sec_domain)"
-
-          echo " 
-            $elytron_assert
-            $oidc_elytron
-            $ejb_config" >> ${CLI_SCRIPT_FILE}
-          echo " 
-              $oidc_extension
-              /subsystem=keycloak:add
-              " >> ${CLI_SCRIPT_FILE}
-          cat "$SECURE_DEPLOYMENTS_CLI" >> "$CLI_SCRIPT_FILE"
-          is_oidc="true"
-        else
-          log_warning "keycloak subsystem already exists, no configuration applied"
-        fi
-      fi
-      if [ -f "$SECURE_SAML_DEPLOYMENTS_CLI" ]; then
-        if [ "${ret_saml}" -ne 0 ]; then
-          saml_extension="$(configure_SAML_extension)"
-          saml_elytron="$(configure_SAML_elytron $id)"
-          echo "
-            $elytron_assert
-            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
-          echo " 
-            $saml_extension
-            /subsystem=keycloak-saml:add
-            " >> ${CLI_SCRIPT_FILE}
-          cat "$SECURE_SAML_DEPLOYMENTS_CLI" >> "$CLI_SCRIPT_FILE"
-          is_saml="true"
-        else
-          log_warning "keycloak saml subsystem already exists, no configuration applied"
-        fi
-      fi
+      saml_extension="$(configure_SAML_extension)"
+      saml_subsystem="$(add_SAML_subsystem)"
+      saml_elytron="$(configure_SAML_elytron $id)"
+      echo "
+        $elytron_assert
+        $saml_elytron"  >> ${CLI_SCRIPT_FILE}
+      echo " 
+        $saml_extension
+        ${saml_subsystem}
+        " >> ${CLI_SCRIPT_FILE}
+      cat "$SECURE_SAML_DEPLOYMENTS_CLI" >> "$CLI_SCRIPT_FILE"
       if [ "$other_exists" == "true" ]; then
-        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+        other_config="$(configure_existing_other_cli $id)"
         echo "
          $other_config" >> ${CLI_SCRIPT_FILE}
       fi
       undertow_config="$(configure_undertow $id $app_sec_domain)"
       echo "
        $undertow_config" >> ${CLI_SCRIPT_FILE}
-      enable_keycloak_deployments
-    elif [ -f "$SECURE_DEPLOYMENTS" ] || [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
+      enable_keycloak_saml_deployments
+    elif [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
 
       elytron_assert="$(elytron_common_assert $app_sec_domain)"
+      keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
+      keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
 
-      if [ -f "$SECURE_DEPLOYMENTS" ]; then
-        if [ "${ret_oidc}" -ne 0 ]; then
-          keycloak_subsystem=$(cat "${SECURE_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
-          keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
+      sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
 
-          sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
-
-          oidc_elytron="$(configure_OIDC_elytron $id)"
-          ejb_config="$(configure_ejb $id $app_sec_domain)"
-          echo " 
-            $elytron_assert
-            $oidc_elytron
-            $ejb_config" >> ${CLI_SCRIPT_FILE}
-          is_oidc="true"
-        else
-          log_warning "keycloak subsystem already exists, no configuration applied"
-        fi
-      fi
-
-      if [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
-        if [ "${ret_saml}" -ne 0 ]; then
-          keycloak_subsystem=$(cat "${SECURE_SAML_DEPLOYMENTS}" | sed ':a;N;$!ba;s/\n//g')
-          keycloak_subsystem="<subsystem xmlns=\"urn:jboss:domain:keycloak-saml:1.1\">${keycloak_subsystem}</subsystem>${SUBSYSTEM_END_MARKER}"
-
-          sed -i "s|${SUBSYSTEM_END_MARKER}|${keycloak_subsystem}|" "${CONFIG_FILE}"
-
-          saml_elytron="$(configure_SAML_elytron $id)"
-          echo "
-            $elytron_assert
-            $saml_elytron"  >> ${CLI_SCRIPT_FILE}
-          is_saml="true"
-        else
-          log_warning "keycloak saml subsystem already exists, no configuration applied"
-        fi
-      fi
+      saml_elytron="$(configure_SAML_elytron $id)"
+      echo "
+        $elytron_assert
+        $saml_elytron"  >> ${CLI_SCRIPT_FILE}
       if [ "$other_exists" == "true" ]; then
-        other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+        other_config="$(configure_existing_other_cli $id)"
         echo "
          $other_config" >> ${CLI_SCRIPT_FILE}
       fi
@@ -186,13 +107,10 @@ function configure_cli_keycloak() {
       echo "
        $undertow_config" >> ${CLI_SCRIPT_FILE}
       configure_extensions_no_marker
-      enable_keycloak_deployments
+      enable_keycloak_saml_deployments
   elif [ -n "$SSO_URL" ]; then
-    enable_keycloak_deployments
-    
-    oidc_extension="$(configure_OIDC_extension)"
+    enable_keycloak_saml_deployments
     saml_extension="$(configure_SAML_extension)"
-    oidc_elytron="$(configure_OIDC_elytron $id)"
     saml_elytron="$(configure_SAML_elytron $id)"
     elytron_assert="$(elytron_common_assert $app_sec_domain)"
     undertow_config="$(configure_undertow $id $app_sec_domain)"
@@ -212,40 +130,19 @@ function configure_cli_keycloak() {
 
     # We can't use output, functions are displaying content.
     cli=
-    configure_OIDC_subsystem
-    oidc="$cli"
     configure_SAML_subsystem
     saml="$cli"
-
-    if [ ! -z "${oidc}" ]; then
-      if [ "${ret_oidc}" -ne 0 ]; then
-        echo " 
-          $elytron_assert
-          $oidc_extension
-          $oidc_elytron
-          $oidc
-          $ejb_config" >> ${CLI_SCRIPT_FILE}
-        is_oidc="true"
-      else
-          log_warning "keycloak subsystem already exists, no configuration applied"
-      fi
-    fi
     
     if [ ! -z "${saml}" ]; then
-      if [ "${ret_saml}" -ne 0 ]; then
         echo "
           $elytron_assert
           $saml_extension
           $saml_elytron
           $saml"  >> ${CLI_SCRIPT_FILE}
-        is_saml="true"
-      else
-        log_warning "keycloak saml subsystem already exists, no configuration applied"
-      fi
     fi
 
     if [ "$other_exists" == "true" ]; then
-      other_config="$(configure_existing_other_cli $is_saml $is_oidc $id)"
+      other_config="$(configure_existing_other_cli $id)"
       echo "
       $other_config" >> ${CLI_SCRIPT_FILE}
     fi
@@ -256,9 +153,7 @@ function configure_cli_keycloak() {
 }
 
 function configure_existing_other_cli() {
-   is_saml=$1
-   is_oidc=$2
-   id=$3
+   id=$1
    ext_domain="ext-KeycloakDomain-$id"
    ext_factory="ext-keycloak-http-authentication-$id"
    http_auth="/subsystem=elytron/http-authentication-factory=$ext_factory:add(\
@@ -269,16 +164,9 @@ function configure_existing_other_cli() {
    sec_domain="/subsystem=elytron/security-domain=$ext_domain:add(default-realm=ApplicationRealm,\
       permission-mapper=default-permission-mapper,security-event-listener=local-audit,\
       realms=[{realm=local},{realm=ApplicationRealm,role-decoder=groups-to-roles}"
-   if [ "$is_saml" == "true" ]; then
      sec_domain="$sec_domain,{realm=KeycloakSAMLRealm-$id}"
      http_auth="$http_auth,{mechanism-name=KEYCLOAK-SAML,mechanism-realm-configurations=[\
        {realm-name=KeycloakSAMLCRealm-$id,realm-mapper=keycloak-saml-realm-mapper-$id}]}"
-   fi
-   if [ "$is_oidc" == "true" ]; then
-     sec_domain="$sec_domain,{realm=KeycloakOIDCRealm-$id}"
-     http_auth="$http_auth,{mechanism-name=KEYCLOAK,mechanism-realm-configurations=[\
-      {realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]}"
-   fi
    sec_domain="$sec_domain])"
    http_auth="$http_auth])"
 
@@ -293,21 +181,18 @@ function configure_existing_other_cli() {
     echo "$cli"
 }
 
-function configure_OIDC_extension() {
-  cli="if (outcome != success) of /extension=org.keycloak.keycloak-adapter-subsystem:read-resource
-        /extension=org.keycloak.keycloak-adapter-subsystem:add()
-      else
-        echo org.keycloak.keycloak-adapter-subsystem extension already added >> \${warning_file}
-      end-if"
-  echo "$cli"
-}
-
 function configure_SAML_extension() {
   cli="
       if (outcome != success) of /extension=org.keycloak.keycloak-saml-adapter-subsystem:read-resource
         /extension=org.keycloak.keycloak-saml-adapter-subsystem:add()
-      else
-        echo org.keycloak.keycloak-saml-adapter-subsystem extension already added >> \${warning_file}
+      end-if"
+  echo "$cli"
+}
+
+function add_SAML_subsystem() {
+  cli="
+      if (outcome != success) of /subsystem=keycloak-saml:read-resource
+        /subsystem=keycloak-saml:add()
       end-if"
   echo "$cli"
 }
@@ -387,51 +272,6 @@ end-if
 echo "$cli"
 }
 
-function configure_OIDC_elytron() {
-  id=$1
-  cli="
-if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakOIDCRealm-$id:read-resource
-    /subsystem=elytron/custom-realm=KeycloakOIDCRealm-$id:add(class-name=org.keycloak.adapters.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-wildfly-elytron-oidc-adapter)
-else
-    echo Keycloak OpenID Connect Realm already installed >> \${warning_file}
-end-if
-
-if (outcome != success) of /subsystem=elytron/security-domain=KeycloakDomain-$id:read-resource
-    /subsystem=elytron/security-domain=KeycloakDomain-$id:add(default-realm=KeycloakOIDCRealm-$id,permission-mapper=default-permission-mapper,security-event-listener=local-audit,realms=[{realm=KeycloakOIDCRealm-$id}])
-else
-    echo Keycloak Security Domain already installed. Trying to install Keycloak OpenID Connect Realm. >> \${warning_file}
-    /subsystem=elytron/security-domain=KeycloakDomain-$id:list-add(name=realms, value={realm=KeycloakOIDCRealm-$id})
-end-if
-
-if (outcome != success) of /subsystem=elytron/constant-realm-mapper=keycloak-oidc-realm-mapper-$id:read-resource
-    /subsystem=elytron/constant-realm-mapper=keycloak-oidc-realm-mapper-$id:add(realm-name=KeycloakOIDCRealm-$id)
-else
-    echo Keycloak OpenID Connect Realm Mapper already installed >> \${warning_file}
-end-if
-
-if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-oidc-http-server-mechanism-factory-$id:read-resource
-    /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-oidc-http-server-mechanism-factory-$id:add(module=org.keycloak.keycloak-wildfly-elytron-oidc-adapter)
-else
-    echo Keycloak OpenID Connect HTTP Mechanism already installed >> \${warning_file}
-end-if
-
-if (outcome != success) of /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:read-resource
-    /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:add(http-server-mechanism-factories=[keycloak-oidc-http-server-mechanism-factory-$id, global])
-else
-    echo Keycloak HTTP Mechanism Factory already installed. Trying to install Keycloak OpenID Connect HTTP Mechanism Factory. >> \${warning_file}
-    /subsystem=elytron/aggregate-http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id:list-add(name=http-server-mechanism-factories, value=keycloak-oidc-http-server-mechanism-factory-$id)
-end-if
-
-if (outcome != success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
-    /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:add(security-domain=KeycloakDomain-$id,http-server-mechanism-factory=keycloak-http-server-mechanism-factory-$id,mechanism-configurations=[{mechanism-name=KEYCLOAK,mechanism-realm-configurations=[{realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]}])
-else
-    echo Keycloak HTTP Authentication Factory already installed. Trying to install Keycloak OpenID Connect Mechanism Configuration >> \${warning_file}
-    /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:list-add(name=mechanism-configurations, value={mechanism-name=KEYCLOAK,mechanism-realm-configurations=[{realm-name=KeycloakOIDCRealm-$id,realm-mapper=keycloak-oidc-realm-mapper-$id}]})
-end-if"
-
-  echo "$cli"
-}
-
 configure_ejb() {
   id=$1
   security_domain=$2
@@ -453,42 +293,14 @@ end-if"
   fi
 }
 
-function configure_OIDC_subsystem() {
-  cli=
-  configure_subsystem $OPENIDCONNECT "openid-connect"
-  secure_deployments="$cli"
-  if [ ! -z "$secure_deployments" ]; then
-    subsystem=/subsystem=keycloak
-    realm=$subsystem/realm=${SSO_REALM}
-    cli="
-      ${subsystem}:add
-      ${realm}:add(auth-server-url=${SSO_URL},register-node-at-startup=true,register-node-period=600,ssl-required=external,allow-any-hostname=false)"
-  
-    if [ -n "$SSO_PUBLIC_KEY" ]; then
-      cli="$cli
-        ${realm}:write-attribute(name=realm-public-key,value=${SSO_PUBLIC_KEY})"
-    fi
-    
-    if [ -n "$SSO_TRUSTSTORE" ] && [ -n "$SSO_TRUSTSTORE_DIR" ]; then
-      cli="$cli
-        ${realm}:write-attribute(name=truststore,value=${SSO_TRUSTSTORE_DIR}/${SSO_TRUSTSTORE})
-        ${realm}:write-attribute(name=truststore-password,value=${SSO_TRUSTSTORE_PASSWORD})"
-    else
-      cli="$cli
-        ${realm}:write-attribute(name=disable-trust-manager,value=true)"
-    fi
-    cli="$cli
-       ${secure_deployments}"
-  fi
-}
-
 function configure_SAML_subsystem() {
   cli=
-  configure_subsystem $SAML "saml"
+  do_configure_SAML_subsystem
   secure_deployments="$cli"
+  saml_subsystem="$(add_SAML_subsystem)"
   if [ ! -z "$secure_deployments" ]; then
     cli="
-       /subsystem=keycloak-saml:add
+       ${saml_subsystem}
        ${secure_deployments}
 "
   fi
@@ -506,19 +318,14 @@ function set_curl() {
   fi
 }
 
-function enable_keycloak_deployments() {
-  if [ -n "$SSO_OPENIDCONNECT_DEPLOYMENTS" ]; then
-    explode_keycloak_deployments $SSO_OPENIDCONNECT_DEPLOYMENTS $OPENIDCONNECT
-  fi
-
+function enable_keycloak_saml_deployments() {
   if [ -n "$SSO_SAML_DEPLOYMENTS" ]; then
-    explode_keycloak_deployments $SSO_SAML_DEPLOYMENTS $SAML
+    explode_keycloak_saml_deployments $SSO_SAML_DEPLOYMENTS
   fi
 }
 
-function explode_keycloak_deployments() {
+function explode_keycloak_saml_deployments() {
   local sso_deployments="${1}"
-  local auth_method="${2}"
 
   for sso_deployment in $(echo $sso_deployments | sed "s/,/ /g"); do
     if [ ! -d "${JBOSS_HOME}/standalone/deployments/${sso_deployment}" ]; then
@@ -533,7 +340,7 @@ function explode_keycloak_deployments() {
 
     if [ -f "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml" ]; then
       requested_auth_method=$(cat ${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
-      sed -i "s|${requested_auth_method}|${auth_method}|" "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml"
+      sed -i "s|${requested_auth_method}|${SAML}|" "${JBOSS_HOME}/standalone/deployments/${sso_deployment}/WEB-INF/web.xml"
     fi
   done
 }
@@ -563,22 +370,12 @@ function get_token() {
 
 
 function configure_extensions_no_marker() {
-  sed -i "s|${EXTENSIONS_END_MARKER}|<extension module=\"org.keycloak.keycloak-adapter-subsystem\"/><extension module=\"org.keycloak.keycloak-saml-adapter-subsystem\"/>${EXTENSIONS_END_MARKER}|" "${CONFIG_FILE}"
+  sed -i "s|${EXTENSIONS_END_MARKER}|<extension module=\"org.keycloak.keycloak-saml-adapter-subsystem\"/>${EXTENSIONS_END_MARKER}|" "${CONFIG_FILE}"
 }
 
-function configure_subsystem() {
-  auth_method=$1
-  protocol=$2
-
-  get_application_routes
-
-  cli=
-  subsystem=
-  deployments=
-  redirect_path=
-
- # We need it to be retrieved prior to iterate the web deployments, needed by CLI
-  if [ -n "$token" ]; then
+function retrieve_realm_signing_key_certificate() {
+realm_signing_key_certificate="NONE"
+if [ -n "$token" ]; then
     ### CIAM-690 -- Start of RH-SSO add-on:
     ### -----------------------------------
     ### Add support for RH-SSO 7.5
@@ -616,6 +413,15 @@ function configure_subsystem() {
      ### CIAM-690 -- End of RH-SSO add-on
      ### --------------------------------
   fi
+}
+
+function do_configure_SAML_subsystem() {
+  get_application_routes
+
+  cli=
+  subsystem=
+  deployments=
+  redirect_path=  
 
   pushd $JBOSS_HOME/standalone/deployments &> /dev/null
   files=*.war
@@ -623,16 +429,15 @@ function configure_subsystem() {
   for f in $files
   do
     if [[ $f != "*.war" ]];then
-      keycloak_configure_secure_deployment "$f" "$realm_signing_key_certificate"
+      keycloak_configure_SAML_secure_deployment "$f"
     fi
   done
   popd &> /dev/null
   # discover deployments in $JBOSS_HOME/standalone/data/content
-  keycloak_discover_deployed_deployments "$realm_signing_key_certificate"
+  keycloak_discover_deployed_deployments
 }
 
 function keycloak_discover_deployed_deployments() {
-  realm_certificate="$1"
   local deployments_xpath="//*[local-name()='deployments']//*[local-name()='deployment']"
   local count=$(xmllint --xpath "count($deployments_xpath)" "${CONFIG_FILE}" 2>/dev/null)
   for ((deployment_index=1; deployment_index<=count; deployment_index++)); do
@@ -648,7 +453,7 @@ function keycloak_discover_deployed_deployments() {
         local tmp_file="/tmp/${deployment_runtime_name}"
         cp "$deployment_file" "$tmp_file"
         pushd /tmp &> /dev/null
-        keycloak_configure_secure_deployment "${deployment_runtime_name}" "${realm_certificate}"
+        keycloak_configure_SAML_secure_deployment "${deployment_runtime_name}"
         rm -f "${deployment_runtime_name}"
         popd &> /dev/null
       else
@@ -658,21 +463,22 @@ function keycloak_discover_deployed_deployments() {
   done
 }
 
-function keycloak_configure_secure_deployment() {
+function keycloak_configure_SAML_secure_deployment() {
   f="$1"
-  realm_certificate="$2"
   module_name=
   web_xml=$(read_web_dot_xml $f WEB-INF/web.xml)
   if [ -n "$web_xml" ]; then
     requested_auth_method=$(echo $web_xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
-    if [[ $requested_auth_method == "${auth_method}" ]]; then
-      if [ $auth_method == ${SAML} ]; then
+    if [[ $requested_auth_method == "${SAML}" ]]; then
+        # We have at least a SAML deployment, retrieve the certificate
+        if [ -z "$realm_signing_key_certificate" ]; then
+          retrieve_realm_signing_key_certificate
+          if [ -n "${realm_signing_key_certificate}" ] && [ "NONE" != "${realm_signing_key_certificate}" ]; then
+            realm_certificate="${realm_signing_key_certificate}"
+          fi
+        fi
         cli="$cli
               /subsystem=keycloak-saml/secure-deployment=${f}:add()"
-      else
-        cli="$cli
-              /subsystem=keycloak/secure-deployment=${f}:add(enable-basic-auth=true, auth-server-url=${SSO_URL}, realm=${SSO_REALM})"
-      fi
 
       if [[ $web_xml == *"<module-name>"* ]]; then
         module_name=$(echo $web_xml | xmllint --nowarning --xpath "//*[local-name()='module-name']/text()" -)
@@ -722,7 +528,7 @@ function keycloak_configure_secure_deployment() {
       fi
 
       if [ -n "$token" ]; then
-        configure_client $module_name $protocol $APPLICATION_ROUTES
+        configure_SAML_client $module_name $APPLICATION_ROUTES
       fi
 
       if [ -n "$APPLICATION_NAME" ]; then
@@ -730,16 +536,15 @@ function keycloak_configure_secure_deployment() {
       else
         entity_id=${module_name}
       fi
-      if [ $auth_method == ${SAML} ]; then
-        if [ -n "$realm_certificate" ]; then
-          validate_signature=true
-          if [ -n "$SSO_SAML_VALIDATE_SIGNATURE" ]; then
-            validate_signature="$SSO_SAML_VALIDATE_SIGNATURE"
-          fi
-        else
-          validate_signature=true
+      if [ -n "$realm_certificate" ]; then
+        validate_signature=true
+        if [ -n "$SSO_SAML_VALIDATE_SIGNATURE" ]; then
+          validate_signature="$SSO_SAML_VALIDATE_SIGNATURE"
         fi
-        cli="$cli
+      else
+        validate_signature=true
+      fi
+      cli="$cli
               /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}:add(sslPolicy=EXTERNAL)
               /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:add(signing=true,encryption=true)
               /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/IDP=idp:add(signatureAlgorithm=RSA_SHA256, \
@@ -748,53 +553,23 @@ function keycloak_configure_secure_deployment() {
               SingleLogoutService={validateRequestSignature=${validate_signature},validateResponseSignature=${validate_signature},signRequest=true,\
               signResponse=true,requestBinding=POST,responseBinding=POST, postBindingUrl=${SSO_URL}/realms/${SSO_REALM}/protocol/saml,\
               redirectBindingUrl=${SSO_URL}/realms/${SSO_REALM}/protocol/saml})"
-        if [ -n "$realm_certificate" ]; then
-          cli="$cli
+      if [ -n "$realm_certificate" ]; then
+        cli="$cli
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/IDP=idp/Key=Key:add(signing=true,CertificatePem=\"${realm_certificate}\")"
-        fi
-        if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ]; then
-          cli="$cli
+      fi
+      if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ]; then
+        cli="$cli
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.file,value=${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE})"
-        fi
-        if [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
-          cli="$cli
+      fi
+      if [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
+        cli="$cli
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.password,value=${SSO_SAML_KEYSTORE_PASSWORD})
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-password,value=${SSO_SAML_KEYSTORE_PASSWORD})"
-        fi
-        if [ -n "$SSO_SAML_CERTIFICATE_NAME" ]; then
-          cli="$cli
+      fi
+      if [ -n "$SSO_SAML_CERTIFICATE_NAME" ]; then
+        cli="$cli
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.Certificate-alias,value=${SSO_SAML_CERTIFICATE_NAME})
                   /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}/Key=Key:write-attribute(name=KeyStore.PrivateKey-alias,value=${SSO_SAML_CERTIFICATE_NAME})"
-        fi
-      fi
-      if [ $auth_method == $OPENIDCONNECT ]; then
-        cli="$cli
-               /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=resource, value=${keycloak_client})"
-      fi
-      if [ $auth_method == $OPENIDCONNECT ] && [ -n "${SSO_SECRET}" ]; then
-        cli="$cli
-              /subsystem=keycloak/secure-deployment=${f}/credential=secret:add(value=${SSO_SECRET})"
-      fi
-
-      if [ -n "$SSO_ENABLE_CORS" ]; then
-        cors=${SSO_ENABLE_CORS}
-      else
-        cors=false
-      fi
-
-      if [ $auth_method == $OPENIDCONNECT ]; then
-        cli="$cli
-            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=enable-cors, value=${cors})"
-      fi
-
-      if [ -n "$SSO_BEARER_ONLY" ]; then
-        bearer=${SSO_BEARER_ONLY}
-      else
-        bearer=false
-      fi
-      if [ $auth_method == $OPENIDCONNECT ]; then
-        cli="$cli
-            /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=bearer-only, value=${bearer})"
       fi
 
       if [ -n "$SSO_SAML_LOGOUT_PAGE" ]; then
@@ -802,28 +577,17 @@ function keycloak_configure_secure_deployment() {
       else
         logoutPage=/
       fi
+      cli="$cli
+            /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}:write-attribute(name=logoutPage,value=$logoutPage)"
 
-      if [ $auth_method == ${SAML} ]; then
-        cli="$cli
-              /subsystem=keycloak-saml/secure-deployment=${f}/SP=${entity_id}:write-attribute(name=logoutPage,value=$logoutPage)"
-      fi
-
-      if [ -n "$SSO_PRINCIPAL_ATTRIBUTE" ]; then
-        if [ $auth_method == $OPENIDCONNECT ]; then
-          cli="$cli
-              /subsystem=keycloak/secure-deployment=${f}:write-attribute(name=principal-attribute, value=${SSO_PRINCIPAL_ATTRIBUTE})"
-        fi
-      fi
-
-      log_info "Configured keycloak subsystem for $protocol module $module_name from $f"
+      log_info "Configured keycloak subsystem for $SAML_PROTOCOL module $module_name from $f"
     fi
   fi
 }
 
-function configure_client() {
+function configure_SAML_client() {
   module_name=$1
-  protocol=$2
-  application_routes=$3
+  application_routes=$2
 
   IFS_save=$IFS
   IFS=";"
@@ -841,8 +605,6 @@ function configure_client() {
   redirects="${redirects:1}"
   IFS=$IFS_save
 
-  if [[ $protocol == "saml" ]]
-  then
     client_config="{\"adminUrl\":\"${endpoint}saml\""
     if [ -n "$SSO_SAML_KEYSTORE" ] && [ -n "$SSO_SAML_KEYSTORE_DIR" ] && [ -n "$SSO_SAML_CERTIFICATE_NAME" ] && [ -n "$SSO_SAML_KEYSTORE_PASSWORD" ]; then
       keytool -export -keystore ${SSO_SAML_KEYSTORE_DIR}/${SSO_SAML_KEYSTORE} -alias $SSO_SAML_CERTIFICATE_NAME -storepass $SSO_SAML_KEYSTORE_PASSWORD -file $JBOSS_HOME/standalone/configuration/keycloak.cer
@@ -855,23 +617,9 @@ function configure_client() {
       fi
       client_config="${client_config},\"attributes\":{\"saml.signing.certificate\":\"${pem}\"${server_signature}}"
     fi
-  else
-    service_addr=$(hostname -i)
-    client_config="{\"redirectUris\":[${redirects}]"
-
-    if [ -n "$HOSTNAME_HTTP" ]; then
-      client_config="${client_config},\"adminUrl\":\"http://\${application.session.host}:8080/${redirect_path}\""
-    else
-      client_config="${client_config},\"adminUrl\":\"https://\${application.session.host}:8443/${redirect_path}\""
-    fi
-  fi
-
-  if [ -n "$SSO_BEARER_ONLY" ] && [ "$SSO_BEARER_ONLY" == "true" ]; then
-    client_config="${client_config},\"bearerOnly\":\"true\""
-  fi
 
   client_config="${client_config},\"clientId\":\"${keycloak_client}\""
-  client_config="${client_config},\"protocol\":\"${protocol}\""
+  client_config="${client_config},\"protocol\":\"${SAML_PROTOCOL}\""
   client_config="${client_config},\"baseUrl\":\"${endpoint}\""
   client_config="${client_config},\"rootUrl\":\"\""
   client_config="${client_config},\"publicClient\":\"false\",\"secret\":\"${SSO_SECRET}\""
@@ -884,9 +632,9 @@ function configure_client() {
   result=$($CURL -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -X POST -d "${client_config}" ${sso_service}/admin/realms/${SSO_REALM}/clients)
 
   if [ -n "$result" ]; then
-    log_warning "ERROR: Unable to register $protocol client for module $module_name in realm $SSO_REALM on $redirects: $result"
+    log_warning "ERROR: Unable to register $SAML_PROTOCOL client for module $module_name in realm $SSO_REALM on $redirects: $result"
   else
-    log_info "Registered $protocol client for module $module_name in realm $SSO_REALM on $redirects"
+    log_info "Registered $SAML_PROTOCOL client for module $module_name in realm $SSO_REALM on $redirects"
   fi
 }
 
