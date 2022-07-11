@@ -6,6 +6,8 @@ source $JBOSS_HOME/bin/launch/oidc-keycloak-env.sh
 OIDC_EXTENSION="org.wildfly.extension.elytron-oidc-client"
 OIDC_SUBSYSTEM="elytron-oidc-client"
 
+OIDC_AUTH_METHOD="OIDC"
+
 function prepareEnv() {
   unset APPLICATION_NAME
   unset APPLICATION_ROUTES
@@ -38,9 +40,6 @@ function configure() {
 }
 
 function oidc_configure {
-  if [ -n "$SSO_USE_LEGACY" ] && [ "$SSO_USE_LEGACY" == "true" ]; then
-    return
-  fi
   if  [ -n "${SSO_URL}" ] || [ "${OIDC_PROVIDER_NAME}" == "rh-sso" ] ||  [ "${OIDC_PROVIDER_NAME}" == "keycloak" ]; then
     source $JBOSS_HOME/bin/launch/oidc-keycloak-hooks.sh
     oidc_keycloak_mapEnvVariables
@@ -49,6 +48,7 @@ function oidc_configure {
     return
   fi
   log_info "Configuring OIDC subsystem for provider ${OIDC_PROVIDER_NAME}"
+
   cli=
   # defined in the provider
   oidc_init_hook
@@ -63,6 +63,11 @@ function oidc_init_hook() {
 
 function oidc_create_client_hook() {
   log_warning "Client will be not register, no support for client registration for $OIDC_PROVIDER_NAME provider"
+}
+
+function oidc_found_deployments() {
+ # NO-OP
+ return
 }
 
 # end implemented by providers
@@ -86,6 +91,7 @@ function oidc_configure_subsystem() {
   oidc_configure_secure_deployments
   secure_deployments="$cli"
   if [ ! -z "$secure_deployments" ]; then
+    oidc_found_deployments
     add_extension="$(oidc_add_extension)"
     add_subsystem="$(oidc_add_subsystem)"
     subsystem=/subsystem=${OIDC_SUBSYSTEM}
@@ -185,7 +191,7 @@ function oidc_configure_secure_deployment() {
   web_xml=$(read_file_in_war $f WEB-INF/web.xml)
   if [ -n "$web_xml" ]; then
     requested_auth_method=$(echo $web_xml | xmllint --nowarning --xpath "string(//*[local-name()='auth-method'])" - | sed ':a;N;$!ba;s/\n//g' | tr -d '[:space:]')
-    if [[ $requested_auth_method == "OIDC" ]]; then
+    if [[ $requested_auth_method == "${OIDC_AUTH_METHOD}" ]]; then
       cli="$cli
         /subsystem=${OIDC_SUBSYSTEM}/secure-deployment=${f}:add(enable-basic-auth=true, provider=${OIDC_PROVIDER_NAME})"
 
