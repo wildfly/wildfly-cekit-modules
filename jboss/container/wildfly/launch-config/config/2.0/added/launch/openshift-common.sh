@@ -167,12 +167,12 @@ function exec_cli_scripts() {
         exit 1
       fi
       if [ "${SCRIPT_DEBUG}" != "true" ] ; then
-        rm ${script} 2> /dev/null
-        rm ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
-        rm ${CONFIG_ERROR_FILE} 2> /dev/null
-        rm ${CONFIG_WARNING_FILE} 2> /dev/null
-        rm ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
-        rm ${CLI_SCRIPT_OUTPUT_FILE} 2> /dev/null
+        rm -f ${script} 2> /dev/null
+        rm -f ${CLI_SCRIPT_PROPERTY_FILE} 2> /dev/null
+        rm -f ${CONFIG_ERROR_FILE} 2> /dev/null
+        rm -f ${CONFIG_WARNING_FILE} 2> /dev/null
+        rm -f ${CLI_SCRIPT_FILE_FOR_EMBEDDED} 2> /dev/null
+        rm -f ${CLI_SCRIPT_OUTPUT_FILE} 2> /dev/null
       fi
     fi
   else
