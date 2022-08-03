@@ -48,7 +48,18 @@ maven_s2i_build
 
 # We must then copy the /deployments to the server
 if [ -n "$galleon_legacy" ]; then
-  log_info "Copying /deployments to $JBOSS_HOME/standalone/"
-  cp -prf /deployments $JBOSS_HOME/standalone/
-  rm -rf /deployments/*
+  log_info "Copying $S2I_TARGET_DEPLOYMENTS_DIR to $JBOSS_HOME/standalone/"
+  cp -prf "$S2I_TARGET_DEPLOYMENTS_DIR" "$JBOSS_HOME/standalone/"
+else
+  # Some extra deployments could have been set in the deployments dir (or custom S2I_SOURCE_DEPLOYMENTS_DIR)
+  # These deployments have been copied during s2i build to the S2I_TARGET_DEPLOYMENTS_DIR
+  if [ -d "$S2I_TARGET_DEPLOYMENTS_DIR" ]; then
+    deployments_count="$( find $S2I_TARGET_DEPLOYMENTS_DIR -mindepth 1 -maxdepth 1 | wc -l )"
+    if [ $deployments_count -gt 0 ] ; then
+      log_info "Copying extra deployments found in $S2I_TARGET_DEPLOYMENTS_DIR to $JBOSS_HOME/standalone/deployments"
+      mkdir -p "$JBOSS_HOME/standalone/deployments"
+      cp "$S2I_TARGET_DEPLOYMENTS_DIR"/* "$JBOSS_HOME/standalone/deployments"
+    fi
+  fi
 fi
+rm -rf "$S2I_TARGET_DEPLOYMENTS_DIR"/*
