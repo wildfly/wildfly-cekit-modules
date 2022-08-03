@@ -3,20 +3,53 @@ source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 
 function maven_s2i_deploy_artifacts_override() {
  local artifact_dirs=${1:-${MAVEN_S2I_ARTIFACT_DIRS}}
+ local server_dir=${S2I_SERVER_DIR:-server}
+ # keep original value that will be used latter in the s2i workflow to copy binary deployments.
+ if [ -n "$S2I_SOURCE_DEPLOYMENTS_DIR" ]; then
+      ORIGINAL_S2I_SOURCE_DEPLOYMENTS_DIR=${S2I_SOURCE_DEPLOYMENTS_DIR}
+ fi
  echo "Installing server. S2I_SOURCE_DIR $S2I_SOURCE_DIR, ARTIFACT DIRS ${artifact_dirs}" 
  echo  "$S2I_SOURCE_DIR content:"
  ls $S2I_SOURCE_DIR
- echo  "$S2I_SOURCE_DIR/$artifact_dirs content:"
- ls -l $S2I_SOURCE_DIR/$artifact_dirs
-
- local server_dir=${S2I_SERVER_DIR:-server}
- provisioned_server="$S2I_SOURCE_DIR/$artifact_dirs/${server_dir}";
-
- if [ ! -d "$provisioned_server" ]; then
-   log_error "No server provisioned found in $provisioned_server. Exiting."
+ 
+ IFS=',' read -a artifact_dirs <<< "${artifact_dirs}"
+ for artifact_dir in "${artifact_dirs[@]}"
+ do
+    if [[ "${artifact_dir}" =~ ^\/ ]]; then
+      log_error "Absolute path found in MAVEN_S2I_ARTIFACT_DIRS: ${artifact_dir}"
+      exit 1
+    else
+      log_info "Scanning ${artifact_dir} directory for server or deployment"
+      provisioned_server="$S2I_SOURCE_DIR/$artifact_dir/${server_dir}";
+      if [ -d "$provisioned_server" ]; then
+        log_info "Found provisioned server in $provisioned_server"
+        if [ -n "$found_server" ]; then
+          log_error "More than one server is found in MAVEN_S2I_ARTIFACT_DIRS, exiting."
+          exit 1
+        fi
+        echo  "$S2I_SOURCE_DIR/$artifact_dir content:"
+        ls -l $S2I_SOURCE_DIR/$artifact_dir
+        found_server="$provisioned_server"
+      else
+        echo  "$S2I_SOURCE_DIR/$artifact_dir content:"
+        ls -l $S2I_SOURCE_DIR/$artifact_dir
+        # copy filtered deployments if any to /deployments
+        # temporarily override source dir so it copies from the dir we pass in 
+        S2I_SOURCE_DEPLOYMENTS_DIR=${artifact_dir}
+        s2i_core_copy_deployments "${S2I_SOURCE_DIR}"
+      fi
+    fi
+ done
+ unset S2I_SOURCE_DEPLOYMENTS_DIR
+ if [ -n "$ORIGINAL_S2I_SOURCE_DEPLOYMENTS_DIR" ]; then
+   S2I_SOURCE_DEPLOYMENTS_DIR=$ORIGINAL_S2I_SOURCE_DEPLOYMENTS_DIR
+ fi
+ if [ ! -d "$found_server" ]; then
+   log_error "No server provisioned found. Exiting."
    exit 1
  fi
- log_info "Copying server from $provisioned_server to $JBOSS_HOME..."
- cp -r "$provisioned_server" $JBOSS_HOME
+ log_info "Copying server from $found_server to $JBOSS_HOME..."
+ cp -r "$found_server" $JBOSS_HOME
  chmod -R ug+rwX $JBOSS_HOME
+ log_info "Server installation done."
 }
