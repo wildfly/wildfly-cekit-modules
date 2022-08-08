@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="embedded-activemq">
+    <feature spec="subsystem.messaging-activemq">
+        <feature spec="subsystem.messaging-activemq.server">
+            <param name="server" value="default"/>
+            <!-- -1 means infinite retry. The client will retry indefinitely until the server is ready -->
+            <feature spec="subsystem.messaging-activemq.server.connection-factory">
+                <param name="connection-factory" value="RemoteConnectionFactory"/>
+                <param name="reconnect-attempts" value="-1"/>
+            </feature>
+        </feature>
+    </feature>
+</layer-spec>
