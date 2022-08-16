@@ -6,6 +6,8 @@ description: Run server in the cloud.
 envs:
 - name: JBOSS_CONTAINER_WILDFLY_RUN_MODULE
   value: /opt/jboss/container/wildfly/run
+- name: WILDFLY_OVERRIDING_ENV_VARS
+  value: "1"
   
 execute:
 - script: configure.sh
