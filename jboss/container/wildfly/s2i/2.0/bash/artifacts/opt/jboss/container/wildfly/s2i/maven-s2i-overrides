@@ -29,11 +29,6 @@ function maven_s2i_custom_binary_build() {
       unzip -l "${INPUT_FILE}" | grep -q META-INF/server-config.xml
       HAS_MANAGED_SERVER_MARKER="$?"
       if [ "$HAS_MANAGED_SERVER_MARKER" -eq 0 ]; then
-        # TODO put these in image.yml
-        MANAGED_SERVER_BUILDER_TOOL_GROUP_ID="org.wildfly.managed-server-builder"
-        MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID="wildfly-managed-server-builder-tool"
-        MANAGED_SERVER_BUILDER_TOOL_VERSION="0.2.0"
-
         MANAGED_SERVER_BUILDER_GAV="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}:${MANAGED_SERVER_BUILDER_TOOL_VERSION}"
 
         mkdir server-builder
@@ -45,9 +40,12 @@ function maven_s2i_custom_binary_build() {
         # TODO Discuss whether it is a good idea to cache these dependencies or not
         log_info "Downloading and copying server builder tool."
         # This is enough once synced to central
-        # mvn dependency:copy -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -Dmdep.stripVersion=true -DoutputDirectory=.
-        # When not synced to central yet, we need to do this instead. It is a bit cumbersome since I haven't
-        # -DremoteRepos is presently only needed before the artifact has synced to maven central. Or is it -DremoteRepositories?
+        #
+        #   mvn dependency:copy -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -Dmdep.stripVersion=true -DoutputDirectory=.
+        #
+        # When not synced to central yet, we need to do this instead. It is a bit cumbersome since I haven't been able to get
+        # remote repositories to work with the dependency:copy command.
+        # -DremoteRepositories is presently only needed before the artifact has synced to maven central
         mvn dependency:get -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -DremoteRepositories=https://repository.jboss.org/nexus/content/groups/public-jboss/
         MAVEN_GA="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}"
         GA_PATH="${MAVEN_GA//./\/}"
