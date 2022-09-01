@@ -14,8 +14,66 @@ function maven_s2i_custom_binary_build() {
        # No copy can be operated in next steps, the binary content is only the server content. 
        source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/disabled-copy-hooks"
      else
-      log_error "Not a server home directory, exiting."
-      exit 1
+      log_info "Checking if it is a managed service file"
+
+      NUMBER_FILES="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
+      if [ "${NUMBER_FILES}" -ne 1 ]; then
+        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${NUMBER_FILES}, exiting."
+        exit 1
+      fi
+
+      SOURCE_DIR_WAR_FILES=("${S2I_SOURCE_DIR}"/*.war)
+      INPUT_FILE="${SOURCE_DIR_WAR_FILES[0]}"
+
+      log_info "Found ${INPUT_FILE}"
+      unzip -l "${INPUT_FILE}" | grep -q META-INF/server-config.xml
+      HAS_MANAGED_SERVER_MARKER="$?"
+      if [ "$HAS_MANAGED_SERVER_MARKER" -eq 0 ]; then
+        # TODO put these in image.yml
+        MANAGED_SERVER_BUILDER_TOOL_GROUP_ID="org.wildfly.managed-server-builder"
+        MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID="wildfly-managed-server-builder-tool"
+        MANAGED_SERVER_BUILDER_TOOL_VERSION="0.2.0"
+
+        MANAGED_SERVER_BUILDER_GAV="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}:${MANAGED_SERVER_BUILDER_TOOL_VERSION}"
+
+        mkdir server-builder
+        cd server-builder
+
+        # Obtain tool via maven
+        # TODO This takes a long time. Maybe better to do this when preparing the image?
+        # TODO Then again all downloading all the dependencies for the tool to provision the server take even longer.
+        # TODO Discuss whether it is a good idea to cache these dependencies or not
+        log_info "Downloading and copying server builder tool."
+        # This is enough once synced to central
+        # mvn dependency:copy -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -Dmdep.stripVersion=true -DoutputDirectory=.
+        # When not synced to central yet, we need to do this instead. It is a bit cumbersome since I haven't
+        # -DremoteRepos is presently only needed before the artifact has synced to maven central. Or is it -DremoteRepositories?
+        mvn dependency:get -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -DremoteRepositories=https://repository.jboss.org/nexus/content/groups/public-jboss/
+        MAVEN_GA="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}"
+        GA_PATH="${MAVEN_GA//./\/}"
+        GA_PATH="${GA_PATH//:/\/}"
+        GAV_PATH="/tmp/artifacts/m2/${GA_PATH}/${MANAGED_SERVER_BUILDER_TOOL_VERSION}/${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}-${MANAGED_SERVER_BUILDER_TOOL_VERSION}.jar"
+        cp "${GAV_PATH}" "./${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}.jar"
+
+        log_info "Preparing server builder project."
+        java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}.jar"
+
+        log_info "Building server."
+        mvn install
+
+        log_info "Copying server to $JBOSS_HOME"
+        cp -r target/server "${JBOSS_HOME}"
+
+        log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
+        cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
+
+        log_info "Cleanup"
+        cd ..
+        rm -rf server-builder
+      else
+        log_error "Not a server home directory, exiting."
+        exit 1
+      fi
      fi
   fi
   chmod -R ug+rwX $JBOSS_HOME
