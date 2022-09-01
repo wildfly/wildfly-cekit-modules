@@ -29,6 +29,17 @@ function maven_s2i_custom_binary_build() {
       unzip -l "${INPUT_FILE}" | grep -q META-INF/server-config.xml
       HAS_MANAGED_SERVER_MARKER="$?"
       if [ "$HAS_MANAGED_SERVER_MARKER" -eq 0 ]; then
+        create_managed_server_from_metadata
+      else
+        log_error "Not a server home directory, exiting."
+        exit 1
+      fi
+     fi
+  fi
+  chmod -R ug+rwX $JBOSS_HOME
+} 
+
+function create_managed_server_from_metadata() {
         MANAGED_SERVER_BUILDER_GAV="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}:${MANAGED_SERVER_BUILDER_TOOL_VERSION}"
 
         mkdir server-builder
@@ -68,11 +79,4 @@ function maven_s2i_custom_binary_build() {
         log_info "Cleanup"
         cd ..
         rm -rf server-builder
-      else
-        log_error "Not a server home directory, exiting."
-        exit 1
-      fi
-     fi
-  fi
-  chmod -R ug+rwX $JBOSS_HOME
-} 
+}
