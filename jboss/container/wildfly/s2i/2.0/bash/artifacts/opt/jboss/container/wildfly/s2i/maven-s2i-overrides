@@ -40,43 +40,28 @@ function maven_s2i_custom_binary_build() {
 } 
 
 function create_managed_server_from_metadata() {
-        MANAGED_SERVER_BUILDER_GAV="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}:${MANAGED_SERVER_BUILDER_TOOL_VERSION}"
+    # TODO Remove this
+    echo "/tmp/artifacts contents"
+    ls -al /tmp/artifacts
+    echo "========"
 
-        mkdir server-builder
-        cd server-builder
+    mkdir server-builder
+    cd server-builder
 
-        # Obtain tool via maven
-        # TODO This takes a long time. Maybe better to do this when preparing the image?
-        # TODO Then again all downloading all the dependencies for the tool to provision the server take even longer.
-        # TODO Discuss whether it is a good idea to cache these dependencies or not
-        log_info "Downloading and copying server builder tool."
-        # This is enough once synced to central
-        #
-        #   mvn dependency:copy -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -Dmdep.stripVersion=true -DoutputDirectory=.
-        #
-        # When not synced to central yet, we need to do this instead. It is a bit cumbersome since I haven't been able to get
-        # remote repositories to work with the dependency:copy command.
-        # -DremoteRepositories is presently only needed before the artifact has synced to maven central
-        mvn dependency:get -Dartifact="${MANAGED_SERVER_BUILDER_GAV}" -DremoteRepositories=https://repository.jboss.org/nexus/content/groups/public-jboss/
-        MAVEN_GA="${MANAGED_SERVER_BUILDER_TOOL_GROUP_ID}:${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}"
-        GA_PATH="${MAVEN_GA//./\/}"
-        GA_PATH="${GA_PATH//:/\/}"
-        GAV_PATH="/tmp/artifacts/m2/${GA_PATH}/${MANAGED_SERVER_BUILDER_TOOL_VERSION}/${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}-${MANAGED_SERVER_BUILDER_TOOL_VERSION}.jar"
-        cp "${GAV_PATH}" "./${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}.jar"
+    MANAGED_SERVER_BUILDER_TOOL="/tmp/artifacts/wildfly-managed-server-builder-tool.jar"
+    log_info "Preparing server builder project."
+    java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL}"
 
-        log_info "Preparing server builder project."
-        java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL_ARTIFACT_ID}.jar"
+    log_info "Building server."
+    mvn install
 
-        log_info "Building server."
-        mvn install
+    log_info "Copying server to $JBOSS_HOME"
+    cp -r target/server "${JBOSS_HOME}"
 
-        log_info "Copying server to $JBOSS_HOME"
-        cp -r target/server "${JBOSS_HOME}"
+    log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
+    cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
 
-        log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
-        cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
-
-        log_info "Cleanup"
-        cd ..
-        rm -rf server-builder
+    log_info "Cleanup"
+    cd ..
+    rm -rf server-builder
 }
