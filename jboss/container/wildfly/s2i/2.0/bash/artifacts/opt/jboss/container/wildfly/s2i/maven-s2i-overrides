@@ -125,6 +125,10 @@ function validate_env_var_set() {
 function read_layers_from_server_config_xml() {
     config_file="${1}"
 
+    found_datasource_layers=0
+    readarray -t ds_layers < /opt/jboss/container/wildfly/s2i/datasource-galleon-layers.txt
+
+
     number_items=$(xmllint --xpath "count(//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer'])" "${config_file}")
     sep=""
     GALLEON_PROVISION_LAYERS=""
@@ -133,5 +137,16 @@ function read_layers_from_server_config_xml() {
         layer=$(xmllint --xpath "//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer']["${i}"]/text()" "$config_file")
         GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS}${sep}${layer}"
         sep=","
+
+        if [ $found_datasource_layers -eq 0 ]; then
+            if printf '%s\0' "${ds_layers[@]}" | grep -Fxqz -- "${layer}" ; then
+                log_info "${layer} is a datasource layer"
+                found_datasources_layers=1
+            fi
+        fi
     done
+
+    if [ $found_datasource_layers -ne 0 ]; then
+        log_info "Found datasource layers, will provision the datasources galleon feature pack."
+    fi
 }
