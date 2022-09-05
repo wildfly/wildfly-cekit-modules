@@ -60,6 +60,14 @@ function create_managed_server_from_metadata() {
     #cd ..
     #rm -rf server-builder
 
+    # Unzip the config files to a known location
+
+    mkdir /tmp/managed-server-files
+    unzip_file_to_directory "${INPUT_FILE}" "server-config.xml" "/tmp/managed-server-files"
+    unzip_file_to_directory "${INPUT_FILE}" "server-init.cli" "/tmp/managed-server-files"
+    unzip_file_to_directory "${INPUT_FILE}" "server-init.yml" "/tmp/managed-server-files"
+    ls /tmp/managed-server-files
+
     # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
     set_galleon_provision_feature_packs_env_var
     # TODO get layers from war, and also calculate the feature packs needed
@@ -74,6 +82,24 @@ function create_managed_server_from_metadata() {
 
     # TODO Adjustments to enable startup cli script and yaml
 
+}
+
+function unzip_file_to_directory() {
+    zip_file="${1}"
+    search_file="${2}"
+    output_dir="${3}"
+
+    # Check both META-INF/ and WEB-INF/classes/META-INF to give user some flexibility. Error if found in both places
+    # For the '&& found_xxxx=1 || found_xxxx=0' end part of each command, the '1' is hit if the file could be extracted,
+    # and the '0' if not
+
+    unzip -p "${zip_file}" "META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_meta_inf=1 || found_meta_inf=0
+    unzip -p "${zip_file}" "WEB-INF/classes/META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_web_inf=1 || found_web_inf=0
+
+    if [ $found_meta_inf -eq 1 ] && [ found_web_inf -eq 0 ]; then
+      log_error "Found ${search_file} in both META-INF/ and in WEB-INF/classes/META-INF/ of ${zip_file}. It should only be in one of the locations."
+      exit 1
+    fi
 }
 
 function set_galleon_provision_feature_packs_env_var() {
@@ -93,4 +119,8 @@ function validate_env_var_set() {
         echo "${1} is not set"
         exit 1
     fi
+}
+
+function read_layers_from_server_config_xml() {
+    artifacts="$(xmllint --xpath "//*[local-name()='module']/*[local-name()='resources']/*[local-name()='artifact']/@name" $moduleFile 2>/dev/null)"
 }
