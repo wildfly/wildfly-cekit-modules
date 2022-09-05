@@ -60,13 +60,14 @@ function create_managed_server_from_metadata() {
     #cd ..
     #rm -rf server-builder
 
-    # Unzip the config files to a known location
-
+    # Unzip the config files to known locations
     mkdir /tmp/managed-server-files
     unzip_file_to_directory "${INPUT_FILE}" "server-config.xml" "/tmp/managed-server-files"
     unzip_file_to_directory "${INPUT_FILE}" "server-init.cli" "/tmp/managed-server-files"
     unzip_file_to_directory "${INPUT_FILE}" "server-init.yml" "/tmp/managed-server-files"
-    ls /tmp/managed-server-files
+
+    # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
+    read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
 
     # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
     set_galleon_provision_feature_packs_env_var
@@ -76,7 +77,7 @@ function create_managed_server_from_metadata() {
     cp "${INPUT_FILE}" /deployments/ROOT.war
 
     # GALLEON_PROVISION_FEATURE_PACKS="wildfly@maven(org.jboss.universe:community-universe),org.wildfly.cloud:wildfly-cloud-galleon-pack:2.0.0.Alpha4"
-    GALLEON_PROVISION_LAYERS="cloud-server"
+    # GALLEON_PROVISION_LAYERS="cloud-server"
     log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
     galleon_provision_server
 
@@ -122,5 +123,15 @@ function validate_env_var_set() {
 }
 
 function read_layers_from_server_config_xml() {
-    artifacts="$(xmllint --xpath "//*[local-name()='module']/*[local-name()='resources']/*[local-name()='artifact']/@name" $moduleFile 2>/dev/null)"
+    config_file="${1}"
+
+    number_items=$(xmllint --xpath "count(//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer'])" "${config_file}")
+    sep=""
+    GALLEON_PROVISION_LAYERS=""
+
+    for ((i=1; i<=number_items; i++)); do
+        layer=$(xmllint --xpath "//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer']["${i}"]/text()" "$config_file")
+        GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS}${sep}${layer}"
+        sep=","
+    done
 }
