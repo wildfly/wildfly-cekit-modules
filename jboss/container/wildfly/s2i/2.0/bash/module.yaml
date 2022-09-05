@@ -8,6 +8,17 @@ envs:
   value: /opt/jboss/container/wildfly/s2i
 - name: S2I_SERVER_DIR
   description: The provisioned server directory inside the application project target directory. By default it looks for 'server' directory in the target directory.
+# Managed server env vars
+- name: MANAGED_SERVER_SERVER_FEATURE_PACK
+  description: Only used for managed server. The coordinates of the WildFly/EAP feature pack.
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_GA
+  description: Only used for managed server. The Maven group and artifact id of the cloud feature pack.
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION
+  description: Only used for managed server. The Maven version of the cloud feature pack.
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA
+  description: Only used for managed server. The Maven group and artifact id of the datasources feature pack.
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION
+  description: Only used for managed server. The Maven version of the datasources feature pack.
 
 # These labels could be moved to shared s2i module.
 labels:

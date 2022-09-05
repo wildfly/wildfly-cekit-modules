@@ -40,28 +40,57 @@ function maven_s2i_custom_binary_build() {
 } 
 
 function create_managed_server_from_metadata() {
-    # TODO Remove this
-    echo "/tmp/artifacts contents"
-    ls -al /tmp/artifacts
-    echo "========"
+    #mkdir server-builder
+    #cd server-builder
 
-    mkdir server-builder
-    cd server-builder
+    #MANAGED_SERVER_BUILDER_TOOL="/tmp/artifacts/wildfly-managed-server-builder-tool.jar"
+    #log_info "Preparing server builder project."
+    #java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL}"
 
-    MANAGED_SERVER_BUILDER_TOOL="/tmp/artifacts/wildfly-managed-server-builder-tool.jar"
-    log_info "Preparing server builder project."
-    java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL}"
+    #log_info "Building server."
+    #mvn install
 
-    log_info "Building server."
-    mvn install
+    #log_info "Copying server to $JBOSS_HOME"
+    #cp -r target/server "${JBOSS_HOME}"
 
-    log_info "Copying server to $JBOSS_HOME"
-    cp -r target/server "${JBOSS_HOME}"
+    #log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
+    #cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
 
-    log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
-    cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
+    #log_info "Cleanup"
+    #cd ..
+    #rm -rf server-builder
 
-    log_info "Cleanup"
-    cd ..
-    rm -rf server-builder
+    # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
+    set_galleon_provision_feature_packs_env_var
+    # TODO get layers from war, and also calculate the feature packs needed
+
+    # Copy the war into /deployments - the provisioning will take care of copying it for us
+    cp "${INPUT_FILE}" /deployments/ROOT.war
+
+    # GALLEON_PROVISION_FEATURE_PACKS="wildfly@maven(org.jboss.universe:community-universe),org.wildfly.cloud:wildfly-cloud-galleon-pack:2.0.0.Alpha4"
+    GALLEON_PROVISION_LAYERS="cloud-server"
+    log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
+    galleon_provision_server
+
+    # TODO Adjustments to enable startup cli script and yaml
+
+}
+
+function set_galleon_provision_feature_packs_env_var() {
+    validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK"
+    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
+    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION"
+
+
+    GALLEON_PROVISION_FEATURE_PACKS="${MANAGED_SERVER_SERVER_FEATURE_PACK},${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
+    # TODO add datasources fp if needed
+}
+
+function validate_env_var_set() {
+    if [ ! -v "${1}" ]; then
+        echo "${1} is not set"
+        exit 1
+    fi
 }
