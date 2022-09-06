@@ -22,14 +22,14 @@ function maven_s2i_custom_binary_build() {
         exit 1
       fi
 
-      SOURCE_DIR_WAR_FILES=("${S2I_SOURCE_DIR}"/*.war)
-      managed_server_war_file="${SOURCE_DIR_WAR_FILES[0]}"
+      source_dir_war_files=("${S2I_SOURCE_DIR}"/*.war)
+      managed_server_war_file="${source_dir_war_files[0]}"
 
       log_info "Found ${managed_server_war_file}"
       unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
       has_managed_server_config_file="$?"
       if [ "$has_managed_server_config_file" -eq 0 ]; then
-        create_managed_server_from_metadata
+        create_managed_server_from_metadata "${managed_server_war_file}"
       else
         log_error "Not a server home directory, exiting."
         exit 1
@@ -40,6 +40,8 @@ function maven_s2i_custom_binary_build() {
 } 
 
 function create_managed_server_from_metadata() {
+    managed_server_war_file="${1}"
+
     # Unzip the config files
     mkdir /tmp/managed-server-files
     unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
@@ -47,11 +49,11 @@ function create_managed_server_from_metadata() {
     unzip_file_to_directory "${managed_server_war_file}" "server-init.yml" "/tmp/managed-server-files"
 
     # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
+    # If the datasource galleon layer is needed, the function will recorded it in the '$found_datasource_layers' env var
     read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
 
     # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
-    set_galleon_provision_feature_packs_env_var
-    # TODO get layers from war, and also calculate the feature packs needed
+    set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
 
     # Copy the war into /deployments - the provisioning will take care of copying it for us
     cp "${managed_server_war_file}" /deployments/ROOT.war
@@ -82,6 +84,8 @@ function unzip_file_to_directory() {
 }
 
 function set_galleon_provision_feature_packs_env_var() {
+    found_datasource_layers="${1}"
+
     validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK"
     validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
     validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
@@ -90,7 +94,10 @@ function set_galleon_provision_feature_packs_env_var() {
 
 
     GALLEON_PROVISION_FEATURE_PACKS="${MANAGED_SERVER_SERVER_FEATURE_PACK},${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
-    # TODO add datasources fp if needed
+
+    if [ ${found_datasource_layers} -eq 1 ]; then
+        GALLEON_PROVISION_FEATURE_PACKS="${GALLEON_PROVISION_FEATURE_PACKS},${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+    fi
 }
 
 function validate_env_var_set() {
@@ -119,7 +126,7 @@ function read_layers_from_server_config_xml() {
         if [ $found_datasource_layers -eq 0 ]; then
             if printf '%s\0' "${ds_layers[@]}" | grep -Fxqz -- "${layer}" ; then
                 log_info "${layer} is a datasource layer"
-                found_datasources_layers=1
+                found_datasource_layers=1
             fi
         fi
     done
