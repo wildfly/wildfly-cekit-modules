@@ -16,19 +16,19 @@ function maven_s2i_custom_binary_build() {
      else
       log_info "Checking if it is a managed service file"
 
-      NUMBER_FILES="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
-      if [ "${NUMBER_FILES}" -ne 1 ]; then
-        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${NUMBER_FILES}, exiting."
+      number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
+      if [ "${number_files}" -ne 1 ]; then
+        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${number_files}, exiting."
         exit 1
       fi
 
       SOURCE_DIR_WAR_FILES=("${S2I_SOURCE_DIR}"/*.war)
-      INPUT_FILE="${SOURCE_DIR_WAR_FILES[0]}"
+      managed_server_war_file="${SOURCE_DIR_WAR_FILES[0]}"
 
-      log_info "Found ${INPUT_FILE}"
-      unzip -l "${INPUT_FILE}" | grep -q META-INF/server-config.xml
-      HAS_MANAGED_SERVER_MARKER="$?"
-      if [ "$HAS_MANAGED_SERVER_MARKER" -eq 0 ]; then
+      log_info "Found ${managed_server_war_file}"
+      unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
+      has_managed_server_config_file="$?"
+      if [ "$has_managed_server_config_file" -eq 0 ]; then
         create_managed_server_from_metadata
       else
         log_error "Not a server home directory, exiting."
@@ -40,31 +40,11 @@ function maven_s2i_custom_binary_build() {
 } 
 
 function create_managed_server_from_metadata() {
-    #mkdir server-builder
-    #cd server-builder
-
-    #MANAGED_SERVER_BUILDER_TOOL="/tmp/artifacts/wildfly-managed-server-builder-tool.jar"
-    #log_info "Preparing server builder project."
-    #java -Dwildfly.builder.war.location="${INPUT_FILE}" -Dwildfly.builder.server.image.builder.location=. -jar "${MANAGED_SERVER_BUILDER_TOOL}"
-
-    #log_info "Building server."
-    #mvn install
-
-    #log_info "Copying server to $JBOSS_HOME"
-    #cp -r target/server "${JBOSS_HOME}"
-
-    #log_info "Copying ${INPUT_FILE} to ${JBOSS_HOME}/standalone/deployments"
-    #cp ${INPUT_FILE} "${JBOSS_HOME}/standalone/deployments"
-
-    #log_info "Cleanup"
-    #cd ..
-    #rm -rf server-builder
-
-    # Unzip the config files to known locations
+    # Unzip the config files
     mkdir /tmp/managed-server-files
-    unzip_file_to_directory "${INPUT_FILE}" "server-config.xml" "/tmp/managed-server-files"
-    unzip_file_to_directory "${INPUT_FILE}" "server-init.cli" "/tmp/managed-server-files"
-    unzip_file_to_directory "${INPUT_FILE}" "server-init.yml" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.cli" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.yml" "/tmp/managed-server-files"
 
     # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
     read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
@@ -74,10 +54,8 @@ function create_managed_server_from_metadata() {
     # TODO get layers from war, and also calculate the feature packs needed
 
     # Copy the war into /deployments - the provisioning will take care of copying it for us
-    cp "${INPUT_FILE}" /deployments/ROOT.war
+    cp "${managed_server_war_file}" /deployments/ROOT.war
 
-    # GALLEON_PROVISION_FEATURE_PACKS="wildfly@maven(org.jboss.universe:community-universe),org.wildfly.cloud:wildfly-cloud-galleon-pack:2.0.0.Alpha4"
-    # GALLEON_PROVISION_LAYERS="cloud-server"
     log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
     galleon_provision_server
 
