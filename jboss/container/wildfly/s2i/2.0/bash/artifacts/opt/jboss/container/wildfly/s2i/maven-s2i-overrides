@@ -154,7 +154,7 @@ function add_cli_script_and_yml_if_present() {
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
         cp "${yaml_config_path}" "${init_path}"
-        echo "export SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+        echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
 
         # Adjust module to enable the yaml mechanism
         controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
@@ -168,7 +168,7 @@ function add_cli_script_and_yml_if_present() {
         log_info "Configuring server for use with ${cli_config}"
         mkdir -p "${init_path}"
         cp "${cli_config_path}" "${init_path}"
-        echo "export CLI_LAUNCH_SCRIPT=${init_directory}/${cli_config}" >> "${server_env_path}"
+        echo "CLI_LAUNCH_SCRIPT=${init_directory}/${cli_config}" >> "${server_env_path}"
     fi
 
     if [ -f "${server_env_path}" ]; then

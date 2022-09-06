@@ -74,3 +74,13 @@ function run_init_node_name() {
     fi
   fi
 }
+
+
+function source_managed_server_env_file() {
+    echo "======> Checking managed server env file"
+    env_file="${1}"
+    # Export the contained env vars
+    set -a
+    source "${env_file}"
+    set +a
+}
