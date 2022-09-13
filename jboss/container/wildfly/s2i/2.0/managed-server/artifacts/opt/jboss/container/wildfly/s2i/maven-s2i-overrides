@@ -1,0 +1,180 @@
+source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
+
+function maven_s2i_custom_binary_build() {
+  local serverDir="${S2I_SOURCE_DIR}/${S2I_SERVER_DIR:-server}"
+  if [ -d "${serverDir}" ]; then
+    log_info "S2I binary build, found server ${serverDir}"
+    log_info "Copying server from $serverDir to $JBOSS_HOME..."
+    cp -r "$serverDir" "$JBOSS_HOME"
+  else
+     log_info "S2I binary build, ${serverDir} not found, root dir must be a server home directory."
+     if [ -f "${S2I_SOURCE_DIR}/jboss-modules.jar" ] && [ -d "${S2I_SOURCE_DIR}/modules" ]; then
+       log_info "S2I binary build, server home detected, installing server."
+       cp -r "${S2I_SOURCE_DIR}" "$JBOSS_HOME"
+       # No copy can be operated in next steps, the binary content is only the server content. 
+       source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/disabled-copy-hooks"
+     else
+      log_info "Checking if it is a managed service file"
+
+      number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
+      if [ "${number_files}" -ne 1 ]; then
+        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${number_files}, exiting."
+        exit 1
+      fi
+
+      source_dir_war_files=("${S2I_SOURCE_DIR}"/*.war)
+      managed_server_war_file="${source_dir_war_files[0]}"
+
+      log_info "Found ${managed_server_war_file}"
+      unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
+      has_managed_server_config_file="$?"
+      if [ "$has_managed_server_config_file" -eq 0 ]; then
+        create_managed_server_from_metadata "${managed_server_war_file}"
+      else
+        log_error "Not a server home directory, exiting."
+        exit 1
+      fi
+     fi
+  fi
+  chmod -R ug+rwX $JBOSS_HOME
+} 
+
+function create_managed_server_from_metadata() {
+    managed_server_war_file="${1}"
+
+    # Unzip the config files
+    mkdir /tmp/managed-server-files
+    unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.cli" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.yml" "/tmp/managed-server-files"
+
+    # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
+    # If the datasource galleon layer is needed, the function will recorded it in the '$found_datasource_layers' env var
+    read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
+
+    # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
+    set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
+
+    # Copy the war into /deployments - the provisioning will take care of copying it for us
+    cp "${managed_server_war_file}" /deployments/ROOT.war
+
+    log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
+    galleon_provision_server
+
+
+    add_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
+}
+
+function unzip_file_to_directory() {
+    zip_file="${1}"
+    search_file="${2}"
+    output_dir="${3}"
+
+    # Check both META-INF/ and WEB-INF/classes/META-INF to give user some flexibility. Error if found in both places
+    # For the '&& found_xxxx=1 || found_xxxx=0' end part of each command, the '1' is hit if the file could be extracted,
+    # and the '0' if not
+
+    unzip -p "${zip_file}" "META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_meta_inf=1 || found_meta_inf=0
+    unzip -p "${zip_file}" "WEB-INF/classes/META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_web_inf=1 || found_web_inf=0
+
+    if [ $found_meta_inf -eq 1 ] && [ found_web_inf -eq 0 ]; then
+      log_error "Found ${search_file} in both META-INF/ and in WEB-INF/classes/META-INF/ of ${zip_file}. It should only be in one of the locations."
+      exit 1
+    fi
+}
+
+function set_galleon_provision_feature_packs_env_var() {
+    found_datasource_layers="${1}"
+
+    validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK"
+    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
+    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION"
+
+
+    GALLEON_PROVISION_FEATURE_PACKS="${MANAGED_SERVER_SERVER_FEATURE_PACK},${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
+
+    if [ ${found_datasource_layers} -eq 1 ]; then
+        GALLEON_PROVISION_FEATURE_PACKS="${GALLEON_PROVISION_FEATURE_PACKS},${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+    fi
+}
+
+function validate_env_var_set() {
+    if [ ! -v "${1}" ]; then
+        echo "${1} is not set"
+        exit 1
+    fi
+}
+
+function read_layers_from_server_config_xml() {
+    config_file="${1}"
+
+    found_datasource_layers=0
+    readarray -t ds_layers < /opt/jboss/container/wildfly/s2i/datasource-galleon-layers.txt
+
+
+    number_items=$(xmllint --xpath "count(//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer'])" "${config_file}")
+    sep=""
+    GALLEON_PROVISION_LAYERS=""
+
+    for ((i=1; i<=number_items; i++)); do
+        layer=$(xmllint --xpath "//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer']["${i}"]/text()" "$config_file")
+        GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS}${sep}${layer}"
+        sep=","
+
+        if [ $found_datasource_layers -eq 0 ]; then
+            if printf '%s\0' "${ds_layers[@]}" | grep -Fxqz -- "${layer}" ; then
+                log_info "${layer} is a datasource layer"
+                found_datasource_layers=1
+            fi
+        fi
+    done
+
+    if [ $found_datasource_layers -ne 0 ]; then
+        log_info "Found datasource layers, will provision the datasources galleon feature pack."
+    fi
+}
+
+function add_cli_script_and_yml_if_present() {
+    echo "hello"
+    config_file_directory="${1}"
+    yaml_config="${2}"
+    cli_config="${3}"
+
+    yaml_config_path="${config_file_directory}/${yaml_config}"
+    cli_config_path="${config_file_directory}/${cli_config}"
+
+
+    init_directory="standalone/configuration/init"
+    init_path="${JBOSS_HOME}/${init_directory}"
+    server_env_path="${init_path}/managed-server.env"
+
+    if [ -f "${yaml_config_path}" ]; then
+        log_info "Configuring server for use with ${yaml_config}"
+        mkdir -p "${init_path}"
+        cp "${yaml_config_path}" "${init_path}"
+        echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+
+        # Adjust module to enable the yaml mechanism
+        controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
+        mkdir -p ${controller_module_services_path}
+        echo "org.jboss.as.controller.persistence.yaml.YamlConfigurationExtension" >> \
+            "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
+    fi
+
+
+    if [ -f "${cli_config_path}" ]; then
+        log_info "Configuring server for use with ${cli_config}"
+        mkdir -p "${init_path}"
+        cp "${cli_config_path}" "${init_path}"
+        echo "CLI_LAUNCH_SCRIPT=${init_directory}/${cli_config}" >> "${server_env_path}"
+    fi
+
+    if [ -f "${server_env_path}" ]; then
+        log_info "Adjusted ${server_env_path} to contain the following entries:"
+        cat "${server_env_path}"
+        log_info "--------------"
+    fi
+
+}
