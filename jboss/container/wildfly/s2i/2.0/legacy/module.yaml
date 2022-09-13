@@ -31,3 +31,4 @@ modules:
   install:
   - name: jboss.container.wildfly.s2i.bash
     version: "2.0"
+  - name: jboss.container.wildfly.s2i.galleon.provisioning
