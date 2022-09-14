@@ -65,10 +65,6 @@ fi
 # Append to JAVA_OPTS.
 JAVA_OPTS="$JAVA_OPTS $JAVA_OPTS_APPEND"
 
-if [ -f "$JBOSS_HOME/standalone/configuration/init/managed-server.env" ]; then
-  source_managed_server_env_file "$JBOSS_HOME/standalone/configuration/init/managed-server.env"
-fi
-
 #Handle proxy options
 source /opt/run-java/proxy-options
 eval preConfigure
