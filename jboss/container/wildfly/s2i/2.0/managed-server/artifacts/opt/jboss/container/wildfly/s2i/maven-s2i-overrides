@@ -137,7 +137,6 @@ function read_layers_from_server_config_xml() {
 }
 
 function add_cli_script_and_yml_if_present() {
-    echo "hello"
     config_file_directory="${1}"
     yaml_config="${2}"
     cli_config="${3}"
@@ -148,13 +147,22 @@ function add_cli_script_and_yml_if_present() {
 
     init_directory="standalone/configuration/init"
     init_path="${JBOSS_HOME}/${init_directory}"
-    server_env_path="${init_path}/managed-server.env"
+
+    if [ -f "${cli_config_path}" ]; then
+        embedded_cli_file="/tmp/adjust-server.cli"
+        echo "embed-server" >> "${embedded_cli_file}"
+        cat "${cli_config_path}" >> "${embedded_cli_file}"
+        echo "" >> "${embedded_cli_file}"
+        echo "stop-embedded-server" >> "${embedded_cli_file}"
+
+        configure_server_with_cli "${embedded_cli_file}"
+    fi
 
     if [ -f "${yaml_config_path}" ]; then
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
         cp "${yaml_config_path}" "${init_path}"
-        echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+        # echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
 
         # Adjust module to enable the yaml mechanism
         controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
@@ -162,19 +170,70 @@ function add_cli_script_and_yml_if_present() {
         echo "org.jboss.as.controller.persistence.yaml.YamlConfigurationExtension" >> \
             "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
     fi
+}
 
+function configure_server_with_cli() {
+    cli_script_file="${1}"
 
-    if [ -f "${cli_config_path}" ]; then
-        log_info "Configuring server for use with ${cli_config}"
-        mkdir -p "${init_path}"
-        cp "${cli_config_path}" "${init_path}"
-        echo "CLI_LAUNCH_SCRIPT=${init_directory}/${cli_config}" >> "${server_env_path}"
+    systime=$(date +%s)
+    # The property file used to pass variables to jboss-cli.sh
+    cli_script_property_file=/tmp/cli-script-property-$systime.cli
+    # This is the cli process output file
+    cli_script_output_file=/tmp/cli-script-output-$systime.cli
+    # This is the file used to log errors by the launch scripts
+    config_error_file=/tmp/cli-script-error-$systime.cli
+    # This is the file used to log warnings by the launch scripts
+    config_warning_file=/tmp/cli-warning-$systime.log
+
+    # Create empty files
+    touch "${cli_script_property_file}"
+    touch "${cli_script_output_file}"
+    touch "${config_error_file}"
+    touch "${config_warning_file}"
+
+    # Set the error and warning files in the cli properties
+    echo "error_file=${config_error_file}" > "${cli_script_property_file}"
+    echo "warning_file=${config_warning_file}" >> "${cli_script_property_file}"
+
+    log_info "Configuring the server using embedded server"
+    start=$(date +%s%3N)
+    eval ${JBOSS_HOME}/bin/jboss-cli.sh --echo-command "--file=${cli_script_file}" "--properties=${cli_script_property_file}" "&>${cli_script_output_file}"
+    cli_result=$?
+    end=$(date +%s%3N)
+
+    if [ "${SCRIPT_DEBUG}" == "true" ]; then
+      cat "${cli_script_output_file}"
     fi
 
-    if [ -f "${server_env_path}" ]; then
-        log_info "Adjusted ${server_env_path} to contain the following entries:"
-        cat "${server_env_path}"
-        log_info "--------------"
-    fi
+    log_info "Duration: $((end-start)) milliseconds"
 
+    if [ $cli_result -ne 0 ]; then
+      log_error "Error applying ${cli_script_file} CLI script."
+      cat "${cli_script_output_file}"
+      exit 1
+    else
+      processErrorsAndWarnings
+      if [ $? -ne 0 ]; then
+        exit 1
+      fi
+    fi
+}
+
+function processErrorsAndWarnings() {
+  if [ -s "${config_warning_file}" ]; then
+    while IFS= read -r line
+    do
+      log_warning "$line"
+    done < "${config_warning_file}"
+  fi
+  rm -f "${config_warning_file}"
+  if [ -s "${config_error_file}" ]; then
+    echo "Error applying ${cli_script_file} CLI script. Embedded server started successfully. The Operations were executed but there were unexpected values. See list of errors in ${config_error_file}"
+    while IFS= read -r line
+    do
+      log_error "$line"
+    done < "${config_error_file}"
+    return 1
+  fi
+  return 0
 }
