@@ -330,7 +330,6 @@ EOF
   CONF_AUTH_MODE="cli"
   CONFIG_ADJUSTMENT_MODE="cli"
 
-  JGROUPS_ENCRYPT_SECRET="encrypt_secret"
   JGROUPS_ENCRYPT_NAME="encrypt_name"
   JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
   JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"

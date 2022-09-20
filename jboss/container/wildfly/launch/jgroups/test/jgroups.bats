@@ -139,43 +139,49 @@ EOF
 }
 
 @test "Test validate keystore - valid" {
-  run validate_keystore "encrypt_secret" "encrypt_name" "encrypt_password" "encrypt_keystore"
+  run validate_keystore "encrypt_name" "encrypt_password" "encrypt_keystore"
   echo "${output}"
   [ "${output}" = "valid" ]
 }
 
 @test "Test validate keystore - missing JGROUPS_ENCRYPT_NAME" {
-  run validate_keystore "encrypt_secret" "" "encrypt_password" "encrypt_keystore"
+  run validate_keystore "" "encrypt_password" "encrypt_keystore"
   echo "${output}"
   [ "${output}" = "partial" ]
 }
 
 @test "Test validate keystore - missing JGROUPS_ENCRYPT_PASSWORD" {
-  run validate_keystore "encrypt_secret" "encrypt_name" "" "encrypt_keystore"
+  run validate_keystore "encrypt_name" "" "encrypt_keystore"
   echo "${output}"
   [ "${output}" = "partial" ]
 }
 
-@test "Test validate keystore - missing JGROUPS_ENCRYPT_NAME and JGROUPS_ENCRYPT_SECRET" {
-  run validate_keystore "" "" "encrypt_password" "encrypt_keystore"
+@test "Test validate keystore - missing JGROUPS_ENCRYPT_KEYSTORE" {
+  run validate_keystore "encrypt_name" "encrypt_password" ""
+  echo "${output}"
+  [ "${output}" = "partial" ]
+}
+
+@test "Test validate keystore - missing all" {
+  run validate_keystore "" "" ""
   echo "${output}"
   [ "${output}" = "missing" ]
 }
 
 @test "Test validate keystore legacy" {
-  run validate_keystore_legacy "encrypt_secret" "encrypt_name" "encrypt_password" "encrypt_keystore" "encrypt_keystore_dir"
+  run validate_keystore_legacy "encrypt_name" "encrypt_password" "encrypt_keystore" "encrypt_keystore_dir"
   echo "${output}"
   [ "${output}" = "valid" ]
 }
 
 @test "Test validate keystore legacy - missing JGROUPS_ENCRYPT_KEYSTORE_DIR" {
-  run validate_keystore_legacy "encrypt_secret" "encrypt_name" "encrypt_password" "encrypt_keystore" ""
+  run validate_keystore_legacy "encrypt_name" "encrypt_password" "encrypt_keystore" ""
   echo "${output}"
   [ "${output}" = "partial" ]
 }
 
-@test "Test validate keystore legacy - missing JGROUPS_ENCRYPT_KEYSTORE_DIR and JGROUPS_ENCRYPT_SECRET" {
-  run validate_keystore_legacy "" "encrypt_name" "encrypt_password" "encrypt_keystore" ""
+@test "Test validate keystore legacy - missing all" {
+  run validate_keystore_legacy "" "" "" ""
   echo "${output}"
   [ "${output}" = "missing" ]
 }
@@ -186,7 +192,6 @@ EOF
     echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
 
     JGROUPS_ENCRYPT_PROTOCOL=
-    JGROUPS_ENCRYPT_SECRET=
     JGROUPS_ENCRYPT_NAME=
     JGROUPS_ENCRYPT_PASSWORD=
     JGROUPS_ENCRYPT_KEYSTORE=
@@ -211,7 +216,6 @@ EOF
     echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
 
     JGROUPS_ENCRYPT_PROTOCOL=SYM_ENCRYPT
-    JGROUPS_ENCRYPT_SECRET="encrypt_secret"
     JGROUPS_ENCRYPT_NAME="encrypt_name"
     JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
     JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"
@@ -233,7 +237,6 @@ EOF
     echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
 
     JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT
-    JGROUPS_ENCRYPT_SECRET=
     JGROUPS_ENCRYPT_NAME=
     JGROUPS_ENCRYPT_PASSWORD=
     JGROUPS_ENCRYPT_KEYSTORE=
@@ -261,7 +264,6 @@ EOF
     echo '<!-- ##JGROUPS_ENCRYPT## -->' >> ${CONFIG_FILE}
 
     JGROUPS_ENCRYPT_PROTOCOL=ASYM_ENCRYPT
-    JGROUPS_ENCRYPT_SECRET="encrypt_secret"
     JGROUPS_ENCRYPT_NAME="encrypt_name"
     JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
     JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"
@@ -385,7 +387,6 @@ EOF
   JGROUPS_ENCRYPT_PROTOCOL="ASYM_ENCRYPT"
   JGROUPS_CLUSTER_PASSWORD="p@ssw0rd"
 
-  JGROUPS_ENCRYPT_SECRET="app-secret"
   JGROUPS_ENCRYPT_NAME="jgroups"
   JGROUPS_ENCRYPT_PASSWORD="p@ssw0rd"
   JGROUPS_ENCRYPT_KEYSTORE="jgroups.jceks"
@@ -438,7 +439,6 @@ EOF
   CONFIG_ADJUSTMENT_MODE="cli"
 
   JGROUPS_ENCRYPT_PROTOCOL="SYM_ENCRYPT"
-  JGROUPS_ENCRYPT_SECRET="encrypt_secret"
   JGROUPS_ENCRYPT_NAME="encrypt_name"
   JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
   JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"
@@ -486,7 +486,6 @@ EOF
   CONFIG_ADJUSTMENT_MODE="cli"
 
   JGROUPS_ENCRYPT_PROTOCOL="SYM_ENCRYPT"
-  JGROUPS_ENCRYPT_SECRET="encrypt_secret"
   JGROUPS_ENCRYPT_NAME="encrypt_name"
   JGROUPS_ENCRYPT_PASSWORD="encrypt_password"
   JGROUPS_ENCRYPT_KEYSTORE="encrypt_keystore"
