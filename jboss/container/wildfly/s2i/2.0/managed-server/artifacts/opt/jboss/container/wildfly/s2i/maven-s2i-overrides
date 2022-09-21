@@ -126,8 +126,8 @@ function read_layers_from_server_config_xml() {
     config_file="${1}"
 
     found_datasource_layers=0
+    found_observability_layer=0
     readarray -t ds_layers < /opt/jboss/container/wildfly/s2i/datasource-galleon-layers.txt
-
 
     number_items=$(xmllint --xpath "count(//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer'])" "${config_file}")
     sep=""
@@ -144,10 +144,27 @@ function read_layers_from_server_config_xml() {
                 found_datasource_layers=1
             fi
         fi
+
+        if [ $found_observability_layer -eq 0 ]; then
+            if [ "${layer}" == "observability" ]; then
+                found_observability_layer=1
+            fi
+        fi
     done
 
     if [ $found_datasource_layers -ne 0 ]; then
         log_info "Found datasource layers, will provision the datasources galleon feature pack."
+    fi
+
+    if [ -z "${GALLEON_PROVISION_LAYERS}" ]; then
+        log_error "No layers were specified in ${config_file}. Cannot continue."
+        exit 1
+    fi
+
+    # Always include the observability layer
+    if [ $found_observability_layer -eq 0 ]; then
+        log_info "Automatically including the 'observability' layer, since it was not specified by the deployment"
+        GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS},observability"
     fi
 }
 
