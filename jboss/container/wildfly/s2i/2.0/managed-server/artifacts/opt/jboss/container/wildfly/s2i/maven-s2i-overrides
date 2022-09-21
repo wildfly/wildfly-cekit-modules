@@ -62,7 +62,7 @@ function create_managed_server_from_metadata() {
     galleon_provision_server
 
 
-    add_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
+    apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
 }
 
 function unzip_file_to_directory() {
@@ -136,7 +136,7 @@ function read_layers_from_server_config_xml() {
     fi
 }
 
-function add_cli_script_and_yml_if_present() {
+function apply_cli_script_and_yml_if_present() {
     config_file_directory="${1}"
     yaml_config="${2}"
     cli_config="${3}"
@@ -159,6 +159,8 @@ function add_cli_script_and_yml_if_present() {
     fi
 
     if [ -f "${yaml_config_path}" ]; then
+        configure_server_with_yaml "${init_path}" "${config_file_directory}" "${yaml_config}"
+
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
         cp "${yaml_config_path}" "${init_path}"
@@ -212,28 +214,117 @@ function configure_server_with_cli() {
       cat "${cli_script_output_file}"
       exit 1
     else
-      processErrorsAndWarnings
-      if [ $? -ne 0 ]; then
-        exit 1
-      fi
+        if [ -s "${config_warning_file}" ]; then
+          output_file "${config_warning_file}" "warning"
+        fi
+        rm -f "${config_warning_file}"
+        if [ -s "${config_error_file}" ]; then
+          echo "Error applying ${cli_script_file} CLI script. Embedded server started successfully. The Operations were executed but there were unexpected values. See list of errors in ${config_error_file}"
+          output_file "${config_error_file}" "error"
+          exit 1
+        fi
     fi
 }
 
-function processErrorsAndWarnings() {
-  if [ -s "${config_warning_file}" ]; then
-    while IFS= read -r line
+function configure_server_with_yaml() {
+    init_dir="${1}"
+    config_file_directory="${2}"
+    yaml_config="${3}"
+
+    yaml_config_path="${config_file_directory}/${yaml_config}"
+
+    log_info "Configuring server for use with ${yaml_config}"
+
+    mkdir -p "${init_dir}"
+    cp "${yaml_config_path}" "${init_path}"
+    # echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+
+    # Adjust module to enable the yaml mechanism
+    controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
+    mkdir -p ${controller_module_services_path}
+    echo "org.jboss.as.controller.persistence.yaml.YamlConfigurationExtension" >> \
+        "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
+
+    start=$(date +%s%3N)
+
+    # Start server in background
+    ${JBOSS_HOME}/bin/standalone.sh --admin-only  > stdout.txt 2> stderr.txt &
+
+    # Look for started message in log
+    find_log_message "WFLYSRV0025" stdout.txt 20000
+    if [ $? -ne 0 ]; then
+        log_error "Server did not start properly."
+    fi
+
+    # Stop server
+    "${JBOSS_HOME}/bin/jboss-cli.sh" --connect  --command="shutdown"
+
+    # WFLYSRV0050 stopped
+    find_log_message "WFLYSRV0050" stdout.txt 5000
+
+    end=$(date +%s%3N)
+    log_info "Duration: $((end-start)) milliseconds"
+
+    # Remove the no longer needed files from the server
+    rm -rf "${init_dir}"
+    rm "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
+}
+
+function find_log_message() {
+    message="${1}"
+    file="${2}"
+    timeout="${3}"
+
+    now=$(date +%s%3N)
+    end=end=$((now+timeout))
+
+
+    while [[ $now -le $end ]]
     do
-      log_warning "$line"
-    done < "${config_warning_file}"
-  fi
-  rm -f "${config_warning_file}"
-  if [ -s "${config_error_file}" ]; then
-    echo "Error applying ${cli_script_file} CLI script. Embedded server started successfully. The Operations were executed but there were unexpected values. See list of errors in ${config_error_file}"
-    while IFS= read -r line
-    do
-      log_error "$line"
-    done < "${config_error_file}"
+        if [ -s "${file}" ]; then
+            found=0
+            # grep -q "${message}" "${file}" || found=1
+            if grep -q "${message}" "${file}"; then
+                return 0
+            fi
+        fi
+        sleep 1s
+        now=$(date +%s%3N)
+    done
     return 1
-  fi
-  return 0
+}
+
+function output_stdout_and_stderr_files() {
+    stdout_file="${1}"
+    stderr_file="${2}"
+
+    if [ -s "${stdout_file}" ]; then
+        log_info "Standard output from server:"
+        output_file "${stdout_file}" "info"
+    fi
+    if [ -s "${stderr_file}" ]; then
+        log_info "Standard error from server:"
+        output_file "${stdout_file}" "error"
+    fi
+}
+
+function output_file(){
+    file="${1}"
+    level="${2}"
+
+    if [ -s "${file}" ]; then
+        while IFS= read -r line
+        do
+            if [ "${level}" == "info" ]; then
+                log_info "${line}"
+            elif [ "${level}" == "warning" ]; then
+                log_warning "${line}"
+            elif [ "${level}" == "error" ]; then
+                log_error "${line}"
+            else
+                log_error "Unknown logging level: ${level}"
+                exit 1
+            fi
+        done < "${file}"
+    fi
 }
