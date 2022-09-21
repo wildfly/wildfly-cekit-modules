@@ -144,9 +144,9 @@ function apply_cli_script_and_yml_if_present() {
     yaml_config_path="${config_file_directory}/${yaml_config}"
     cli_config_path="${config_file_directory}/${cli_config}"
 
-
     init_directory="standalone/configuration/init"
     init_path="${JBOSS_HOME}/${init_directory}"
+    server_env_path="${init_path}/managed-server.env"
 
     if [ -f "${cli_config_path}" ]; then
         embedded_cli_file="/tmp/adjust-server.cli"
@@ -159,12 +159,11 @@ function apply_cli_script_and_yml_if_present() {
     fi
 
     if [ -f "${yaml_config_path}" ]; then
-        configure_server_with_yaml "${init_path}" "${config_file_directory}" "${yaml_config}"
 
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
         cp "${yaml_config_path}" "${init_path}"
-        # echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+        echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
 
         # Adjust module to enable the yaml mechanism
         controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
@@ -224,50 +223,6 @@ function configure_server_with_cli() {
           exit 1
         fi
     fi
-}
-
-function configure_server_with_yaml() {
-    init_dir="${1}"
-    config_file_directory="${2}"
-    yaml_config="${3}"
-
-    yaml_config_path="${config_file_directory}/${yaml_config}"
-
-    log_info "Configuring server for use with ${yaml_config}"
-
-    mkdir -p "${init_dir}"
-    cp "${yaml_config_path}" "${init_path}"
-    # echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
-
-    # Adjust module to enable the yaml mechanism
-    controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
-    mkdir -p ${controller_module_services_path}
-    echo "org.jboss.as.controller.persistence.yaml.YamlConfigurationExtension" >> \
-        "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
-
-    start=$(date +%s%3N)
-
-    # Start server in background
-    ${JBOSS_HOME}/bin/standalone.sh --admin-only  > stdout.txt 2> stderr.txt &
-
-    # Look for started message in log
-    find_log_message "WFLYSRV0025" stdout.txt 20000
-    if [ $? -ne 0 ]; then
-        log_error "Server did not start properly."
-    fi
-
-    # Stop server
-    "${JBOSS_HOME}/bin/jboss-cli.sh" --connect  --command="shutdown"
-
-    # WFLYSRV0050 stopped
-    find_log_message "WFLYSRV0050" stdout.txt 5000
-
-    end=$(date +%s%3N)
-    log_info "Duration: $((end-start)) milliseconds"
-
-    # Remove the no longer needed files from the server
-    rm -rf "${init_dir}"
-    rm "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
 }
 
 function find_log_message() {
