@@ -55,12 +55,8 @@ function create_managed_server_from_metadata() {
     # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
     set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
 
-    # Copy the war into /deployments - the provisioning will take care of copying it for us
-    cp "${managed_server_war_file}" /deployments/ROOT.war
-
     log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
     galleon_provision_server
-
 
     apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
 }
