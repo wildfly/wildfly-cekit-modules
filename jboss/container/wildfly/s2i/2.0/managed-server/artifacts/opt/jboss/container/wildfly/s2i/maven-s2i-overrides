@@ -191,6 +191,9 @@ function apply_cli_script_and_yml_if_present() {
     fi
 
     if [ -f "${yaml_config_path}" ]; then
+        # Once https://issues.redhat.com/browse/WFCORE-4758 is merged, we can boot the server with
+        # the YAML overrides here, and call read-config-as-xml-file to get the updated configuration
+        # and put that into the provisioned server for use by the runtime image. 
 
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
