@@ -56,6 +56,12 @@ function create_managed_server_from_metadata() {
     set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
 
     log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
+    # Set the optional GALLEON_PROVISION_CHANNELS if MANAGED_SERVER_PROVISION_CHANNELS was set
+    if [ -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        GALLEON_PROVISION_CHANNELS="${MANAGED_SERVER_PROVISION_CHANNELS}"
+        log_info "Using channels: ${GALLEON_PROVISION_CHANNELS}"
+    fi
+
     galleon_provision_server
 
     apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
@@ -82,18 +88,30 @@ function unzip_file_to_directory() {
 function set_galleon_provision_feature_packs_env_var() {
     found_datasource_layers="${1}"
 
+
     validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_GA"
-    validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION"
     validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
-    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
     validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA"
-    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION"
 
+    server_feature_pack="${MANAGED_SERVER_SERVER_FEATURE_PACK_GA}"
+    cloud_feature_pack="${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}"
+    datasources_feature_pack="${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA}"
 
-    GALLEON_PROVISION_FEATURE_PACKS="${MANAGED_SERVER_SERVER_FEATURE_PACK_GA}:${MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION},${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
+    if [ ! -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        # We only need the versions if channels were set
+        validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION"
+        validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
+        validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION"
+
+        server_feature_pack="${server_feature_pack}:${MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION}"
+        cloud_feature_pack="${cloud_feature_pack}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
+        datasources_feature_pack="${datasource_feature_pack}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+    fi
+
+    GALLEON_PROVISION_FEATURE_PACKS="${server_feature_pack},${cloud_feature_pack}"
 
     if [ ${found_datasource_layers} -eq 1 ]; then
-        GALLEON_PROVISION_FEATURE_PACKS="${GALLEON_PROVISION_FEATURE_PACKS},${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+        GALLEON_PROVISION_FEATURE_PACKS="${GALLEON_PROVISION_FEATURE_PACKS},${datasources_feature_pack}"
     fi
 }
 
