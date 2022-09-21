@@ -7,7 +7,6 @@ preConfigure() {
 }
 
 prepareEnv() {
-  unset JGROUPS_ENCRYPT_SECRET
   unset JGROUPS_ENCRYPT_PASSWORD
   unset JGROUPS_ENCRYPT_KEYSTORE_DIR
   unset JGROUPS_ENCRYPT_KEYSTORE
@@ -202,41 +201,44 @@ create_jgroups_elytron_legacy_cli() {
   fi
 }
 
-
+# elytron case.  If no JGROUPS_ENCRYPT_KEYSTORE_DIR provided, the keystore is considered relative to jboss.server.config.dir.
 validate_keystore() {
-    declare jg_encrypt_secret="$1" jg_encrypt_name="$2" jg_encrypt_password="$3" jg_encrypt_keystore="$4"
-    if [ -n "${jg_encrypt_secret}"   -a \
-      -n "${jg_encrypt_name}"         -a \
+    declare jg_encrypt_name="$1" jg_encrypt_password="$2" jg_encrypt_keystore="$3"
+    if [ -n "${jg_encrypt_name}"         -a \
       -n "${jg_encrypt_password}"     -a \
       -n "${jg_encrypt_keystore}" ]; then
         echo "valid"
-      elif [ -n "${jg_encrypt_secret}" ]; then
-        echo "partial"
+      elif [ -n "${jg_encrypt_name}"         -o \
+        -n "${jg_encrypt_password}"     -o \
+        -n "${jg_encrypt_keystore}" ]; then
+          echo "partial"
       else
         echo "missing"
-      fi
+    fi
 }
 
 # for legacy configs, we require JGROUPS_ENCRYPT_KEYSTORE_DIR
 validate_keystore_legacy() {
-    declare jg_encrypt_secret="$1" jg_encrypt_name="$2" jg_encrypt_password="$3" jg_encrypt_keystore="$4" jg_encrypt_keystore_dir="$5"
-    if [ -n "${jg_encrypt_secret}"   -a \
-      -n "${jg_encrypt_name}"         -a \
+    declare jg_encrypt_name="$1" jg_encrypt_password="$2" jg_encrypt_keystore="$3" jg_encrypt_keystore_dir="$4"
+    if [ -n "${jg_encrypt_name}"         -a \
       -n "${jg_encrypt_password}"     -a \
       -n "${jg_encrypt_keystore_dir}" -a \
       -n "${jg_encrypt_keystore}" ]; then
         echo "valid"
-      elif [ -n "${jg_encrypt_secret}" ]; then
+      elif [ -n "${jg_encrypt_name}"         -o \
+        -n "${jg_encrypt_password}"     -o \
+        -n "${jg_encrypt_keystore_dir}" -o \
+        -n "${jg_encrypt_keystore}" ]; then
         echo "partial"
       else
         echo "missing"
-      fi
+    fi
 }
 
 validate_keystore_and_create() {
   local mode="${1}" protocol="${2}"
 
-  valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_SECRET}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
+  valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
 
   if [ "${valid_state}" = "valid" ]; then
     if [ "${mode}" = "xml" ]; then
@@ -250,10 +252,11 @@ validate_keystore_and_create() {
 }
 
 # used when elytron marker is not present
+# In such a case the keystore dir must be set.
 validate_keystore_and_create_legacy() {
   declare mode="$1"
 
-  valid_state=$(validate_keystore_legacy "${JGROUPS_ENCRYPT_SECRET}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
+  valid_state=$(validate_keystore_legacy "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}" "${JGROUPS_ENCRYPT_KEYSTORE_DIR}")
 
   if [ "${valid_state}" = "valid" ]; then
     if [ "${mode}" = "xml" ]; then
@@ -332,7 +335,7 @@ configure_jgroups_encryption() {
       # CLOUD-2437 AUTH protocol is required when using ASYM_ENCRYPT protocol
       if [ -n "${JGROUPS_CLUSTER_PASSWORD}" ]; then
         # Test if we have all the information available to configure ASYM_ENCRYPT protocol configuring the Key Store in the Elytron subsystem
-        valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_SECRET}" "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
+        valid_state=$(validate_keystore "${JGROUPS_ENCRYPT_NAME}" "${JGROUPS_ENCRYPT_PASSWORD}" "${JGROUPS_ENCRYPT_KEYSTORE}")
 
         if [ "${has_elytron_subsystem}" -eq 0 ] && [ "${valid_state}" = "valid" ]; then
           log_info "Detected valid JGroups encryption configuration, the communication within the cluster will be encrypted using ASYM_ENCRYPT and Elytron keystore."
@@ -342,10 +345,10 @@ configure_jgroups_encryption() {
             validate_keystore_and_create "cli" "ASYM_ENCRYPT"
           fi
         else
-          jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol. You need to set all of these variables to configure ASYM_ENCRYPT using the Elytron keystore: JGROUPS_ENCRYPT_SECRET, JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE."
+          jgroups_unencrypted_message="Detected <STATE> JGroups encryption configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol. You need to set all of these variables to configure ASYM_ENCRYPT using the Elytron keystore: JGROUPS_ENCRYPT_NAME, JGROUPS_ENCRYPT_PASSWORD, JGROUPS_ENCRYPT_KEYSTORE."
           if [ ! "${has_elytron_subsystem}" -eq 0 ]; then
             log_warning "Elytron subsystem is not in your configuration, the communication within the cluster will be encrypted using a deprecated version of ASYM_ENCRYPT protocol."
-          elif [ -n "${JGROUPS_ENCRYPT_SECRET}" ] || [ -n "${JGROUPS_ENCRYPT_NAME}" ] || [ -n "${JGROUPS_ENCRYPT_PASSWORD}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE_DIR}" ]; then
+          elif [ -n "${JGROUPS_ENCRYPT_NAME}" ] || [ -n "${JGROUPS_ENCRYPT_PASSWORD}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE}" ] || [ -n "${JGROUPS_ENCRYPT_KEYSTORE_DIR}" ]; then
             log_warning "${jgroups_unencrypted_message//<STATE>/partial}"
           else
             log_warning "${jgroups_unencrypted_message//<STATE>/missing}"
