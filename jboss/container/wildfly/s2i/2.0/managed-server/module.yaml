@@ -8,6 +8,19 @@ envs:
 #  value: "/opt/jboss/container/wildfly/s2i/galleon"
 - name: S2I_SOURCE_DEPLOYMENTS_FILTER
   value: "*.war *.ear *.rar *.jar"
+- name: MANAGED_SERVER_SERVER_FEATURE_PACK_GA
+  description: The Maven group and artifact id of the WildFly/EAP feature pack.
+- name: MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION
+  description: The Maven version of the WildFly/EAP feature pack.
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_GA
+  description: The Maven group and artifact id of the cloud feature pack.
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION
+  description: The Maven version of the cloud feature pack.
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA
+  description: The Maven group and artifact id of the datasources feature pack.
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION
+  description: The Maven version of the datasources feature pack.
+
 - name: PROVISIONING_MAVEN_PLUGIN_ARTIFACT_ID
   description: "Internal only, must be set by image. The Maven plugin used to provision the server artifactId, for example: wildfly-maven-plugin"
 - name: PROVISIONING_MAVEN_PLUGIN_GROUP_ID
