@@ -11,9 +11,9 @@ envs:
 - name: MANAGED_SERVER_PROVISION_CHANNELS
   description: Optional. The list of channels used to provision the server. If present, the MANAGED_SERVER_XXX_FEATURE_PACK_VERSION variables are ignored.
 - name: MANAGED_SERVER_SERVER_FEATURE_PACK_GA
-  description: The Maven group and artifact id of the WildFly/EAP feature pack.
+  description: The Maven group and artifact id of the WildFly feature pack.
 - name: MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION
-  description: The Maven version of the WildFly/EAP feature pack. Unused if MANAGED_SERVER_PROVISION_CHANNELS is set.
+  description: The Maven version of the WildFly feature pack. Unused if MANAGED_SERVER_PROVISION_CHANNELS is set.
 - name: MANAGED_SERVER_CLOUD_FEATURE_PACK_GA
   description: The Maven group and artifact id of the cloud feature pack.
 - name: MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION

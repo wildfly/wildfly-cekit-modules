@@ -42,6 +42,9 @@ function maven_s2i_custom_binary_build() {
 function create_managed_server_from_metadata() {
     managed_server_war_file="${1}"
 
+    validate_env_var_not_set "GALLEON_PROVISION_LAYERS"
+    validate_env_var_not_set "GALLEON_PROVISION_FEATURE_PACKS"
+
     # Unzip the config files
     mkdir /tmp/managed-server-files
     unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
@@ -88,7 +91,6 @@ function unzip_file_to_directory() {
 function set_galleon_provision_feature_packs_env_var() {
     found_datasource_layers="${1}"
 
-
     validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_GA"
     validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
     validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA"
@@ -118,6 +120,13 @@ function set_galleon_provision_feature_packs_env_var() {
 function validate_env_var_set() {
     if [ ! -v "${1}" ]; then
         echo "${1} is not set"
+        exit 1
+    fi
+}
+
+function validate_env_var_not_set() {
+    if [ -v "${1}" ]; then
+        echo "Variable ${1} should not be set for a managed server"
         exit 1
     fi
 }
@@ -193,7 +202,7 @@ function apply_cli_script_and_yml_if_present() {
     if [ -f "${yaml_config_path}" ]; then
         # Once https://issues.redhat.com/browse/WFCORE-4758 is merged, we can boot the server with
         # the YAML overrides here, and call read-config-as-xml-file to get the updated configuration
-        # and put that into the provisioned server for use by the runtime image. 
+        # and put that into the provisioned server for use by the runtime image.
 
         log_info "Configuring server for use with ${yaml_config}"
         mkdir -p "${init_path}"
