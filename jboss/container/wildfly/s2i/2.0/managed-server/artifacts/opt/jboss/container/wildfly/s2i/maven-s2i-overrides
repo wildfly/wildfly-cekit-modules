@@ -68,6 +68,11 @@ function create_managed_server_from_metadata() {
     galleon_provision_server
 
     apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
+
+    if [ ! -d "${JBOSS_HOME}/standalone/deployments" ]; then
+        mkdir "${JBOSS_HOME}/standalone/deployments"
+        echo "tmp" >> "${JBOSS_HOME}/standalone/deployments/.placeholder.txt"
+    fi
 }
 
 function unzip_file_to_directory() {
