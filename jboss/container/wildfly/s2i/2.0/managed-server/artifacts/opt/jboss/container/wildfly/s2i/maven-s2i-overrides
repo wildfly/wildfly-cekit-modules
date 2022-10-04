@@ -112,7 +112,7 @@ function set_galleon_provision_feature_packs_env_var() {
 
         server_feature_pack="${server_feature_pack}:${MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION}"
         cloud_feature_pack="${cloud_feature_pack}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
-        datasources_feature_pack="${datasource_feature_pack}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+        datasources_feature_pack="${datasources_feature_pack}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
     fi
 
     GALLEON_PROVISION_FEATURE_PACKS="${server_feature_pack},${cloud_feature_pack}"
