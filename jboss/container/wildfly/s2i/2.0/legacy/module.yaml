@@ -24,6 +24,11 @@ envs:
   description: "DEPRECATED API. A comma separated list of custom galleon feature-packs GAV.  Can be used when a set of Galleon layers has been set in GALLEON_PROVISION_LAYERS."
 - name: GALLEON_PROVISION_LAYERS
   description: "DEPRECATED API. Used during s2i to provision a custom galleon server. Comma separated list of layers to compose the configuration."
+- name: WILDFLY_S2I_GENERATE_SERVER_BUILDER
+  description: "Set this env variable to true if the S2I build output an S2I builder to be used for application build/deployment. The side effect is that no maven repository cache will be kept in the builder image."
+- name: env_variable_WILDFLY_SERVER_BUILDER
+  description: "In case you want to set Maven or S2I build related env variables (repositories, mirrors, arguments, ...) but not want them exposed in the generated server builder, you can suffix the env variable with '_WILDFLY_SERVER_BUILDER'. For example setting 'MAVEN_ARGS_APPEND_WILDFLY_SERVER_BUILDER=-Dfoo=bar' env variable would make 'MAVEN_ARGS_APPEND=-Dfoo=bar' to be set during the build."
+
 execute:
 - script: configure.sh
 
