@@ -10,4 +10,14 @@
             </feature>
         </feature>
     </feature>
+        <feature spec="socket-binding-group.socket-binding">
+        <param name="socket-binding-group" value="standard-sockets" />
+        <param name="socket-binding" value="http"/>
+        <param name="interface" value="bindall"/>
+    </feature>
+    <feature spec="socket-binding-group.socket-binding">
+        <param name="socket-binding-group" value="standard-sockets" />
+        <param name="socket-binding" value="https"/>
+        <param name="interface" value="bindall"/>
+    </feature>
 </feature-group-spec>

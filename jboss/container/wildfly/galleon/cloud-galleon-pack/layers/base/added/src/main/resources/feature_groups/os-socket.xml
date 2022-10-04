@@ -4,4 +4,8 @@
         <param name="socket-binding-group" value="standard-sockets" />
         <param name="port-offset" value="0"/>
     </feature>
+    <feature spec="interface">
+        <param name="interface" value="bindall"/>
+        <param name="inet-address" value="${jboss.bind.address.bindall:0.0.0.0}"/>
+    </feature>
 </feature-group-spec>
