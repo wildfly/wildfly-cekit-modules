@@ -80,16 +80,26 @@ function unzip_file_to_directory() {
     search_file="${2}"
     output_dir="${3}"
 
+    output_file="${output_dir}/${search_file}"
+
+    log_info "Looking for ${search_file} in the META-INF/ and WEB-INF/classes/META-INF/ folders in ${zip_file}. If found, will be saved to ${output_file}."
+
     # Check both META-INF/ and WEB-INF/classes/META-INF to give user some flexibility. Error if found in both places
     # For the '&& found_xxxx=1 || found_xxxx=0' end part of each command, the '1' is hit if the file could be extracted,
     # and the '0' if not
 
-    unzip -p "${zip_file}" "META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_meta_inf=1 || found_meta_inf=0
-    unzip -p "${zip_file}" "WEB-INF/classes/META-INF/${search_file}" >> "${output_dir}/${search_file}" && found_web_inf=1 || found_web_inf=0
+    unzip -p "${zip_file}" "META-INF/${search_file}" >> "${output_file}" && found_meta_inf=1 || found_meta_inf=0
+    unzip -p "${zip_file}" "WEB-INF/classes/META-INF/${search_file}" >> "${output_file}" && found_web_inf=1 || found_web_inf=0
 
     if [ $found_meta_inf -eq 1 ] && [ found_web_inf -eq 0 ]; then
       log_error "Found ${search_file} in both META-INF/ and in WEB-INF/classes/META-INF/ of ${zip_file}. It should only be in one of the locations."
       exit 1
+    fi
+
+    if [ -f "${output_file}" ] && [ ! -s "${output_file}" ]; then
+        # File exists but was empty. Delete it to simplify the next steps
+        log_info "${output_file} is empty. Deleting it"
+        rm ${output_file}
     fi
 }
 
@@ -188,13 +198,17 @@ function apply_cli_script_and_yml_if_present() {
     cli_config="${3}"
 
     yaml_config_path="${config_file_directory}/${yaml_config}"
+
     cli_config_path="${config_file_directory}/${cli_config}"
+    yaml_config_path="${config_file_directory}/${yaml_config}"
 
     init_directory="standalone/configuration/init"
     init_path="${JBOSS_HOME}/${init_directory}"
     server_env_path="${init_path}/managed-server.env"
 
+    log_info "Looking for ${cli_config_path}"
     if [ -f "${cli_config_path}" ]; then
+        log_info "${cli_config_path} found - configuring server for use with it"
         embedded_cli_file="/tmp/adjust-server.cli"
         echo "embed-server" >> "${embedded_cli_file}"
         cat "${cli_config_path}" >> "${embedded_cli_file}"
@@ -204,7 +218,10 @@ function apply_cli_script_and_yml_if_present() {
         configure_server_with_cli "${embedded_cli_file}"
     fi
 
+    log_info "Looking for ${yaml_config_path}"
     if [ -f "${yaml_config_path}" ]; then
+        log_info "${yaml_config_path} found - configuring server for use with it"
+
         # Once https://issues.redhat.com/browse/WFCORE-4758 is merged, we can boot the server with
         # the YAML overrides here, and call read-config-as-xml-file to get the updated configuration
         # and put that into the provisioned server for use by the runtime image.
