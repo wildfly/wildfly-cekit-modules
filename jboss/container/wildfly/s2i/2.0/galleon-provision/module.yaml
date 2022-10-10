@@ -14,6 +14,20 @@ envs:
   description: "Internal only, must be set by image. The Maven plugin used to provision the server groupId, for example: org.wildfly.plugins"
 - name: PROVISIONING_MAVEN_PLUGIN_VERSION
   description: "Internal only, must be set by image. The Maven plugin used to provision the server version, for example: 4.0.0.Final"
+- name: MANAGED_SERVER_SERVER_FEATURE_PACK_GA
+  description: "Internal only, must be set by image. The Maven <groupId>:<artifactId> of the core server feature pack"
+- name: MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION
+  description: "Internal only, must be set by image. The Maven version of the core server feature pack"
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_GA
+  description: "Internal only, must be set by image. The Maven <groupId>:<artifactId> of the cloud feature pack"
+- name: MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION
+  description: "Internal only, must be set by image. The Maven version of the cloud feature pack"
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA
+  description: "Internal only, must be set by image. The Maven <groupId>:<artifactId> of the datasources feature pack"
+- name: MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION
+  description: "Internal only, must be set by image. The Maven version of the datasources feature pack"
+- name: MANAGED_SERVER_PROVISION_CHANNELS
+  description: If set, the MANAGED_SERVER_XXX_FEATURE_PACK_VERSION values are ignored, and it will use the latest from the channel
 execute:
 - script: configure.sh
 
