@@ -1,0 +1,29 @@
+# H2
+h2database-default-datasource
+h2database-datasource
+h2database-driver
+
+# MariaDB
+mariadb-default-datasource
+mariadb-datasource
+mariadb-driver
+
+# Microsoft SQL Server
+mssqlserver-default-datasource
+mssqlserver-datasource
+mssqlserver-driver
+
+# MySQL
+mysql-default-datasource
+mysql-datasource
+mysql-driver
+
+# Oracle
+oracle-default-datasource
+oracle-datasource
+oracle-driver
+
+# PostgreSQL
+postgresql-default-datasource
+postgresql-datasource
+postgresql-driver

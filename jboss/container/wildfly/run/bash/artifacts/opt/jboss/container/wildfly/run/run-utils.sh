@@ -74,3 +74,37 @@ function run_init_node_name() {
     fi
   fi
 }
+
+function source_managed_server_env_file() {
+    env_file="${1}"
+    readarray -t env_lines < "${env_file}"
+
+    # Check env file not trying to define any env vars that have been set elsewhere
+    for env_line in "${env_lines[@]}"
+    do
+      :
+      # Trim the line
+      env_line="${env_line##*( )}"
+      env_line="${env_line%%*( )}"
+
+      # Get the env var name
+      if [ ${#env_line} -gt 2 ]; then
+        # Need at least two characters, one for the name, and one for '='
+        if [[ ! "${#env_line}" = \#* ]] ; then
+          # If it started with a '#' we would be a comment
+          readarray -d "=" -t strarr <<< "${env_line}"
+          var_name="${strarr[0]}"
+
+          if [ -v "${var_name}" ]; then
+            log_error "Variable '{$var_name}' is already set by the container. Exiting."
+            exit 1
+          fi
+        fi
+      fi
+    done
+
+    # Export the contained env vars
+    set -a
+    source "${env_file}"
+    set +a
+}

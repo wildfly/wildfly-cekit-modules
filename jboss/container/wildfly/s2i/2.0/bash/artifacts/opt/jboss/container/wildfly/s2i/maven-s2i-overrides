@@ -19,4 +19,4 @@ function maven_s2i_custom_binary_build() {
      fi
   fi
   chmod -R ug+rwX $JBOSS_HOME
-} 
+}

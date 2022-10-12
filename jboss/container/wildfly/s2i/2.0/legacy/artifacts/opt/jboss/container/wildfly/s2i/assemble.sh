@@ -24,7 +24,7 @@ export CONFIG_ADJUSTMENT_MODE=cli
 source "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}/s2i-core-hooks"
 
 # Required to handle custom feature-pack copied to local maven repo
-source "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}/s2i_galleon"
+source "${JBOSS_CONTAINER_WILDFLY_S2I_GALLEON_MODULE}/s2i_galleon"
 if [ -n "${GALLEON_PROVISION_FEATURE_PACKS}" ] || [ -n "${GALLEON_USE_LOCAL_FILE}" ]; then
   log_warning "You have activated legacy s2i workflow by setting GALLEON_PROVISION_FEATURE_PACKS or GALLEON_USE_LOCAL_FILE env variable."
   log_warning "This support is deprecated and will be removed in a future release. Provision and configure your server during s2i from your pom.xml file by using the dedicated Maven plugin."

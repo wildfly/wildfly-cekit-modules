@@ -1,0 +1,363 @@
+source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
+
+function maven_s2i_custom_binary_build() {
+  log_info "Checking if it is a managed service deployment, or if we should populate the maven repository."
+
+  if [ -n "${BASE_IMAGE_LAYERS}" ]; then
+    log_info "Populating maven repository by provisioning a server which will be deleted"
+    populate_maven_repository_with_base_server_dependencies "${BASE_IMAGE_LAYERS}"
+  else
+      number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
+      if [ "${number_files}" -ne 1 ]; then
+        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${number_files}, exiting."
+        exit 1
+      fi
+
+      source_dir_war_files=("${S2I_SOURCE_DIR}"/*.war)
+      managed_server_war_file="${source_dir_war_files[0]}"
+
+      log_info "Found ${managed_server_war_file}"
+      unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
+      has_managed_server_config_file="$?"
+      if [ "$has_managed_server_config_file" -eq 0 ]; then
+        create_managed_server_from_metadata "${managed_server_war_file}"
+      else
+        log_error "Not a server home directory, exiting."
+        exit 1
+      fi
+ fi
+}
+
+function populate_maven_repository_with_base_server_dependencies() {
+    base_image_layers="${1}"
+
+    echo "checking ${S2I_SOURCE_DIR}"
+    ls -al "${S2I_SOURCE_DIR}"
+
+    # Force adding all galleon feature packs
+    set_galleon_provision_feature_packs_env_var "1"
+
+    GALLEON_PROVISION_LAYERS="${base_image_layers}"
+
+    if [ -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        GALLEON_PROVISION_CHANNELS="${MANAGED_SERVER_PROVISION_CHANNELS}"
+        log_info "Using channels: ${GALLEON_PROVISION_CHANNELS}"
+    fi
+
+    galleon_provision_server
+
+    rm -rf "${JBOSS_HOME}"
+}
+
+function create_managed_server_from_metadata() {
+    managed_server_war_file="${1}"
+
+    validate_env_var_not_set "GALLEON_PROVISION_LAYERS"
+    validate_env_var_not_set "GALLEON_PROVISION_FEATURE_PACKS"
+
+    # Unzip the config files
+    mkdir /tmp/managed-server-files
+    unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.cli" "/tmp/managed-server-files"
+    unzip_file_to_directory "${managed_server_war_file}" "server-init.yml" "/tmp/managed-server-files"
+
+    # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
+    # If the datasource galleon layer is needed, the function will recorded it in the '$found_datasource_layers' env var
+    read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
+
+    # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
+    set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
+
+    log_info "Provisioning server with feature packs: ${GALLEON_PROVISION_FEATURE_PACKS} - and layers: ${GALLEON_PROVISION_LAYERS}"
+    # Set the optional GALLEON_PROVISION_CHANNELS if MANAGED_SERVER_PROVISION_CHANNELS was set
+    if [ -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        GALLEON_PROVISION_CHANNELS="${MANAGED_SERVER_PROVISION_CHANNELS}"
+        log_info "Using channels: ${GALLEON_PROVISION_CHANNELS}"
+    fi
+
+    galleon_provision_server
+
+    apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
+
+    if [ ! -d "${JBOSS_HOME}/standalone/deployments" ]; then
+        mkdir "${JBOSS_HOME}/standalone/deployments"
+        echo "tmp" >> "${JBOSS_HOME}/standalone/deployments/.placeholder.txt"
+    fi
+
+    chmod -R ug+rwX $JBOSS_HOME
+}
+
+function unzip_file_to_directory() {
+    zip_file="${1}"
+    search_file="${2}"
+    output_dir="${3}"
+
+    output_file="${output_dir}/${search_file}"
+
+    log_info "Looking for ${search_file} in the META-INF/ and WEB-INF/classes/META-INF/ folders in ${zip_file}. If found, will be saved to ${output_file}."
+
+    # Check both META-INF/ and WEB-INF/classes/META-INF to give user some flexibility. Error if found in both places
+    # For the '&& found_xxxx=1 || found_xxxx=0' end part of each command, the '1' is hit if the file could be extracted,
+    # and the '0' if not
+
+    unzip -p "${zip_file}" "META-INF/${search_file}" >> "${output_file}" && found_meta_inf=1 || found_meta_inf=0
+    unzip -p "${zip_file}" "WEB-INF/classes/META-INF/${search_file}" >> "${output_file}" && found_web_inf=1 || found_web_inf=0
+
+    if [ $found_meta_inf -eq 1 ] && [ found_web_inf -eq 0 ]; then
+      log_error "Found ${search_file} in both META-INF/ and in WEB-INF/classes/META-INF/ of ${zip_file}. It should only be in one of the locations."
+      exit 1
+    fi
+
+    if [ -f "${output_file}" ] && [ ! -s "${output_file}" ]; then
+        # File exists but was empty. Delete it to simplify the next steps
+        log_info "${output_file} is empty. Deleting it"
+        rm ${output_file}
+    fi
+}
+
+function set_galleon_provision_feature_packs_env_var() {
+    found_datasource_layers="${1}"
+
+    validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_GA"
+    validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA"
+
+    server_feature_pack="${MANAGED_SERVER_SERVER_FEATURE_PACK_GA}"
+    cloud_feature_pack="${MANAGED_SERVER_CLOUD_FEATURE_PACK_GA}"
+    datasources_feature_pack="${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_GA}"
+
+    if [ ! -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        # We only need the versions if channels were set
+        validate_env_var_set "MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION"
+        validate_env_var_set "MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION"
+        validate_env_var_set "MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION"
+
+        server_feature_pack="${server_feature_pack}:${MANAGED_SERVER_SERVER_FEATURE_PACK_VERSION}"
+        cloud_feature_pack="${cloud_feature_pack}:${MANAGED_SERVER_CLOUD_FEATURE_PACK_VERSION}"
+        datasources_feature_pack="${datasources_feature_pack}:${MANAGED_SERVER_DATASOURCES_FEATURE_PACK_VERSION}"
+    fi
+
+    GALLEON_PROVISION_FEATURE_PACKS="${server_feature_pack},${cloud_feature_pack}"
+
+    if [ ${found_datasource_layers} -eq 1 ]; then
+        GALLEON_PROVISION_FEATURE_PACKS="${GALLEON_PROVISION_FEATURE_PACKS},${datasources_feature_pack}"
+    fi
+}
+
+function validate_env_var_set() {
+    if [ ! -v "${1}" ]; then
+        echo "${1} is not set"
+        exit 1
+    fi
+}
+
+function validate_env_var_not_set() {
+    if [ -v "${1}" ]; then
+        echo "Variable ${1} should not be set for a managed server"
+        exit 1
+    fi
+}
+
+function read_layers_from_server_config_xml() {
+    config_file="${1}"
+
+    found_datasource_layers=0
+    found_observability_layer=0
+    readarray -t ds_layers < /opt/jboss/container/wildfly/s2i/datasource-galleon-layers.txt
+
+    number_items=$(xmllint --xpath "count(//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer'])" "${config_file}")
+    sep=""
+    GALLEON_PROVISION_LAYERS=""
+
+    for ((i=1; i<=number_items; i++)); do
+        layer=$(xmllint --xpath "//*[local-name()='server-config']/*[local-name()='layers']/*[local-name()='layer']["${i}"]/text()" "$config_file")
+        GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS}${sep}${layer}"
+        sep=","
+
+        if [ $found_datasource_layers -eq 0 ]; then
+            if printf '%s\0' "${ds_layers[@]}" | grep -Fxqz -- "${layer}" ; then
+                log_info "${layer} is a datasource layer"
+                found_datasource_layers=1
+            fi
+        fi
+
+        if [ $found_observability_layer -eq 0 ]; then
+            if [ "${layer}" == "observability" ]; then
+                found_observability_layer=1
+            fi
+        fi
+    done
+
+    if [ $found_datasource_layers -ne 0 ]; then
+        log_info "Found datasource layers, will provision the datasources galleon feature pack."
+    fi
+
+    if [ -z "${GALLEON_PROVISION_LAYERS}" ]; then
+        log_error "No layers were specified in ${config_file}. Cannot continue."
+        exit 1
+    fi
+
+    # Always include the observability layer
+    if [ $found_observability_layer -eq 0 ]; then
+        log_info "Automatically including the 'observability' layer, since it was not specified by the deployment"
+        GALLEON_PROVISION_LAYERS="${GALLEON_PROVISION_LAYERS},observability"
+    fi
+}
+
+function apply_cli_script_and_yml_if_present() {
+    config_file_directory="${1}"
+    yaml_config="${2}"
+    cli_config="${3}"
+
+    yaml_config_path="${config_file_directory}/${yaml_config}"
+
+    cli_config_path="${config_file_directory}/${cli_config}"
+    yaml_config_path="${config_file_directory}/${yaml_config}"
+
+    init_directory="standalone/configuration/init"
+    init_path="${JBOSS_HOME}/${init_directory}"
+    server_env_path="${init_path}/managed-server.env"
+
+    log_info "Looking for ${cli_config_path}"
+    if [ -f "${cli_config_path}" ]; then
+        log_info "${cli_config_path} found - configuring server for use with it"
+        embedded_cli_file="/tmp/adjust-server.cli"
+        echo "embed-server" >> "${embedded_cli_file}"
+        cat "${cli_config_path}" >> "${embedded_cli_file}"
+        echo "" >> "${embedded_cli_file}"
+        echo "stop-embedded-server" >> "${embedded_cli_file}"
+
+        configure_server_with_cli "${embedded_cli_file}"
+    fi
+
+    log_info "Looking for ${yaml_config_path}"
+    if [ -f "${yaml_config_path}" ]; then
+        log_info "${yaml_config_path} found - configuring server for use with it"
+
+        # Once https://issues.redhat.com/browse/WFCORE-4758 is merged, we can boot the server with
+        # the YAML overrides here, and call read-config-as-xml-file to get the updated configuration
+        # and put that into the provisioned server for use by the runtime image.
+
+        log_info "Configuring server for use with ${yaml_config}"
+        mkdir -p "${init_path}"
+        cp "${yaml_config_path}" "${init_path}"
+        echo "SERVER_ARGS=\"--yaml init/${yaml_config}\"" >> "${server_env_path}"
+
+        # Adjust module to enable the yaml mechanism
+        controller_module_services_path="${JBOSS_HOME}/modules/system/layers/base/org/jboss/as/controller/main/dir/META-INF/services"
+        mkdir -p ${controller_module_services_path}
+        echo "org.jboss.as.controller.persistence.yaml.YamlConfigurationExtension" >> \
+            "${controller_module_services_path}/org.jboss.as.controller.persistence.ConfigurationExtension"
+    fi
+}
+
+function configure_server_with_cli() {
+    cli_script_file="${1}"
+
+    systime=$(date +%s)
+    # The property file used to pass variables to jboss-cli.sh
+    cli_script_property_file=/tmp/cli-script-property-$systime.cli
+    # This is the cli process output file
+    cli_script_output_file=/tmp/cli-script-output-$systime.cli
+    # This is the file used to log errors by the launch scripts
+    config_error_file=/tmp/cli-script-error-$systime.cli
+    # This is the file used to log warnings by the launch scripts
+    config_warning_file=/tmp/cli-warning-$systime.log
+
+    # Create empty files
+    touch "${cli_script_property_file}"
+    touch "${cli_script_output_file}"
+    touch "${config_error_file}"
+    touch "${config_warning_file}"
+
+    # Set the error and warning files in the cli properties
+    echo "error_file=${config_error_file}" > "${cli_script_property_file}"
+    echo "warning_file=${config_warning_file}" >> "${cli_script_property_file}"
+
+    log_info "Configuring the server using embedded server"
+    start=$(date +%s%3N)
+    eval ${JBOSS_HOME}/bin/jboss-cli.sh --echo-command "--file=${cli_script_file}" "--properties=${cli_script_property_file}" "&>${cli_script_output_file}"
+    cli_result=$?
+    end=$(date +%s%3N)
+
+    if [ "${SCRIPT_DEBUG}" == "true" ]; then
+      cat "${cli_script_output_file}"
+    fi
+
+    log_info "Duration: $((end-start)) milliseconds"
+
+    if [ $cli_result -ne 0 ]; then
+      log_error "Error applying ${cli_script_file} CLI script."
+      cat "${cli_script_output_file}"
+      exit 1
+    else
+        if [ -s "${config_warning_file}" ]; then
+          output_file "${config_warning_file}" "warning"
+        fi
+        rm -f "${config_warning_file}"
+        if [ -s "${config_error_file}" ]; then
+          echo "Error applying ${cli_script_file} CLI script. Embedded server started successfully. The Operations were executed but there were unexpected values. See list of errors in ${config_error_file}"
+          output_file "${config_error_file}" "error"
+          exit 1
+        fi
+    fi
+}
+
+function find_log_message() {
+    message="${1}"
+    file="${2}"
+    timeout="${3}"
+
+    now=$(date +%s%3N)
+    end=end=$((now+timeout))
+
+
+    while [[ $now -le $end ]]
+    do
+        if [ -s "${file}" ]; then
+            found=0
+            # grep -q "${message}" "${file}" || found=1
+            if grep -q "${message}" "${file}"; then
+                return 0
+            fi
+        fi
+        sleep 1s
+        now=$(date +%s%3N)
+    done
+    return 1
+}
+
+function output_stdout_and_stderr_files() {
+    stdout_file="${1}"
+    stderr_file="${2}"
+
+    if [ -s "${stdout_file}" ]; then
+        log_info "Standard output from server:"
+        output_file "${stdout_file}" "info"
+    fi
+    if [ -s "${stderr_file}" ]; then
+        log_info "Standard error from server:"
+        output_file "${stdout_file}" "error"
+    fi
+}
+
+function output_file(){
+    file="${1}"
+    level="${2}"
+
+    if [ -s "${file}" ]; then
+        while IFS= read -r line
+        do
+            if [ "${level}" == "info" ]; then
+                log_info "${line}"
+            elif [ "${level}" == "warning" ]; then
+                log_warning "${line}"
+            elif [ "${level}" == "error" ]; then
+                log_error "${line}"
+            else
+                log_error "Unknown logging level: ${level}"
+                exit 1
+            fi
+        done < "${file}"
+    fi
+}
