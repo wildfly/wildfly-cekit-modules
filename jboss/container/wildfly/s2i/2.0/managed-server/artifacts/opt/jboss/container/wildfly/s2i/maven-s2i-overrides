@@ -1,21 +1,12 @@
 source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 
 function maven_s2i_custom_binary_build() {
-  local serverDir="${S2I_SOURCE_DIR}/${S2I_SERVER_DIR:-server}"
-  if [ -d "${serverDir}" ]; then
-    log_info "S2I binary build, found server ${serverDir}"
-    log_info "Copying server from $serverDir to $JBOSS_HOME..."
-    cp -r "$serverDir" "$JBOSS_HOME"
-  else
-     log_info "S2I binary build, ${serverDir} not found, root dir must be a server home directory."
-     if [ -f "${S2I_SOURCE_DIR}/jboss-modules.jar" ] && [ -d "${S2I_SOURCE_DIR}/modules" ]; then
-       log_info "S2I binary build, server home detected, installing server."
-       cp -r "${S2I_SOURCE_DIR}" "$JBOSS_HOME"
-       # No copy can be operated in next steps, the binary content is only the server content. 
-       source "${JBOSS_CONTAINER_WILDFLY_S2I_MODULE}/disabled-copy-hooks"
-     else
-      log_info "Checking if it is a managed service file"
+  log_info "Checking if it is a managed service deployment, or if we should populate the maven repository."
 
+  if [ -n "${BASE_IMAGE_LAYERS}" ]; then
+    log_info "Populating maven repository by provisioning a server which will be deleted"
+    populate_maven_repository_with_base_server_dependencies "${BASE_IMAGE_LAYERS}"
+  else
       number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
       if [ "${number_files}" -ne 1 ]; then
         log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${number_files}, exiting."
@@ -34,10 +25,29 @@ function maven_s2i_custom_binary_build() {
         log_error "Not a server home directory, exiting."
         exit 1
       fi
-     fi
-  fi
-  chmod -R ug+rwX $JBOSS_HOME
-} 
+ fi
+}
+
+function populate_maven_repository_with_base_server_dependencies() {
+    base_image_layers="${1}"
+
+    echo "checking ${S2I_SOURCE_DIR}"
+    ls -al "${S2I_SOURCE_DIR}"
+
+    # Force adding all galleon feature packs
+    set_galleon_provision_feature_packs_env_var "1"
+
+    GALLEON_PROVISION_LAYERS="${base_image_layers}"
+
+    if [ -v MANAGED_SERVER_PROVISION_CHANNELS ]; then
+        GALLEON_PROVISION_CHANNELS="${MANAGED_SERVER_PROVISION_CHANNELS}"
+        log_info "Using channels: ${GALLEON_PROVISION_CHANNELS}"
+    fi
+
+    galleon_provision_server
+
+    rm -rf "${JBOSS_HOME}"
+}
 
 function create_managed_server_from_metadata() {
     managed_server_war_file="${1}"
@@ -73,6 +83,8 @@ function create_managed_server_from_metadata() {
         mkdir "${JBOSS_HOME}/standalone/deployments"
         echo "tmp" >> "${JBOSS_HOME}/standalone/deployments/.placeholder.txt"
     fi
+
+    chmod -R ug+rwX $JBOSS_HOME
 }
 
 function unzip_file_to_directory() {
