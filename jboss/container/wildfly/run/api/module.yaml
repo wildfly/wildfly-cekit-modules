@@ -16,8 +16,6 @@ envs:
   description: Set jboss.node.name property value. By default a truncated to 23 characters name based on the hostname is computed.
 - name: PORT_OFFSET
   description: Use this env variable to set the server port offset. This is advised practice instead of directly setting jboss.socket.binding.port-offset in the SERVER_ARGS. It allows the server shutdown logic to connect to the running server to do a clean CLI shutdown. 
-- name: RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS
-  description: On JDK15+, the --add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED option is added. Set this env to false to disable it. 
 - name: SERVER_ARGS
   description: In order to provide arguments to the launched server.
 - name: SERVER_ENABLE_STATISTICS
