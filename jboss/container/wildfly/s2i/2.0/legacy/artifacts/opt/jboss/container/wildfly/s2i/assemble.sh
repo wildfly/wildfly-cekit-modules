@@ -12,10 +12,6 @@ export CONFIG_ADJUSTMENT_MODE=cli
 source "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}/s2i-core-hooks"
 
 if [ -d "${JBOSS_HOME}" ]; then
-  if [ -n "$WILDFLY_S2I_GENERATE_SERVER_BUILDER" ] && [[ "$WILDFLY_S2I_GENERATE_SERVER_BUILDER" == "true" ]]; then
-    log_error "Can't generate a server builder, the current image is a server builder."
-    exit 1
-  fi
   log_info "Builder image already contains a server, will only build and deploy applications."
   cp "${JBOSS_CONTAINER_WILDFLY_S2I_LEGACY_GALLEON_MODULE}"/clean-settings.xml "${HOME}/.m2/settings.xml"
 else
