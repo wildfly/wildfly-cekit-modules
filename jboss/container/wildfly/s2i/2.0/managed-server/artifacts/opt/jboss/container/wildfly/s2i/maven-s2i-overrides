@@ -3,6 +3,10 @@ source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 function maven_s2i_custom_binary_build() {
   log_info "Checking if it is a managed service deployment, or if we should populate the maven repository."
 
+    echo "Checking ${S2I_SOURCE_DIR}"
+    ls -al -R "${S2I_SOURCE_DIR}"
+
+
   if [ -n "${BASE_IMAGE_LAYERS}" ]; then
     log_info "Populating maven repository by provisioning a server which will be deleted"
     populate_maven_repository_with_base_server_dependencies "${BASE_IMAGE_LAYERS}"
@@ -13,9 +17,6 @@ function maven_s2i_custom_binary_build() {
 
 function populate_maven_repository_with_base_server_dependencies() {
     base_image_layers="${1}"
-
-    echo "checking ${S2I_SOURCE_DIR}"
-    ls -al "${S2I_SOURCE_DIR}"
 
     # Force adding all galleon feature packs
     set_galleon_provision_feature_packs_env_var "1"
@@ -62,30 +63,25 @@ function provision_managed_server() {
         managed_server_war_file="${source_dir_war_files[0]}"
 
         log_info "Found ${managed_server_war_file}"
-        unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
-        has_managed_server_config_file="$?"
-        if [ "$has_managed_server_config_file" -eq 0 ]; then
+        set -x
+        unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml  && has_managed_server_config_file=1 || has_managed_server_config_file=0
+        set +x
+        if [ "$has_managed_server_config_file" -eq 1 ]; then
           # Unzip the config files
           unzip_file_to_directory "${managed_server_war_file}" "${server_config_xml}" "${managed_server_config_file_dir}"
           unzip_file_to_directory "${managed_server_war_file}" "${server_init_yml}" "${managed_server_config_file_dir}"
           unzip_file_to_directory "${managed_server_war_file}" "${server_init_cli}" "${managed_server_config_file_dir}"
+        fi
+      fi
 
-          # Overwrite any files with the ones in S2I_SOURCE_DIR folder
-          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_config_xml}"
-          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_yml}"
-          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_cli}"
-        else
-          log_error "No server configuration files found, exiting."
-          exit 1
-        fi
-      else
-        if [ ! -f "${managed_server_config_file_dir}/${server_config_xml}" ]; then
-          log_error "No server configuration files found, exiting."
-          exit 1
-        fi
-        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_config_xml}"
-        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_yml}"
-        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_cli}"
+      # We copy the config files from the source directory if they exist. If the single war file had
+      # the same file they are overwritten with a warning
+      copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_config_xml}"
+      copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_yml}"
+      copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_cli}"
+      if [ ! -f "${managed_server_config_file_dir}/${server_config_xml}" ]; then
+        log_error "No server configuration files found, exiting."
+        exit 1
       fi
 
       # provision the server
