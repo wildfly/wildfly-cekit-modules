@@ -7,24 +7,7 @@ function maven_s2i_custom_binary_build() {
     log_info "Populating maven repository by provisioning a server which will be deleted"
     populate_maven_repository_with_base_server_dependencies "${BASE_IMAGE_LAYERS}"
   else
-      number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
-      if [ "${number_files}" -ne 1 ]; then
-        log_error "Expected 1 file in ${S2I_SOURCE_DIR} but found ${number_files}, exiting."
-        exit 1
-      fi
-
-      source_dir_war_files=("${S2I_SOURCE_DIR}"/*.war)
-      managed_server_war_file="${source_dir_war_files[0]}"
-
-      log_info "Found ${managed_server_war_file}"
-      unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
-      has_managed_server_config_file="$?"
-      if [ "$has_managed_server_config_file" -eq 0 ]; then
-        create_managed_server_from_metadata "${managed_server_war_file}"
-      else
-        log_error "Not a server home directory, exiting."
-        exit 1
-      fi
+    provision_managed_server
  fi
 }
 
@@ -49,21 +32,93 @@ function populate_maven_repository_with_base_server_dependencies() {
     rm -rf "${JBOSS_HOME}"
 }
 
-function create_managed_server_from_metadata() {
-    managed_server_war_file="${1}"
+function provision_managed_server() {
+      validate_env_var_not_set "GALLEON_PROVISION_LAYERS"
+      validate_env_var_not_set "GALLEON_PROVISION_FEATURE_PACKS"
 
-    validate_env_var_not_set "GALLEON_PROVISION_LAYERS"
-    validate_env_var_not_set "GALLEON_PROVISION_FEATURE_PACKS"
+      number_files="$(ls -1q "${S2I_SOURCE_DIR}"/*.war | wc -l)"
+      if [ "${number_files}" -lt 1 ]; then
+        log_error "No war files found in ${S2I_SOURCE_DIR}, exiting."
+        exit 1
+      fi
 
-    # Unzip the config files
-    mkdir /tmp/managed-server-files
-    unzip_file_to_directory "${managed_server_war_file}" "server-config.xml" "/tmp/managed-server-files"
-    unzip_file_to_directory "${managed_server_war_file}" "server-init.cli" "/tmp/managed-server-files"
-    unzip_file_to_directory "${managed_server_war_file}" "server-init.yml" "/tmp/managed-server-files"
+      # Create the directory that will contain the files used to configure the server.
+      # These can be contained in the S2I_SOURCE_DIR directory or in the war (if there is only one).
+      # The ones in the S2I_SOURCE_DIR will take precedence
+      # If there is more than one war, it will not be inspected.
+      managed_server_config_file_dir="/tmp/managed-server-files"
+      mkdir ${managed_server_config_file_dir}
+
+      server_config_xml="server-config.xml"
+      server_init_yml="server-init.yml"
+      server_init_cli="server-init.cli"
+
+      # Put the config files where expected
+
+      if [ "${number_files}" -eq 1 ]; then
+        # If there is only one war file we look for the config files in the war
+
+        source_dir_war_files=("${S2I_SOURCE_DIR}"/*.war)
+        managed_server_war_file="${source_dir_war_files[0]}"
+
+        log_info "Found ${managed_server_war_file}"
+        unzip -l "${managed_server_war_file}" | grep -q META-INF/server-config.xml
+        has_managed_server_config_file="$?"
+        if [ "$has_managed_server_config_file" -eq 0 ]; then
+          # Unzip the config files
+          unzip_file_to_directory "${managed_server_war_file}" "${server_config_xml}" "${managed_server_config_file_dir}"
+          unzip_file_to_directory "${managed_server_war_file}" "${server_init_yml}" "${managed_server_config_file_dir}"
+          unzip_file_to_directory "${managed_server_war_file}" "${server_init_cli}" "${managed_server_config_file_dir}"
+
+          # Overwrite any files with the ones in S2I_SOURCE_DIR folder
+          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_config_xml}"
+          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_yml}"
+          copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_cli}"
+        else
+          log_error "No server configuration files found, exiting."
+          exit 1
+        fi
+      else
+        if [ ! -f "${managed_server_config_file_dir}/${server_config_xml}" ]; then
+          log_error "No server configuration files found, exiting."
+          exit 1
+        fi
+        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_config_xml}"
+        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_yml}"
+        copyAndOverwriteFileFromS2iSourceDirectoryIfExists "${managed_server_config_file_dir}" "${server_init_cli}"
+      fi
+
+      # provision the server
+      create_managed_server_from_found_config "${managed_server_config_file_dir}" "${server_config_xml}" "${server_init_yml}" "${server_init_cli}"
+
+}
+
+function copyAndOverwriteFileFromS2iSourceDirectoryIfExists() {
+    managed_server_config_file_dir="${1}"
+    file_name="${2}"
+
+    source_file="${S2I_SOURCE_DIR}/${file_name}"
+    dest_file="${managed_server_config_file_dir}/${file_name}"
+
+    if [ -f "${source_file}" ]; then
+        if [ -f  "${dest_file}" ]; then
+            log_warning "Overwriting the ${file_name} from the war with the one uploaded outside the war."
+        fi
+        cp -f ${source_file} ${dest_file}
+    fi
+}
+
+function create_managed_server_from_found_config() {
+    managed_server_config_file_dir="$1"
+    server_config_xml="$2"
+    server_init_yml="$3"
+    server_init_cli="$4"
+
+    server_config_path="${managed_server_config_file_dir}/${server_config_xml}"
 
     # Get the layers from server-config.xml and set GALLEON_PROVISION_LAYERS
     # If the datasource galleon layer is needed, the function will recorded it in the '$found_datasource_layers' env var
-    read_layers_from_server_config_xml "/tmp/managed-server-files/server-config.xml"
+    read_layers_from_server_config_xml "${server_config_path}"
 
     # Set the required GALLEON_PROVISION_FEATURE_PACKS env var
     set_galleon_provision_feature_packs_env_var "${found_datasource_layers}"
@@ -77,7 +132,7 @@ function create_managed_server_from_metadata() {
 
     galleon_provision_server
 
-    apply_cli_script_and_yml_if_present "/tmp/managed-server-files" "server-init.yml" "server-init.cli"
+    apply_cli_script_and_yml_if_present "${managed_server_config_file_dir}" "${server_init_yml}" "${server_init_cli}"
 
     if [ ! -d "${JBOSS_HOME}/standalone/deployments" ]; then
         mkdir "${JBOSS_HOME}/standalone/deployments"
@@ -86,6 +141,7 @@ function create_managed_server_from_metadata() {
 
     chmod -R ug+rwX $JBOSS_HOME
 }
+
 
 function unzip_file_to_directory() {
     zip_file="${1}"
@@ -205,14 +261,14 @@ function read_layers_from_server_config_xml() {
 }
 
 function apply_cli_script_and_yml_if_present() {
-    config_file_directory="${1}"
+    managed_server_config_file_dir="${1}"
     yaml_config="${2}"
     cli_config="${3}"
 
-    yaml_config_path="${config_file_directory}/${yaml_config}"
+    yaml_config_path="${managed_server_config_file_dir}/${yaml_config}"
 
-    cli_config_path="${config_file_directory}/${cli_config}"
-    yaml_config_path="${config_file_directory}/${yaml_config}"
+    cli_config_path="${managed_server_config_file_dir}/${cli_config}"
+    yaml_config_path="${managed_server_config_file_dir}/${yaml_config}"
 
     init_directory="standalone/configuration/init"
     init_path="${JBOSS_HOME}/${init_directory}"
