@@ -34,47 +34,6 @@ setup() {
   [ "$status" -eq 0 ]
 }
 
-@test "Java 17" {
-  expected=$(cat << EOF
-#JVM modular option  --add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED added by image run startup script
-JAVA_OPTS="\$JAVA_OPTS --add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED"
-EOF
-    )
-  JAVA_VERSION=17
-  run run_add_jpms_options
-  output=$(<"${JBOSS_HOME}/bin/standalone.conf")
-  normalize_spaces_new_lines
-  echo "$output"
-  echo "$expected"
-  [ "${output}" = "${expected}" ]
-}
-
-@test "Java 17, jndi export disabled" {
-  RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS=false
-  JAVA_VERSION=17
-  run run_add_jpms_options
-  [ "${output}" = "" ]
-  confFile=$(<"${JBOSS_HOME}/bin/standalone.conf")
-   [ "${confFile}" = "" ]
-  [ "$status" -eq 0 ]
-}
-
-@test "Java 17, jndi export enabled" {
-  expected=$(cat << EOF
-#JVM modular option  --add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED added by image run startup script
-JAVA_OPTS="\$JAVA_OPTS --add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED"
-EOF
-    )
-RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS=true
-  JAVA_VERSION=17
-  run run_add_jpms_options
-  output=$(<"${JBOSS_HOME}/bin/standalone.conf")
-  normalize_spaces_new_lines
-  echo "$output"
-  echo "$expected"
-  [ "${output}" = "${expected}" ]
-}
-
 @test "JBoss Node name set" {
   JBOSS_NODE_NAME=foo
   run_init_node_name

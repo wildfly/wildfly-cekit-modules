@@ -8,7 +8,8 @@ if [ ! -d "${JBOSS_HOME}" ]; then
     exit 1
 fi
 
-run_add_jpms_options
+# Un-used, this is a hook to add JPMS options to JVM at startup.
+# run_add_jpms_options
 
 run_setup_shutdown_hook
 

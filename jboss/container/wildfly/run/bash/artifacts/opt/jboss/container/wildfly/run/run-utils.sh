@@ -15,19 +15,20 @@ JAVA_OPTS=\"\$JAVA_OPTS ${options}\""
   fi
 }
 
+# Un-used, kept as an example in case we have a need to add more JPMS options.
 function run_add_jpms_options() {
   # Append cloud specific modular options in standalone.conf
   SPEC_VERSION="${JAVA_VERSION//1.}"
   SPEC_VERSION="${SPEC_VERSION//.*}"
   if (( $SPEC_VERSION > 15 )); then
     MODULAR_JVM_OPTIONS=`echo $JAVA_OPTS | grep "\-\-add\-modules"`
-    if [ "x$MODULAR_JVM_OPTIONS" = "x" ]; then
-      if [ "x$RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS" == "x" ] || [ "x$RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS" == "xtrue" ]; then
-        local option="--add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED"
-        local marker="#JVM modular option  ${option} added by image run startup script"
-        run_add_java_options "${marker}" "${option}"
-      fi
-    fi
+    # if [ "x$MODULAR_JVM_OPTIONS" = "x" ]; then
+      # if [ "x$RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS" == "x" ] || [ "x$RUN_SCRIPT_JPMS_ADD_EXPORT_JNDI_DNS" == "xtrue" ]; then
+      #  local option="--add-exports=jdk.naming.dns/com.sun.jndi.dns=ALL-UNNAMED"
+      #  local marker="#JVM modular option  ${option} added by image run startup script"
+      #  run_add_java_options "${marker}" "${option}"
+      # fi
+    # fi
   fi
 }
 
