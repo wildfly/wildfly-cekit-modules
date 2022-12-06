@@ -89,10 +89,10 @@ jobs:
           . ~/cekit/bin/activate
           overrides="{\"modules\": {\"repositories\": [{\"name\":\"wildfly-cekit-modules\",\"path\":\"../../wildfly-cekit-modules\"}]}}"
           pushd wildfly-builder-image
-          cekit build --overrides "$overrides" docker
+          cekit build --overrides=jdk11-overrides.yaml --overrides "$overrides" docker
           popd
           pushd wildfly-runtime-image
-          cekit build --overrides "$overrides"  docker
+          cekit build --overrides=jdk11-overrides.yaml --overrides "$overrides"  docker
           popd
           docker image ls
         working-directory: wildfly-s2i
@@ -101,16 +101,16 @@ jobs:
         run: |
           . ~/cekit/bin/activate
           pushd wildfly-builder-image
-          cekit -v test behave
+          cekit -v test --overrides=jdk11-overrides.yaml behave
           popd
         working-directory: wildfly-s2i
       - name: Additional Tests
         if: env.IMPACT_IMAGE == 'true'
         run: |
-          export IMAGE_VERSION=$(./tools/release/get-image-version.sh wildfly/wildfly-s2i-jdk11)
+          export IMAGE_VERSION=$(yq e ".version" jdk11-overrides.yaml)
           export NAMESPACE=wildfly
-          export IMAGE_NAME=${NAMESPACE}/wildfly-s2i-jdk11
-          export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime-jdk11
+          export IMAGE_NAME=${NAMESPACE}/wildfly-s2i
+          export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime
           . ~/cekit/bin/activate
           ./test/run
         working-directory: wildfly-s2i

@@ -66,7 +66,7 @@ jobs:
           cp wildfly-preview-cloud-galleon-pack/target/wildfly-preview-cloud-galleon-pack-$cloudVersion.zip custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-preview-cloud-galleon-pack/$cloudVersion
           docker_file=custom-cloud-image/docker/Dockerfile
             cat <<EOF > $docker_file
-             FROM wildfly/wildfly-s2i-jdk11:latest
+             FROM wildfly/wildfly-s2i:latest
              RUN mkdir -p /tmp/artifacts/m2
              COPY --chown=jboss:root repository /tmp/artifacts/m2
           EOF
@@ -114,14 +114,14 @@ jobs:
         run: |
           . ~/cekit/bin/activate
           pushd wildfly-builder-image
-          cekit build docker
+          cekit build --overrides=jdk11-overrides.yaml docker
           popd
           docker image ls
         working-directory: wildfly-s2i
       - name: Build and test extended image containing custom WildFly cloud feature-pack
         if: env.IMPACT_CLOUD_FP == 'true'
         run: |
-          docker build -t wildfly/wildfly-s2i-jdk11:dev-${{ env.CLOUD_FP_VERSION }} ./custom-cloud-image/docker
+          docker build -t wildfly/wildfly-s2i:dev-${{ env.CLOUD_FP_VERSION }} ./custom-cloud-image/docker
           cp -r ../wildfly-s2i/wildfly-builder-image ./custom-cloud-image
           cp -r ../wildfly-s2i/wildfly-modules ./custom-cloud-image
           comment="### PLACEHOLDER FOR CLOUD CUSTOM TESTING ###"
@@ -134,7 +134,7 @@ jobs:
           done
           . ~/cekit/bin/activate
           pushd custom-cloud-image/wildfly-builder-image
-            cekit test --image=wildfly/wildfly-s2i-jdk11:dev-${{ env.CLOUD_FP_VERSION }} behave
+            cekit test --image=wildfly/wildfly-s2i:dev-${{ env.CLOUD_FP_VERSION }} behave
           popd
         working-directory: wildfly-cloud-galleon-pack
       - name: List containers
