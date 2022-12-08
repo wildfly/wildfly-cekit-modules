@@ -68,7 +68,7 @@ jobs:
           mkdir ~/cekit
           python3 -m venv ~/cekit
           . ~/cekit/bin/activate
-          pip install cekit docker==5.0.3 docker-squash odcs behave lxml 
+          pip install cekit==4.3.0 docker==5.0.3 docker-squash odcs behave lxml 
       - name: install s2i binary
         if: env.IMPACT_IMAGE == 'true'
         run: |
