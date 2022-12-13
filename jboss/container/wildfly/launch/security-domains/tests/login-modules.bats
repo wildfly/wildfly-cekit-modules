@@ -64,7 +64,7 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
-@test "Configure CLI other security-domain login module no flags no module" {
+@test "1 Configure CLI other security-domain login module no flags no module" {
   expected=$(cat <<EOF
     if (outcome != success) of /subsystem=security:read-resource
           echo "You are adding a login module to other security domain. However, your base configuration doesn't contain the security subsystem. Fix your configuration for that to happen." >> \${error_file}
@@ -90,7 +90,7 @@ EOF
   [ "${output}" = "${expected}" ]
 }
 
-@test "Configure CLI other security-domain login module no flags no module" {
+@test "2 Configure CLI other security-domain login module no flags no module" {
   expected=$(cat <<EOF
     if (outcome != success) of /subsystem=security:read-resource
           echo "You are adding a login module to other security domain. However, your base configuration doesn't contain the security subsystem. Fix your configuration for that to happen." >> \${error_file}
