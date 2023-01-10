@@ -77,7 +77,7 @@ function configure() {
 }
 
 function configure_artemis_address() {
-    IP_ADDR=${JBOSS_MESSAGING_HOST:-`hostname -i`}
+    IP_ADDR=${JBOSS_MESSAGING_HOST:-${SERVER_IP_ADDR}}
     JBOSS_MESSAGING_ARGS="${JBOSS_MESSAGING_ARGS} -Djboss.messaging.host=${IP_ADDR}"
 }
 # /subsystem=messaging-activemq/server=default/jms-queue=queue_name:add(entries=[])

@@ -1015,7 +1015,6 @@ function configure_client() {
       client_config="${client_config},\"attributes\":{\"saml.signing.certificate\":\"${pem}\"${server_signature}}"
     fi
   else
-    service_addr=$(hostname -i)
     client_config="{\"redirectUris\":[${redirects}]"
 
     if [ -n "$HOSTNAME_HTTP" ]; then
