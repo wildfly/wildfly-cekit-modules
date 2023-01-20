@@ -43,12 +43,12 @@ function galleon_parse_channels() {
         local channelsXml=
         for channel in $(echo "${channels}" | sed "s/,/ /g"); do
           if [[ "$channel" =~ .*"://".* ]]; then
-            channelsXml="$channelsXml<channel><url>$channel</url></channel>"
+            channelsXml="$channelsXml<channel><manifest><url>$channel</url></manifest></channel>"
           else
               local groupId=
               local artifactId=
               local version=
-              local channelXml="<channel>"
+              local channelXml="<channel><manifest>"
               for coord in $(echo "${channel}" | sed "s/:/ /g"); do
                 if [ -z "${groupId}" ]; then
                   groupId=${coord}
@@ -66,7 +66,7 @@ function galleon_parse_channels() {
                   continue
                 fi
               done
-              channelXml="$channelXml</channel>"
+              channelXml="$channelXml</manifest></channel>"
               channelsXml="$channelsXml$channelXml"
           fi
         done
