@@ -37,7 +37,7 @@ envs:
 - name: GALLEON_S2I_FP_ARTIFACT_ID
   description: "Mandatory. artifactid of s2i galleon feature-pack"
 - name: GALLEON_VERSION
-  value: "4.2.8.Final"
+  value: "4.2.9.Final"
 - name: GALLEON_WILDFLY_VERSION
   value: "5.2.6.Final"
   description: "Set to true to explicitly add org.wildfly:wildfly-datasources-galleon-pack to provisoned galleon feature-packs."
