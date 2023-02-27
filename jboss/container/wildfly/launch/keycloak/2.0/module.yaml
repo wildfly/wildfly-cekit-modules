@@ -34,8 +34,6 @@ envs:
     description: Logout page.
   - name: "SSO_SAML_VALIDATE_SIGNATURE"
     description: true or false. Validate or not signature.
-  - name: "SSO_SECRET"
-    description: The SSO Client Secret.
   - name: "SSO_SECURITY_DOMAIN"
     description: By default 'keycloak' is use.
   - name: "SSO_TRUSTSTORE"

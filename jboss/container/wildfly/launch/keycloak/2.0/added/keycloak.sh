@@ -17,7 +17,6 @@ function prepareEnv() {
   unset SSO_SAML_KEYSTORE_PASSWORD
   unset SSO_SAML_LOGOUT_PAGE
   unset SSO_SAML_VALIDATE_SIGNATURE
-  unset SSO_SECRET
   unset SSO_SECURITY_DOMAIN
   unset SSO_SERVICE_URL
   unset SSO_TRUSTSTORE
@@ -622,12 +621,7 @@ function configure_SAML_client() {
   client_config="${client_config},\"protocol\":\"${SAML_PROTOCOL}\""
   client_config="${client_config},\"baseUrl\":\"${endpoint}\""
   client_config="${client_config},\"rootUrl\":\"\""
-  client_config="${client_config},\"publicClient\":\"false\",\"secret\":\"${SSO_SECRET}\""
   client_config="${client_config}}"
-
-  if [ -z "$SSO_SECRET" ]; then
-    log_warning "ERROR: SSO_SECRET not set. Make sure to generate a secret in the SSO/Keycloak client '$module_name' configuration and then set the SSO_SECRET variable."
-  fi
 
   result=$($CURL -H "Content-Type: application/json" -H "Authorization: Bearer ${token}" -X POST -d "${client_config}" ${sso_service}/admin/realms/${SSO_REALM}/clients)
 
