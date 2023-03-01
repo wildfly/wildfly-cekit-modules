@@ -7,46 +7,40 @@ execute:
   user: '185'
 envs:
   - name: "APPLICATION_NAME"
-    description: Application name
+    description: "Optional. Used as a prefix to the client name that is computed based on the deployment name."
   - name: "HOSTNAME_HTTP"
-    description: Custom http Route Hostname
+    description: "Optional. Custom 'hostname' part of the HTTP Openshift route. When not set a route discovery is operated."
   - name: "HOSTNAME_HTTPS"
-    description: Custom https Route Hostname
+    description: "Optional. Custom 'hostname' part of the HTTPS Openshift route. When not set a route discovery is operated."
   - name: "SSO_DISABLE_SSL_CERTIFICATE_VALIDATION"
-    description: true or false. Enable/disable validation.
+    description: "Optional. true or false. Enable/disable validation of the keycloak server certificate. It is advised to be set to true when the SSO server generates a self signed certificate."
   - name: "SSO_PASSWORD"
-    description: The password for the keycloak service user.
-  - name: "SSO_PRINCIPAL_ATTRIBUTE"
-    description: Principal attribute.
-  - name: "SSO_PUBLIC_KEY"
-    description: SSO Public Key.
+    description: "The password of a user that has the priviledges to interact with the keycloak realm and can create and register clients."
   - name: "SSO_REALM"
-    description: The SSO realm to which the application client(s) should be associated (e.g. demo).
+    description: "The SSO realm to which the application client(s) should be associated (e.g. demo)."
   - name: "SSO_SAML_CERTIFICATE_NAME"
-    description: Certificate name
+    description: "Alias of the private key and certificate located in the SAML client keystore."
   - name: "SSO_SAML_KEYSTORE"
-    description: The name of the keystore file.
+    description: "The name of the keystore file."
   - name: "SSO_SAML_KEYSTORE_DIR"
-    description: Keystore directory.
+    description: "Directory in which the client keystore is located."
   - name: "SSO_SAML_KEYSTORE_PASSWORD"
-    description: Keystore password.
+    description: "Keystore password."
   - name: "SSO_SAML_LOGOUT_PAGE"
-    description: Logout page.
+    description: "Logout page."
   - name: "SSO_SAML_VALIDATE_SIGNATURE"
-    description: true or false. Validate or not signature.
-  - name: "SSO_SECRET"
-    description: The SSO Client Secret.
+    description: "Optional. true or false. Validate or not signature. True by default."
   - name: "SSO_SECURITY_DOMAIN"
-    description: By default 'keycloak' is use.
+    description: "Optional. The name of the security domain used to secure undertow and ejb subsystems. By default 'keycloak' is use."
   - name: "SSO_TRUSTSTORE"
-    description: The name of the truststore file.
+    description: "Optional. The name of the truststore file that contains the server certificate."
   - name: "SSO_TRUSTSTORE_CERTIFICATE_ALIAS"
-    description: Certificate alias.
+    description: "Optional. Certificate alias inside the truststore."
   - name: "SSO_TRUSTSTORE_DIR"
-    description: Location of truststore.
+    description: "Optional. Directory in which the truststore is located."
   - name: "SSO_TRUSTSTORE_PASSWORD"
-    description: The password for the truststore and certificate (e.g. mykeystorepass).
+    description: "Optional. The password for the truststore and certificate (e.g. mykeystorepass)."
   - name: "SSO_URL"
-    description: The URL for the SSO server.
+    description: "The URL for the SSO server suffixed by '/auth'."
   - name: "SSO_USERNAME"
-    description: The username used to access the SSO service.
+    description: "The username of a user that has the priviledges to interact with the keycloak realm and can create and register clients."
