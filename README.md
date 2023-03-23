@@ -1,6 +1,6 @@
 # wildfly-cekit-modules
 
-A set of [CEKit](https://github.com/cekit/cekitmodules) used to build [WildFly S2I](https://github.com/wildfly/wildfly-s2i/)
+A set of [CEKit](https://github.com/cekit/cekitmodules) modules used to build [WildFly S2I](https://github.com/wildfly/wildfly-s2i/)
 images and [WildFly Cloud Galleon feature-pack](https://github.com/wildfly-extras/wildfly-cloud-galleon-pack).
 
 These CEKit modules cover:
