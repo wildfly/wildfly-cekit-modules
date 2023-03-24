@@ -103,7 +103,7 @@ jobs:
       - name: Additional Tests
         if: env.IMPACT_IMAGE == 'true'
         run: |
-          export IMAGE_VERSION=$(yq e ".version" jdk11-overrides.yaml)
+          export IMAGE_VERSION=$(yq e ".version" wildfly-runtime-image/jdk11-overrides.yaml)
           export NAMESPACE=wildfly
           export IMAGE_NAME=${NAMESPACE}/wildfly-s2i
           export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime
