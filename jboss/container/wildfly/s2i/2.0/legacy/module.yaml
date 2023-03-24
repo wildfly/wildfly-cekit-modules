@@ -24,6 +24,8 @@ envs:
   description: "DEPRECATED API. A comma separated list of custom galleon feature-packs GAV.  Can be used when a set of Galleon layers has been set in GALLEON_PROVISION_LAYERS."
 - name: GALLEON_PROVISION_LAYERS
   description: "DEPRECATED API. Used during s2i to provision a custom galleon server. Comma separated list of layers to compose the configuration."
+- name: GALLEON_PROVISION_CHANNELS
+  description: "DEPRECATED API. Used during s2i to provision a custom galleon server. Comma separated list of Channel manifest maven coordinates ('GroupId:ArtifactId[:Version]') or URL (e.g.: file://tmp/manifes.yaml) to resolve artifacts."
 - name: WILDFLY_S2I_GENERATE_SERVER_BUILDER
   description: "Set this env variable to true if the S2I build output an S2I builder to be used for application build/deployment. The side effect is that no maven repository cache will be kept in the builder image."
 - name: env_variable_WILDFLY_SERVER_BUILDER
