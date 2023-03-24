@@ -10,6 +10,4 @@
     <exclude feature-id="subsystem.jgroups.stack.protocol:stack=udp,protocol=PING"/>
     <exclude feature-id="subsystem.jgroups.stack.protocol.MPING:stack=tcp"/>
 
-    <exclude feature-id="socket-binding-group.socket-binding:socket-binding-group=standard-sockets,socket-binding=jgroups-udp-fd"/>
-    <exclude feature-id="socket-binding-group.socket-binding:socket-binding-group=standard-sockets,socket-binding=jgroups-tcp-fd"/>
 </layer-spec>
