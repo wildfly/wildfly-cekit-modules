@@ -43,12 +43,20 @@ setup() {
 @test "Node name set" {
   NODE_NAME=abcdefghijklmnopqrstuvwxyz
   run_init_node_name
-  [ "${JBOSS_NODE_NAME}" = "defghijklmnopqrstuvwxyz" ]
+
+  # Verify that jboss.node.name is untouched
+  [ "${JBOSS_NODE_NAME}" = "abcdefghijklmnopqrstuvwxyz" ]
+  # Verify that jboss.tx.node.id is truncated to last 23 characters
+  [ "${JBOSS_TX_NODE_ID}" = "defghijklmnopqrstuvwxyz" ]
 }
 
 @test "Host name set" {
   HOSTNAME=abcdefghijklmnopqrstuvwxyz123
   run_init_node_name
-    echo $JBOSS_NODE_NAME
-  [ "${JBOSS_NODE_NAME}" = "ghijklmnopqrstuvwxyz123" ]
+  echo $JBOSS_NODE_NAME
+
+  # Verify that jboss.node.name is untouched
+  [ "${JBOSS_NODE_NAME}" = "abcdefghijklmnopqrstuvwxyz123" ]
+  # Verify that jboss.tx.node.id is truncated to last 23 characters
+  [ "${JBOSS_TX_NODE_ID}" = "ghijklmnopqrstuvwxyz123" ]
 }

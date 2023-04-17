@@ -13,7 +13,9 @@ envs:
 - name: JAVA_OPTS_APPEND
   description: To append options to JAVA_OPTS env variable.
 - name: JBOSS_NODE_NAME
-  description: Set jboss.node.name property value. By default a truncated to 23 characters name based on the hostname is computed.
+  description: Set jboss.node.name property value.
+- name: JBOSS_TX_NODE_ID
+  description: Set transactions subsystem node-identifier property value. By default set as truncated to last 23 characters name based on the hostname is computed.
 - name: PORT_OFFSET
   description: Use this env variable to set the server port offset. This is advised practice instead of directly setting jboss.socket.binding.port-offset in the SERVER_ARGS. It allows the server shutdown logic to connect to the running server to do a clean CLI shutdown. 
 - name: SERVER_ARGS
