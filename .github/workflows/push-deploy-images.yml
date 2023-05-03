@@ -1,4 +1,4 @@
-name: Send event to Wildfly s2i to Build and Deploy images when pushing changes that impact the image.
+name: Send event to WildFly s2i to Build and Deploy images when pushing changes that impact the image.
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ env:
   WF_S2I_TOKEN: ${{ secrets.WILDFLY_S2I_BUILD_DEPLOY_TOKEN }}
 jobs:
   wfci:
-    name: Wildfly-s2i Image Deployment on push
+    name: WildFly-s2i Image Deployment on push
     runs-on: ubuntu-latest
     steps:
       - id: files

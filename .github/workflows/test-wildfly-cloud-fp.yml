@@ -1,4 +1,4 @@
-name: Wildfly Cekit OpenShift Modules - Build WildFly cloud galleon feature-pack and Test WildFly s2i image if the changes introduced in the PR impact it. 
+name: WildFly CEKit OpenShift Modules - Build WildFly cloud galleon feature-pack and Test WildFly s2i image if the changes introduced in the PR impact it.
 on:
   pull_request:
      branches: [ main ]
@@ -8,7 +8,7 @@ env:
   FORK_REPO: ${{ github.event.pull_request.head.repo.full_name }}
 jobs:
   wfci:
-    name: Wildfly-s2i Build and Test
+    name: WildFly-s2i Build and Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
