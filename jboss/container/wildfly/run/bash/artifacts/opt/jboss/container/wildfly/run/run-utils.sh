@@ -53,7 +53,7 @@ function run_setup_shutdown_hook() {
 
   if [ -n "$CLI_GRACEFUL_SHUTDOWN" ] ; then
     trap "" TERM
-    log_info "Using CLI Graceful Shutdown instead of TERM signal"
+    log_info "Graceful shutdown via a TERM signal has been disabled. Graceful shutdown will need to be initiated via a CLI command."
   fi
 }
 
