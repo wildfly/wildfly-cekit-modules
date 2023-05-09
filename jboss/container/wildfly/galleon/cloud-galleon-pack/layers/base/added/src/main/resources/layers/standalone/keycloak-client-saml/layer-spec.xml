@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="keycloak-client-saml">
+    <props>
+        <prop name="org.wildfly.rule.hidden-if-org.wildfly.rule.not-expected-file-keycloak" value="/WEB-INF/keycloak.json"/>
+    </props>
+</layer-spec>

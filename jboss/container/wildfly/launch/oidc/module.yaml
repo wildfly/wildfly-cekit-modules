@@ -28,6 +28,7 @@ envs:
     description: "Require HTTPS. By default 'external' (private and local address no https)."
   - name: "OIDC_PROVIDER_URL"
     description: "The URL for the SSO provider."
+    required: true
   - name: "OIDC_SECURE_DEPLOYMENT_BEARER_ONLY"
     description: "true or false. SSO Client Access Type."
   - name: "OIDC_SECURE_DEPLOYMENT_ENABLE_CORS"
@@ -36,7 +37,10 @@ envs:
     description: "Principal attribute."
   - name: "OIDC_SECURE_DEPLOYMENT_SECRET"
     description: "The SSO Client Secret."
+    required: true
   - name: "OIDC_USER_NAME"
     description: "The username used to access the SSO service."
+    required: true
   - name: "OIDC_USER_PASSWORD"
     description: "The password for the keycloak service user."
+    required: true

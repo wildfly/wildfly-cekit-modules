@@ -16,18 +16,24 @@ envs:
     description: "Optional. true or false. Enable/disable validation of the keycloak server certificate. It is advised to be set to true when the SSO server generates a self signed certificate."
   - name: "SSO_PASSWORD"
     description: "The password of a user that has the priviledges to interact with the keycloak realm and can create and register clients."
+    required: true
   - name: "SSO_REALM"
     description: "The SSO realm to which the application client(s) should be associated (e.g. demo)."
   - name: "SSO_SAML_CERTIFICATE_NAME"
     description: "Alias of the private key and certificate located in the SAML client keystore."
+    required: true
   - name: "SSO_SAML_KEYSTORE"
     description: "The name of the keystore file."
+    required: true
   - name: "SSO_SAML_KEYSTORE_DIR"
     description: "Directory in which the client keystore is located."
+    required: true
   - name: "SSO_SAML_KEYSTORE_PASSWORD"
     description: "Keystore password."
+    required: true
   - name: "SSO_SAML_LOGOUT_PAGE"
     description: "Logout page."
+    required: true
   - name: "SSO_SAML_VALIDATE_SIGNATURE"
     description: "Optional. true or false. Validate or not signature. True by default."
   - name: "SSO_SECURITY_DOMAIN"
@@ -42,5 +48,7 @@ envs:
     description: "Optional. The password for the truststore and certificate (e.g. mykeystorepass)."
   - name: "SSO_URL"
     description: "The URL for the SSO server suffixed by '/auth'."
+    required: true
   - name: "SSO_USERNAME"
     description: "The username of a user that has the priviledges to interact with the keycloak realm and can create and register clients."
+    required: true

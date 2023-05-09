@@ -1,5 +1,9 @@
 <?xml version="1.0" ?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="logging">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="logging">
+    <props>
+        <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/json-logging/module.yaml,https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/logger-category/module.yaml"/>
+    </props>
+    
     <feature-group name="os-logging"/>
 </layer-spec>
 
