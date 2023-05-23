@@ -9,6 +9,12 @@
                 <param name="proxy-address-forwarding" value="true"/>
             </feature>
         </feature>
+        <feature spec="subsystem.undertow.servlet-container">
+            <param name="servlet-container" value="default"/>
+            <feature spec="subsystem.undertow.servlet-container.setting.affinity-cookie">
+                <param name="name" value="INGRESSCOOKIE"/>
+            </feature>
+        </feature>
     </feature>
     <feature spec="socket-binding-group.socket-binding">
         <param name="socket-binding-group" value="standard-sockets"/>
