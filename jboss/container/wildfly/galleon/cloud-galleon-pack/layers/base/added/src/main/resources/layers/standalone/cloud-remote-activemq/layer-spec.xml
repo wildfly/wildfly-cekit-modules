@@ -1,0 +1,10 @@
+<?xml version="1.0" ?>
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="cloud-remote-activemq">
+    <props>
+        <prop name="org.wildfly.rule.kind" value="metadata-only"/>
+        <prop name="org.wildfly.rule.add-on-depends-on" value="only:messaging-activemq"/>
+        <prop name="org.wildfly.rule.add-on" value="messaging,cloud-remote-activemq"/>
+        <prop name="org.wildfly.rule.add-on-description" value="Configure connection to a remote broker using MQ_SERVICE_PREFIX_MAPPING env variable."/>
+        <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/messaging/2.0/module.yaml"/>
+    </props>
+</layer-spec>
