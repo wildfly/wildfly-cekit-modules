@@ -1,4 +1,4 @@
-name: Wildfly Cekit OpenShift Modules - Bats
+name: WildFly CEKit OpenShift Modules - Bats
 on:
   push:
     branches: [ main ]

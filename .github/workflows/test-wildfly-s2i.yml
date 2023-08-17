@@ -1,4 +1,4 @@
-name: Wildfly Cekit OpenShift Modules - Build/Run WildFly s2i image if the changes introduced in the PR impact it. 
+name: WildFly CEKit OpenShift Modules - Build/Run WildFly s2i image if the changes introduced in the PR impact it.
 on:
   pull_request:
      branches: [ main ]
@@ -7,7 +7,7 @@ env:
   S2I_URI: https://github.com/openshift/source-to-image/releases/download/v1.3.1/source-to-image-v1.3.1-a5a77147-linux-amd64.tar.gz
 jobs:
   wfci:
-    name: Wildfly-s2i Build and Test
+    name: WildFly-s2i Build and Test
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
