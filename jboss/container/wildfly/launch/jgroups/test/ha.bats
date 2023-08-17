@@ -156,7 +156,7 @@ EOF
 # check that non-empty OPENSHIFT_DNS_PING_SERVICE_NAME is present when using dns.DNS_PING
 @test "Generate JGroups ping config - dns.DNS_PING requires service name" {
     expected=$(cat <<EOF
-/tmp/jboss_home/bin/launch/ha.sh: line 295: init_node_name: command not found
+/tmp/jboss_home/bin/launch/ha.sh: line 294: init_node_name: command not found
 ERROR Environment variable OPENSHIFT_DNS_PING_SERVICE_NAME is required when using dns.DNS_PING ping protocol. Please refer to the documentation for configuration.
 EOF
 )
