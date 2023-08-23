@@ -68,8 +68,11 @@ function run_init_node_name() {
     else
       JBOSS_NODE_NAME="$(hostname)"
     fi
-
-    # CLOUD-427: truncate transaction node-id JBOSS_TX_NODE_ID to the last 23 characters of the JBOSS_NODE_NAME
+  fi
+  # CLOUD-427: truncate transaction node-id JBOSS_TX_NODE_ID to the last 23 characters of the JBOSS_NODE_NAME
+  if [ ${#JBOSS_NODE_NAME} -gt 23 ]; then
     JBOSS_TX_NODE_ID=${JBOSS_NODE_NAME: -23}
+  else
+    JBOSS_TX_NODE_ID=${JBOSS_NODE_NAME}
   fi
 }
