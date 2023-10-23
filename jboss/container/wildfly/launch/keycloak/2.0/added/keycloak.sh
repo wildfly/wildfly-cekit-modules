@@ -46,7 +46,8 @@ EXTENSIONS_END_MARKER="</extensions>"
 function configure_cli_keycloak() {
 
     app_sec_domain=${SSO_SECURITY_DOMAIN:-keycloak}
-    id=$(date +%s)
+    
+    id=${TEST_FIXED_ID:-$(date +%s)}
 
     # No more supported
     if [ -n "${SSO_FORCE_LEGACY_SECURITY}" ]; then
@@ -81,8 +82,10 @@ function configure_cli_keycloak() {
         echo "
          $other_config" >> ${CLI_SCRIPT_FILE}
       fi
+      ejb_config="$(configure_ejb $id $app_sec_domain)"
       undertow_config="$(configure_undertow $id $app_sec_domain)"
       echo "
+       $ejb_config
        $undertow_config" >> ${CLI_SCRIPT_FILE}
       enable_keycloak_saml_deployments
     elif [ -f "$SECURE_SAML_DEPLOYMENTS" ]; then
@@ -102,8 +105,10 @@ function configure_cli_keycloak() {
         echo "
          $other_config" >> ${CLI_SCRIPT_FILE}
       fi
+      ejb_config="$(configure_ejb $id $app_sec_domain)"
       undertow_config="$(configure_undertow $id $app_sec_domain)"
       echo "
+       $ejb_config 
        $undertow_config" >> ${CLI_SCRIPT_FILE}
       configure_extensions_no_marker
       enable_keycloak_saml_deployments
@@ -146,6 +151,7 @@ function configure_cli_keycloak() {
       $other_config" >> ${CLI_SCRIPT_FILE}
     fi
     echo "
+     $ejb_config
      $undertow_config" >> ${CLI_SCRIPT_FILE}
   fi
   
@@ -170,14 +176,20 @@ function configure_existing_other_cli() {
    http_auth="$http_auth])"
 
    cli="
-     if (outcome == success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
        $sec_domain
        $http_auth
        /subsystem=undertow/application-security-domain=other:remove
        /subsystem=undertow/application-security-domain=other:add(http-authentication-factory=$ext_factory)
-       echo Existing other application-security-domain is extended with support for keycloak >> \${warning_file}
-     end-if"
-    echo "$cli"
+       echo Existing other application-security-domain is extended with support for keycloak >> \${warning_file}"
+   xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:ejb3:')]/*[local-name()='application-security-domains']/*[local-name()='application-security-domain' and @name='other' and @security-domain='ApplicationDomain']\""
+   local ret_domain_ejb
+   testXpathExpression "${xpath}" "ret_domain_ejb"
+   if [ "${ret_domain_ejb}" -eq 0 ]; then
+     cli="
+       $cli
+       /subsystem=ejb3/application-security-domain=other:write-attribute(name=security-domain, value=$ext_domain)"
+   fi
+   echo "$cli"
 }
 
 function configure_SAML_extension() {
@@ -218,11 +230,7 @@ function configure_undertow() {
   id=$1
   security_domain=$2
   cli="
-if (outcome == success) of /subsystem=elytron/http-authentication-factory=keycloak-http-authentication-$id:read-resource
-    /subsystem=undertow/application-security-domain=${security_domain}:add(http-authentication-factory=keycloak-http-authentication-$id)
-else
-    echo Undertow not configured, no keycloak-http-authentication-$id found, keycloak subsystems must have been already configured. >> \${warning_file}
-end-if"
+    /subsystem=undertow/application-security-domain=${security_domain}:add(http-authentication-factory=keycloak-http-authentication-$id)"
 echo "$cli"
 }
 
