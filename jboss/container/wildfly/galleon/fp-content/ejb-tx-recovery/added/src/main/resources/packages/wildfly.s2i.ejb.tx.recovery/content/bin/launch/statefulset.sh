@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
 function prepareEnv() {
   unset STATEFULSET_HEADLESS_SERVICE_NAME

@@ -12,8 +12,8 @@ PRIVATE_IP_ADDRESS=${PUBLIC_IP_ADDRESS}
 MANAGEMENT_IP_ADDRESS=${WILDFLY_MANAGEMENT_BIND_ADDRESS:-${SERVER_MANAGEMENT_BIND_ADDRESS:-0.0.0.0}}
 ENABLE_STATISTICS=${WILDFLY_ENABLE_STATISTICS:-${SERVER_ENABLE_STATISTICS:-true}}
 
-# handle jboss node name truncation
+# Handle JBOSS_TX_NODE_ID computation from JBOSS_NODE_NAME
 # Do not rely on ha.sh launch script to set it. The ha logic will get removed at some point.
  init_node_name
 
-launchServer "$JBOSS_HOME/bin/standalone.sh -c $SERVER_CONFIG" "-Djboss.node.name=${JBOSS_NODE_NAME} -bprivate ${PUBLIC_IP_ADDRESS} -b ${PUBLIC_IP_ADDRESS} -bmanagement ${MANAGEMENT_IP_ADDRESS} -Dwildfly.statistics-enabled=${ENABLE_STATISTICS} ${SERVER_ARGS}"
+launchServer "$JBOSS_HOME/bin/standalone.sh -c $SERVER_CONFIG" "-Djboss.node.name=${JBOSS_NODE_NAME} -Djboss.tx.node.id=${JBOSS_TX_NODE_ID} -bprivate ${PUBLIC_IP_ADDRESS} -b ${PUBLIC_IP_ADDRESS} -bmanagement ${MANAGEMENT_IP_ADDRESS} -Dwildfly.statistics-enabled=${ENABLE_STATISTICS} ${SERVER_ARGS}"

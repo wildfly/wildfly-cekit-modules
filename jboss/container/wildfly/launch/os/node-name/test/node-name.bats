@@ -1,49 +1,28 @@
 #!/usr/bin/env bats
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 rm -rf $JBOSS_HOME 2>/dev/null
-mkdir -p $JBOSS_HOME/bin/
-touch $JBOSS_HOME/bin/standalone.conf
+mkdir -p $JBOSS_HOME/bin/launch
 
-export JBOSS_CONTAINER_UTIL_LOGGING_MODULE=$BATS_TMPDIR/logging
-mkdir -p "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}"
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}"
-source $BATS_TEST_DIRNAME/../artifacts/opt/jboss/container/wildfly/run/run-utils.sh
+# copy scripts we are going to use
+cp $BATS_TEST_DIRNAME/../added/launch/openshift-node-name.sh $JBOSS_HOME/bin/launch
 
-setup() {
- rm -f $JBOSS_HOME/bin/standalone.conf
- touch $JBOSS_HOME/bin/standalone.conf
-}
 
-@test "Java 8" {
-  JAVA_VERSION=1.8
-  run run_add_jpms_options
-  [ "${output}" = "" ]
-  confFile=$(<"${JBOSS_HOME}/bin/standalone.conf")
-   [ "${confFile}" = "" ]
-  [ "$status" -eq 0 ]
-}
+# source the scripts needed
+source $JBOSS_HOME/bin/launch/openshift-node-name.sh
 
-@test "Java 11" {
-  JAVA_VERSION=11
-  run run_add_jpms_options
-  [ "${output}" = "" ]
-  confFile=$(<"${JBOSS_HOME}/bin/standalone.conf")
-   [ "${confFile}" = "" ]
-  [ "$status" -eq 0 ]
-}
 
 @test "JBoss Node name set to a value smaller than 23" {
   JBOSS_NODE_NAME=foo
-  run_init_node_name
+  init_node_name
   [ "${JBOSS_NODE_NAME}" = "foo" ]
   [ "${JBOSS_TX_NODE_ID}" = "foo" ]
 }
 
 @test "JBOSS_NODE_NAME set" {
   JBOSS_NODE_NAME=abcdefghijklmnopqrstuvwxyz123
-  run_init_node_name
+  init_node_name
   echo $JBOSS_NODE_NAME
 
   # Verify that jboss.node.name is untouched
@@ -54,7 +33,7 @@ setup() {
 
 @test "Node name set" {
   NODE_NAME=abcdefghijklmnopqrstuvwxyz
-  run_init_node_name
+  init_node_name
 
   # Verify that jboss.node.name is untouched
   [ "${JBOSS_NODE_NAME}" = "abcdefghijklmnopqrstuvwxyz" ]
@@ -64,7 +43,7 @@ setup() {
 
 @test "Node name set to value smaller than 23" {
   NODE_NAME=abcdef
-  run_init_node_name
+  init_node_name
 
   # Verify that jboss.node.name is untouched
   [ "${JBOSS_NODE_NAME}" = "abcdef" ]
@@ -74,7 +53,7 @@ setup() {
 
 @test "Host name set" {
   HOSTNAME=abcdefghijklmnopqrstuvwxyz123
-  run_init_node_name
+  init_node_name
   echo $JBOSS_NODE_NAME
 
   # Verify that jboss.node.name is untouched

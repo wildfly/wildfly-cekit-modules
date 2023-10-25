@@ -93,7 +93,7 @@ else
     #Ensure node name (FOR NOW NEEDED PERHAPS REVISIT FOR EAP8)
     run_init_node_name
 
-    SERVER_ARGS="${JAVA_PROXY_OPTIONS} -Djboss.node.name=${JBOSS_NODE_NAME} ${PORT_OFFSET_PROPERTY} -b ${PUBLIC_IP_ADDRESS} -bmanagement ${MANAGEMENT_IP_ADDRESS} -Dwildfly.statistics-enabled=${ENABLE_STATISTICS} ${SERVER_ARGS}"
+    SERVER_ARGS="${JAVA_PROXY_OPTIONS} -Djboss.node.name=${JBOSS_NODE_NAME} -Djboss.tx.node.id=${JBOSS_TX_NODE_ID} ${PORT_OFFSET_PROPERTY} -b ${PUBLIC_IP_ADDRESS} -bmanagement ${MANAGEMENT_IP_ADDRESS} -Dwildfly.statistics-enabled=${ENABLE_STATISTICS} ${SERVER_ARGS}"
 
     if [ -n "${CLI_LAUNCH_SCRIPT}" ]; then
       if [ ! -f "${CLI_LAUNCH_SCRIPT}" ]; then
