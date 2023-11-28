@@ -85,7 +85,7 @@ jobs:
         if: env.IMPACT_CLOUD_FP == 'true'
         uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: '3.11.5'
       - name: Setup virtualenv and install cekit and required packages
         if: env.IMPACT_CLOUD_FP == 'true'
         run: |
