@@ -145,12 +145,27 @@ jobs:
               fileName=$(basename ${feature})
               echo "Testing feature file $fileName"
               cekit test --image=wildfly/wildfly-s2i:dev-${{ env.CLOUD_FP_VERSION }} behave > test-logs-$fileName.txt 2>&1
+              rm test-logs-$fileName.txt
               docker system prune -f
             popd
             rm wildfly-builder-image/tests/features/*.feature
           done
           popd
         working-directory: wildfly-cloud-galleon-pack
+      - name: Advertise Failing Behave Scenarios
+        if: failure()
+        run: |
+          pushd wildfly-builder-image
+          logFile=$(find . -type f -iname "test-logs-*.txt")
+          if [ -f "${logFile}" ]; then
+            # Remove tar noise
+            grep -v "tar.go:" ${logFile} > tmpFile && mv tmpFile ${logFile}
+            # Display failing scenario
+            grep -A10000 "Failing scenarios" ${logFile}
+          else
+            echo "No failure in behave tests"
+          fi
+          popd
       - name: List containers
         if: failure()
         run: |
