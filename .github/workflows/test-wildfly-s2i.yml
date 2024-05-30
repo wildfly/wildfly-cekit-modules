@@ -18,7 +18,7 @@ jobs:
         uses: jitterbit/get-changed-files@v1
       - run: |
           for changed_file in ${{ steps.files.outputs.all }}; do
-            if [[ "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] || [[ "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]]; then
+            if [[ "${changed_file}" =~ ^\.github/workflows/test-wildfly-s2i.yml ]] || [[ "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] || [[ "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]]; then
               echo "Change detected in ${changed_file}, will test image."
               echo "IMPACT_IMAGE=true" >> "$GITHUB_ENV"
               exit 0
@@ -85,10 +85,10 @@ jobs:
           . ~/cekit/bin/activate
           overrides="{\"modules\": {\"repositories\": [{\"name\":\"wildfly-cekit-modules\",\"path\":\"../../wildfly-cekit-modules\"}]}}"
           pushd wildfly-builder-image
-          cekit build --overrides=jdk11-overrides.yaml --overrides "$overrides" docker
+          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides" docker
           popd
           pushd wildfly-runtime-image
-          cekit build --overrides=jdk11-overrides.yaml --overrides "$overrides"  docker
+          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides"  docker
           popd
           docker image ls
         working-directory: wildfly-s2i
@@ -96,20 +96,42 @@ jobs:
         if: env.IMPACT_IMAGE == 'true'
         run: |
           . ~/cekit/bin/activate
-          pushd wildfly-builder-image
-          cekit -v test --overrides=jdk11-overrides.yaml behave
-          popd
+          mkdir -p all-tests
+          mv wildfly-builder-image/tests/features/*.feature all-tests
+          for feature in all-tests/*.feature; do
+            cp $feature wildfly-builder-image/tests/features/
+            pushd wildfly-builder-image
+              echo "Testing feature file $(basename ${feature})"
+              cekit test --overrides=jdk21-overrides.yaml behave > test-logs-$fileName.txt 2>&1
+              docker system prune -f
+            popd
+            rm wildfly-builder-image/tests/features/*.feature
+          done
         working-directory: wildfly-s2i
       - name: Additional Tests
         if: env.IMPACT_IMAGE == 'true'
         run: |
-          export IMAGE_VERSION=$(yq e ".version" wildfly-runtime-image/jdk11-overrides.yaml)
+          export IMAGE_VERSION=$(yq e ".version" wildfly-runtime-image/jdk21-overrides.yaml)
           export NAMESPACE=wildfly
           export IMAGE_NAME=${NAMESPACE}/wildfly-s2i
           export RUNTIME_IMAGE_NAME=${NAMESPACE}/wildfly-runtime
           . ~/cekit/bin/activate
           ./test/run
         working-directory: wildfly-s2i
+      - name: Advertise Failing Behave Scenarios
+        if: failure()
+        run: |
+          pushd wildfly-builder-image
+          logFile=$(find . -type f -iname "test-logs-*.txt")
+          if [ -f "${logFile}" ]; then
+            # Remove tar noise
+            grep -v "tar.go:" ${logFile} > tmpFile && mv tmpFile ${logFile}
+            # Display failing scenario
+            grep -A10000 "Failing scenarios" ${logFile}
+          else
+            echo "No failure in behave tests"
+          fi
+          popd
       - name: List containers
         if: failure()
         run: |
@@ -119,3 +141,11 @@ jobs:
             top -b -n1
             echo === DISK USAGE ===
              df -h
+      - name: Upload Test Reports on Failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: wildfly-s2i-test-logs
+          path: |
+           wildfly-builder-image/test-logs-*.txt
+           /tmp/*.wfs2i.log

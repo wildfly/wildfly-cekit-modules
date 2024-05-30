@@ -19,7 +19,7 @@ jobs:
         uses: jitterbit/get-changed-files@v1
       - run: |
           for changed_file in ${{ steps.files.outputs.all }}; do
-            if [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]] && [[ "${changed_file}" =~ ^jboss/container/wildfly/.* ]]; then
+            if [[ "${changed_file}" =~ ^\.github/workflows/test-wildfly-cloud-fp.yml ]] || ( [[ ! "${changed_file}" =~ ^jboss/container/wildfly/s2i/2.0/.* ]] && [[ ! "${changed_file}" =~ ^jboss/container/wildfly/run/.* ]] && [[ "${changed_file}" =~ ^jboss/container/wildfly/.* ]] ); then
               echo "Change detected in ${changed_file}, will build cloud feature-pack and test images."
               echo "IMPACT_CLOUD_FP=true" >> "$GITHUB_ENV"
               exit 0
@@ -48,6 +48,13 @@ jobs:
             repository: wildfly-extras/wildfly-cloud-galleon-pack
             ref: main
             path: wildfly-cloud-galleon-pack
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: 21
+          distribution: 'temurin'
+          cache: 'maven'
+          cache-dependency-path: wildfly-cloud-galleon-pack/pom.xml
       - uses: n1hility/cancel-previous-runs@v2
         if: env.IMPACT_CLOUD_FP == 'true'
         with:
@@ -110,7 +117,7 @@ jobs:
         run: |
           . ~/cekit/bin/activate
           pushd wildfly-builder-image
-          cekit build --overrides=jdk11-overrides.yaml docker
+          cekit build --overrides=jdk21-overrides.yaml docker
           popd
           docker image ls
         working-directory: wildfly-s2i
@@ -129,10 +136,36 @@ jobs:
             sed -i "s|$legacyPlaceHolder|$legacyReplacement|" "$feature"
           done
           . ~/cekit/bin/activate
-          pushd custom-cloud-image/wildfly-builder-image
-            cekit test --image=wildfly/wildfly-s2i:dev-${{ env.CLOUD_FP_VERSION }} behave
+          pushd custom-cloud-image/
+          mkdir -p all-tests
+          mv wildfly-builder-image/tests/features/*.feature all-tests
+          for feature in all-tests/*.feature; do
+            cp $feature wildfly-builder-image/tests/features/
+            pushd wildfly-builder-image
+              fileName=$(basename ${feature})
+              echo "Testing feature file $fileName"
+              cekit test --image=wildfly/wildfly-s2i:dev-${{ env.CLOUD_FP_VERSION }} behave > test-logs-$fileName.txt 2>&1
+              rm test-logs-$fileName.txt
+              docker system prune -f
+            popd
+            rm wildfly-builder-image/tests/features/*.feature
+          done
           popd
         working-directory: wildfly-cloud-galleon-pack
+      - name: Advertise Failing Behave Scenarios
+        if: failure()
+        run: |
+          pushd wildfly-builder-image
+          logFile=$(find . -type f -iname "test-logs-*.txt")
+          if [ -f "${logFile}" ]; then
+            # Remove tar noise
+            grep -v "tar.go:" ${logFile} > tmpFile && mv tmpFile ${logFile}
+            # Display failing scenario
+            grep -A10000 "Failing scenarios" ${logFile}
+          else
+            echo "No failure in behave tests"
+          fi
+          popd
       - name: List containers
         if: failure()
         run: |
@@ -142,3 +175,11 @@ jobs:
             top -b -n1
             echo === DISK USAGE ===
              df -h
+      - name: Upload Test Reports on Failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: wildfly-s2i-test-logs
+          path: |
+           wildfly-builder-image/test-logs-*.txt
+           /tmp/*.wfs2i.log
