@@ -13,5 +13,5 @@
     <exclude feature-id="subsystem.jgroups.stack.protocol:stack=udp,protocol=PING"/>
     <exclude feature-id="subsystem.jgroups.stack.protocol.MPING:stack=tcp"/>
 
-    <feature-group name="os-infinispan-web-repl-cache"/>
+    <feature-group name="os-infinispan-web-sessions-cache"/>
 </layer-spec>
