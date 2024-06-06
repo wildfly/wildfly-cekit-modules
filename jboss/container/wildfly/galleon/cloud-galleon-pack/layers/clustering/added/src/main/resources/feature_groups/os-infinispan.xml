@@ -5,23 +5,24 @@
 
     <feature-group name="infinispan-dist-ejb">
         <include feature-id="subsystem.infinispan.cache-container:cache-container=ejb">
-            <param name="default-cache" value="repl"/>
-            <feature spec="subsystem.infinispan.cache-container.replicated-cache">
-                <param name="replicated-cache" value="repl"/>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.memory.heap">
+            <param name="default-cache" value="beans"/>
+            <feature spec="subsystem.infinispan.cache-container.distributed-cache">
+                <param name="distributed-cache" value="beans"/>
+                <feature spec="subsystem.infinispan.cache-container.distributed-cache.memory.heap">
                     <param name="size" value="10000"/>
                 </feature>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.component.locking">
+                <feature spec="subsystem.infinispan.cache-container.distributed-cache.component.locking">
                     <param name="isolation" value="REPEATABLE_READ"/>
                 </feature>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.component.transaction">
+                <feature spec="subsystem.infinispan.cache-container.distributed-cache.component.transaction">
                     <param name="mode" value="BATCH"/>
                 </feature>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.component.expiration">
+                <feature spec="subsystem.infinispan.cache-container.distributed-cache.component.expiration">
                     <param name="interval" value="0"/>
                 </feature>
-                <feature spec="subsystem.infinispan.cache-container.replicated-cache.store.file">
-                    <unset param="relative-to"/>
+                <feature spec="subsystem.infinispan.cache-container.distributed-cache.store.file">
+                    <param name="passivation" value="true"/>
+                    <param name="purge" value="true"/>
                 </feature>
             </feature>
         </include>
