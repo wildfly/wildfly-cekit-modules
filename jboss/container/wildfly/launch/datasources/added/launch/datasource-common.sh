@@ -33,6 +33,8 @@ function clearDatasourceEnv() {
 
   unset ${service}_SERVICE_HOST
   unset ${service}_SERVICE_PORT
+  unset ${prefix}_SERVICE_HOST
+  unset ${prefix}_SERVICE_PORT
   unset ${prefix}_JNDI
   unset ${prefix}_USERNAME
   unset ${prefix}_PASSWORD
@@ -810,7 +812,7 @@ function map_properties() {
     if [ -z "$(eval echo \$${prefix}_XA_CONNECTION_PROPERTY_URL)" ]; then
       if [ -z "${!serverNameVar}" ] || [ -z "${!portVar}" ] || [ -z "${!databaseNameVar}" ]; then
         if [ "$prefix" != "$service" ]; then
-          log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+          log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST (${$prefix}_SERVICE_HOST), ${service}_SERVICE_PORT (${prefix}_SERVICE_PORT), and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
           eval ${invalidVar}="true"
         else
           log_warning "Missing configuration for XA datasource $prefix. Either ${prefix}_XA_CONNECTION_PROPERTY_URL or $serverNameVar, and $portVar, and $databaseNameVar is required. Datasource will not be configured."
@@ -823,7 +825,7 @@ function map_properties() {
       fi
     fi
   else
-    log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST, ${service}_SERVICE_PORT, and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
+    log_warning "Missing configuration for datasource $prefix. ${service}_SERVICE_HOST (${$prefix}_SERVICE_HOST), ${service}_SERVICE_PORT (${$prefix}_SERVICE_PORT), and/or ${prefix}_DATABASE is missing. Datasource will not be configured."
     eval ${invalidVar}="true"
   fi
 
@@ -853,8 +855,14 @@ function inject_datasource() {
   local service_name
 
   host=$(find_env "${service}_SERVICE_HOST")
+  if [ -z "$host" ]; then
+    host=$(find_env "${prefix}_SERVICE_HOST")
+  fi
 
   port=$(find_env "${service}_SERVICE_PORT")
+  if [ -z "$port" ]; then
+    port=$(find_env "${prefix}_SERVICE_PORT")
+  fi
 
   # Custom JNDI environment variable name format: [NAME]_[DATABASE_TYPE]_JNDI
   jndi=$(get_jndi_name "$prefix" "$service")
