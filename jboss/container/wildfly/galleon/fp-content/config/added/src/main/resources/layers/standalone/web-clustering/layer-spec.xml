@@ -21,5 +21,5 @@
     <exclude feature-id="socket-binding-group.socket-binding:socket-binding-group=standard-sockets,socket-binding=jgroups-udp-fd"/>
     <exclude feature-id="socket-binding-group.socket-binding:socket-binding-group=standard-sockets,socket-binding=jgroups-tcp-fd"/>
 
-    <feature-group name="os-infinispan-web-repl-cache"/>
+    <feature-group name="os-infinispan-web-sessions-cache"/>
 </layer-spec>

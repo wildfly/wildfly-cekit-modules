@@ -63,7 +63,7 @@ jobs:
         if: env.IMPACT_CLOUD_FP == 'true'
         run: |
           echo Using "${FORK_REPO%%/*}" and "${GITHUB_HEAD_REF##*/}" to build cloud feature-pack
-          mvn clean install -DskipTests -Dwildfly.cekit.modules.fork="${FORK_REPO%%/*}" -Dwildfly.cekit.modules.tag="${GITHUB_HEAD_REF##*/}"
+          mvn clean install --batch-mode --no-transfer-progress -DskipTests -Dwildfly.cekit.modules.fork="${FORK_REPO%%/*}" -Dwildfly.cekit.modules.tag="${GITHUB_HEAD_REF##*/}"
           cloudVersion=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "CLOUD_FP_VERSION=${cloudVersion}" >> $GITHUB_ENV
           mkdir -p custom-cloud-image
