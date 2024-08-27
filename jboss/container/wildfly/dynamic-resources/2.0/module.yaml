@@ -1,0 +1,10 @@
+schema_version: 1
+name: jboss.container.wildfly.dynamic-resources
+version: '2.0'
+description: Legacy dynamic-resources script package.
+execute:
+- script: install.sh
+envs:
+    - name: "CONTAINER_HEAP_PERCENT"
+      example: 0.5
+      description: Deprecated. See JAVA_MAX_MEM_RATIO.
