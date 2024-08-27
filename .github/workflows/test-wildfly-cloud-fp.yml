@@ -50,6 +50,7 @@ jobs:
             path: wildfly-cloud-galleon-pack
       - name: Set up JDK 21
         uses: actions/setup-java@v3
+        if: env.IMPACT_CLOUD_FP == 'true'
         with:
           java-version: 21
           distribution: 'temurin'
