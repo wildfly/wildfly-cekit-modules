@@ -1,7 +1,7 @@
 schema_version: 1
-name: jboss.container.wildfly.run
+name: jboss.container.wildfly.run.common
 version: '1.0'
-description: Run server in the cloud.
+description: Run server in the cloud, common scripts.
 
 envs:
 - name: JBOSS_CONTAINER_WILDFLY_RUN_MODULE
@@ -15,4 +15,3 @@ execute:
 modules:
   install:
   - name: jboss.container.wildfly.run.api
-  - name: jboss.container.util.logging.bash

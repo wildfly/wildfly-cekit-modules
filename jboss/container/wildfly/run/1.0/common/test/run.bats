@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-source $BATS_TEST_DIRNAME/../../../../../../test-common/cli_utils.sh
+source $BATS_TEST_DIRNAME/../../../../../../../test-common/cli_utils.sh
 # fake JBOSS_HOME
 export JBOSS_HOME=$BATS_TMPDIR/jboss_home
 rm -rf $JBOSS_HOME 2>/dev/null
@@ -8,7 +8,7 @@ touch $JBOSS_HOME/bin/standalone.conf
 
 export JBOSS_CONTAINER_UTIL_LOGGING_MODULE=$BATS_TMPDIR/logging
 mkdir -p "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}"
-cp $BATS_TEST_DIRNAME/../../../../../../test-common/logging.sh "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}"
+cp $BATS_TEST_DIRNAME/../../../../../../../test-common/logging.sh "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}"
 source $BATS_TEST_DIRNAME/../artifacts/opt/jboss/container/wildfly/run/run-utils.sh
 
 setup() {
