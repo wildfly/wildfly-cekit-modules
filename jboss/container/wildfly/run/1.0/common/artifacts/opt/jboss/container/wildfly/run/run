@@ -67,7 +67,11 @@ fi
 JAVA_OPTS="$JAVA_OPTS $JAVA_OPTS_APPEND"
 
 #Handle proxy options
-source /opt/run-java/proxy-options
+if [ -f "${JBOSS_CONTAINER_JAVA_PROXY_MODULE}/proxy-options" ]; then
+  source "${JBOSS_CONTAINER_JAVA_PROXY_MODULE}"/proxy-options
+else
+  source /opt/run-java/proxy-options
+fi
 eval preConfigure
 eval configure
 
