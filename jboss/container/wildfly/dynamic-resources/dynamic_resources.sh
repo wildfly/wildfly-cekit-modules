@@ -11,6 +11,9 @@ JAVA_INITIAL_MEM_RATIO=${JAVA_INITIAL_MEM_RATIO:-${INITIAL_HEAP_PERCENT:+$(echo 
 
 function source_java_run_scripts() {
     local java_scripts_dir="/opt/run-java"
+    if [ -f "${JBOSS_CONTAINER_JAVA_JVM_MODULE}/java-default-options" ]; then
+      java_scripts_dir="${JBOSS_CONTAINER_JAVA_JVM_MODULE}"
+    fi
     # load java options functions
     source "${java_scripts_dir}/java-default-options"
 }
@@ -38,6 +41,9 @@ adjust_java_options() {
     local options="$@"
     local remove_xms
     local java_scripts_dir="/opt/run-java"
+    if [ -f "${JBOSS_CONTAINER_JAVA_JVM_MODULE}/java-default-options" ]; then
+      java_scripts_dir="${JBOSS_CONTAINER_JAVA_JVM_MODULE}"
+    fi
     # nuke any hard-coded memory settings.  java-default-options won't add these
     # if they're already specified
     JAVA_OPTS="$(echo $JAVA_OPTS| sed -re 's/(-Xmx[^ ]*|-Xms[^ ]*)//g')"
