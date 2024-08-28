@@ -1,7 +1,7 @@
 schema_version: 1
 name: jboss.container.wildfly.dynamic-resources
 version: '2.0'
-description: Legacy dynamic-resources script package.
+description: Legacy dynamic-resources script package, UBI9.
 execute:
 - script: install.sh
 envs:
