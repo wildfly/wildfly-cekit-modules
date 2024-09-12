@@ -1,0 +1,27 @@
+= WildFly cekit modules tagging
+
+The cekit modules are not released. They need to be tagged when a component that depends on them are released.
+
+WildFly cekit modules are used by:
+
+* link:https://github.com/wildfly-extras/wildfly-cloud-galleon-pack[WildFly cloud Galleon feature-pack]
+* link:https://github.com/wildfly/wildfly-s2i[WildFly S2I]
+
+== Tagging for new release of WildFly cloud Galleon feature-pack
+
+Prior to release a new WildFly cloud galleon feature-pack:
+
+* `git pull --rebase upstream main`
+* `git tag wildfly-cloud-<cloud feature-pack version>` For example: `wildfly-cloud-7.0.2.Final`
+
+== Tagging for new release of WildFly S2I images
+
+Prior to release new Wildfly S2I images, a new Tag is needed in case some changes occurred 
+in this repository since that last tag used in WildFly S2I,
+The tag is named: `0.<current WildFly Major version>.X`, where X is an increment starting from 0. For example, `0.33.0`, `0.33.1`.
+
+If a tag is needed, prior to release new WildFly S2I images:
+
+* `git pull --rebase upstream main`
+* `git tag 0.<current WildFly Major version>.X` For example: `0.33.0`
+
