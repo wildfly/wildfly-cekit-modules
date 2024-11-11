@@ -20,6 +20,17 @@ envs:
   value: "1.6"
 - name: DEBUG_GALLEON_FP_SRC
   description: By default the feature-pack sources are deleted. Set this variable to true to keep it in the image (mainly for debug purpose).
+
+artifacts:
+  - url: http://download.devel.redhat.com/devel/candidates/middleware/eap/JBEAP-7.4.20.GA-CR1/jboss-eap-7.4.20.GA-CR1-image-builder-maven-repository.zip
+    md5: c7e39f2e91f210e356ca268f904a9593
+    # Optionally, overwrite target name
+    target: maven-repo.zip
+    # Optionally, provide source of the artifact
+    source-url: http://download.devel.redhat.com/devel/candidates/middleware/eap/JBEAP-7.4.20.GA-CR1/jboss-eap-7.4.20.GA-CR1-src.zip
+    # When source-url is specified, checksum must be provided
+    source-md5: 1ecaaa92e9f31f4e6626d97d51668b28
+
 execute:
 - script: configure.sh
   user: 185
