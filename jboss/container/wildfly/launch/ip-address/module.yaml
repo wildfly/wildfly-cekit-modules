@@ -1,0 +1,10 @@
+schema_version: 1
+name: jboss.container.wildfly.launch.ip-address
+version: '1.0'
+description: Configure ip address.
+execute:
+  - script: configure.sh
+    user: '185'
+envs:
+  - name: "SERVER_USE_IPV6"
+    description: By default IP v4 is used. Set this env variable to true to enable IP v6.
