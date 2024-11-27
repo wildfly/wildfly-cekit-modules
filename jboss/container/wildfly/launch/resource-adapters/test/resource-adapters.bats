@@ -47,14 +47,20 @@ teardown() {
   end-if
   batch
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one:add(archive="activemq-rar-one.rar", transaction-support="XATransaction")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory:add(class-name="org.apache.activemq.ra.ActiveMQManagedConnectionFactory", jndi-name="java:/ConnectionFactory", enabled="true", use-java-context="true", tracking="true", min-pool-size=1, max-pool-size=5, pool-prefill=false, flush-strategy=EntirePool, same-rm-override=false, recovery-username="RecoveryUserName", recovery-password="RecoveryPassword")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory:add(class-name="org.apache.activemq.ra.ActiveMQManagedConnectionFactory", jndi-name="java:/ConnectionFactory", enabled="true", use-java-context="true", tracking="true", min-pool-size=1, initial-pool-size=1, max-pool-size=5, pool-prefill=false, pool-fair=false, pool-use-strict-min=true, flush-strategy=EntirePool, same-rm-override=false, capacity-incrementer-class=org.jboss.jca.core.connectionmanager.pool.capacity.WatermarkIncrementer, capacity-decrementer-class=org.jboss.jca.core.connectionmanager.pool.capacity.SizeDecrementer, recovery-username="RecoveryUserName", recovery-password="RecoveryPassword")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory:write-attribute(name=capacity-incrementer-properties.watermark, value="1")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory:write-attribute(name=capacity-decrementer-properties.size, value="2")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory/config-properties=Password:add(value="P@ssword1")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory/config-properties=ServerUrl:add(value="tcp://1.2.3.4:61616?jms.rmIdFromConnectionId=true")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/connection-definitions=ConnectionFactory/config-properties=UserName:add(value="tombrady")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBQueue":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/HELLOWORLDMDBQueue", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=PhysicalName:add(value="queue/HELLOWORLDMDBQueue")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=propA:add(value="valueA")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=propB:add(value="valueB")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBTopic":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/queue/HELLOWORLDMDBTopic", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=PhysicalName:add(value="queue/HELLOWORLDMDBTopic")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=propC:add(value="valueC")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-one/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=propD:add(value="valueD")
   run-batch
 
   if (outcome != success) of /subsystem=resource-adapters:read-resource
@@ -67,14 +73,20 @@ teardown() {
   end-if
   batch
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two:add(archive="activemq-rar-two.rar", transaction-support="XATransaction")
-    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory:add(class-name="org.apache.activemq.ra.ActiveMQManagedConnectionFactory", jndi-name="java:/ConnectionFactory", enabled="true", use-java-context="true", tracking="true", min-pool-size=1, max-pool-size=5, pool-prefill=false, flush-strategy=EntirePool, same-rm-override=false, recovery-username="RecoveryUserName", recovery-password="RecoveryPassword")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory:add(class-name="org.apache.activemq.ra.ActiveMQManagedConnectionFactory", jndi-name="java:/ConnectionFactory", enabled="true", use-java-context="true", tracking="true", min-pool-size=1, initial-pool-size=1, max-pool-size=5, pool-prefill=false, pool-fair=false, pool-use-strict-min=true, flush-strategy=EntirePool, same-rm-override=false, capacity-incrementer-class=org.jboss.jca.core.connectionmanager.pool.capacity.WatermarkIncrementer, capacity-decrementer-class=org.jboss.jca.core.connectionmanager.pool.capacity.SizeDecrementer, recovery-username="RecoveryUserName", recovery-password="RecoveryPassword")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory:write-attribute(name=capacity-incrementer-properties.watermark, value="1")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory:write-attribute(name=capacity-decrementer-properties.size, value="2")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory/config-properties=Password:add(value="P@ssword1")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory/config-properties=ServerUrl:add(value="tcp://1.2.3.4:61616?jms.rmIdFromConnectionId=true")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/connection-definitions=ConnectionFactory/config-properties=UserName:add(value="tombrady")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBQueue":add(class-name="org.apache.activemq.command.ActiveMQQueue", jndi-name="java:/queue/HELLOWORLDMDBQueue", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=PhysicalName:add(value="queue/HELLOWORLDMDBQueue")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=propA:add(value="valueA")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBQueue"/config-properties=propB:add(value="valueB")
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBTopic":add(class-name="org.apache.activemq.command.ActiveMQTopic", jndi-name="java:/queue/HELLOWORLDMDBTopic", use-java-context=true)
     /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=PhysicalName:add(value="queue/HELLOWORLDMDBTopic")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=propC:add(value="valueC")
+    /subsystem=resource-adapters/resource-adapter=activemq-rar-two/admin-objects="queue/HELLOWORLDMDBTopic"/config-properties=propD:add(value="valueD")
   run-batch
 EOF
 )
@@ -95,17 +107,28 @@ EOF
   TEST_RA_ONE_RECOVERY_USERNAME="RecoveryUserName"
   TEST_RA_ONE_RECOVERY_PASSWORD="RecoveryPassword"
   TEST_RA_ONE_POOL_MIN_SIZE="1"
+  TEST_RA_ONE_POOL_INITIAL_SIZE="1"
   TEST_RA_ONE_POOL_MAX_SIZE="5"
   TEST_RA_ONE_POOL_PREFILL="false"
+  TEST_RA_ONE_POOL_FAIR="false"
+  TEST_RA_ONE_POOL_USE_STRICT_MIN="true"
   TEST_RA_ONE_TRACKING="true"
   TEST_RA_ONE_TRANSACTION_SUPPORT="XATransaction"
   TEST_RA_ONE_POOL_IS_SAME_RM_OVERRIDE="false"
   TEST_RA_ONE_POOL_FLUSH_STRATEGY="EntirePool"
+  TEST_RA_ONE_POOL_CAPACITY_INCREMENTER_CLASS="org.jboss.jca.core.connectionmanager.pool.capacity.WatermarkIncrementer"
+  TEST_RA_ONE_POOL_CAPACITY_INCREMENTER_PROPERTY_watermark="1"
+  TEST_RA_ONE_POOL_CAPACITY_DECREMENTER_CLASS="org.jboss.jca.core.connectionmanager.pool.capacity.SizeDecrementer"
+  TEST_RA_ONE_POOL_CAPACITY_DECREMENTER_PROPERTY_size="2"
   TEST_RA_ONE_ADMIN_OBJECTS="queue,topic"
   TEST_RA_ONE_ADMIN_OBJECT_queue_CLASS_NAME="org.apache.activemq.command.ActiveMQQueue"
   TEST_RA_ONE_ADMIN_OBJECT_queue_PHYSICAL_NAME="queue/HELLOWORLDMDBQueue"
+  TEST_RA_ONE_ADMIN_OBJECT_queue_PROPERTY_propA="valueA"
+  TEST_RA_ONE_ADMIN_OBJECT_queue_PROPERTY_propB="valueB"
   TEST_RA_ONE_ADMIN_OBJECT_topic_CLASS_NAME="org.apache.activemq.command.ActiveMQTopic"
   TEST_RA_ONE_ADMIN_OBJECT_topic_PHYSICAL_NAME="queue/HELLOWORLDMDBTopic"
+  TEST_RA_ONE_ADMIN_OBJECT_topic_PROPERTY_propC="valueC"
+  TEST_RA_ONE_ADMIN_OBJECT_topic_PROPERTY_propD="valueD"
 
   TEST_RA_TWO_ID="activemq-rar-two"
   TEST_RA_TWO_ARCHIVE="activemq-rar-two.rar"
@@ -120,22 +143,33 @@ EOF
   TEST_RA_TWO_RECOVERY_USERNAME="RecoveryUserName"
   TEST_RA_TWO_RECOVERY_PASSWORD="RecoveryPassword"
   TEST_RA_TWO_POOL_MIN_SIZE="1"
+  TEST_RA_TWO_POOL_INITIAL_SIZE="1"
   TEST_RA_TWO_POOL_MAX_SIZE="5"
   TEST_RA_TWO_POOL_PREFILL="false"
+  TEST_RA_TWO_POOL_FAIR="false"
+  TEST_RA_TWO_POOL_USE_STRICT_MIN="true"
   TEST_RA_TWO_TRACKING="true"
   TEST_RA_TWO_TRANSACTION_SUPPORT="XATransaction"
   TEST_RA_TWO_POOL_IS_SAME_RM_OVERRIDE="false"
   TEST_RA_TWO_POOL_FLUSH_STRATEGY="EntirePool"
+  TEST_RA_TWO_POOL_CAPACITY_INCREMENTER_CLASS="org.jboss.jca.core.connectionmanager.pool.capacity.WatermarkIncrementer"
+  TEST_RA_TWO_POOL_CAPACITY_INCREMENTER_PROPERTY_watermark="1"
+  TEST_RA_TWO_POOL_CAPACITY_DECREMENTER_CLASS="org.jboss.jca.core.connectionmanager.pool.capacity.SizeDecrementer"
+  TEST_RA_TWO_POOL_CAPACITY_DECREMENTER_PROPERTY_size="2"
   TEST_RA_TWO_ADMIN_OBJECTS="queue,topic"
   TEST_RA_TWO_ADMIN_OBJECT_queue_CLASS_NAME="org.apache.activemq.command.ActiveMQQueue"
   TEST_RA_TWO_ADMIN_OBJECT_queue_PHYSICAL_NAME="queue/HELLOWORLDMDBQueue"
+  TEST_RA_TWO_ADMIN_OBJECT_queue_PROPERTY_propA="valueA"
+  TEST_RA_TWO_ADMIN_OBJECT_queue_PROPERTY_propB="valueB"
   TEST_RA_TWO_ADMIN_OBJECT_topic_CLASS_NAME="org.apache.activemq.command.ActiveMQTopic"
   TEST_RA_TWO_ADMIN_OBJECT_topic_PHYSICAL_NAME="queue/HELLOWORLDMDBTopic"
+  TEST_RA_TWO_ADMIN_OBJECT_topic_PROPERTY_propC="valueC"
+  TEST_RA_TWO_ADMIN_OBJECT_topic_PROPERTY_propD="valueD"
 
   run configure
-  echo "Console:${output}"
   output=$(<${CLI_SCRIPT_FILE})
   normalize_spaces_new_lines
+  echo "Console:${output}"
   [ "${output}" = "${expected}" ]
 }
 
