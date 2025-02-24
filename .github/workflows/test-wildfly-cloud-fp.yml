@@ -177,7 +177,7 @@ jobs:
             echo === DISK USAGE ===
              df -h
       - name: Upload Test Reports on Failure
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: wildfly-s2i-test-logs
