@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="embedded-activemq">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="embedded-activemq">
+    <props>
+        <prop name="org.wildfly.category" value="Cloud"/>
+        <prop name="org.wildfly.description" value="Support for an embedded Apache Activemq Artemis Jakarta Messaging broker, adjusted for the cloud"/>
+    </props>
     <feature spec="subsystem.messaging-activemq">
         <feature spec="subsystem.messaging-activemq.server">
             <param name="server" value="default"/>

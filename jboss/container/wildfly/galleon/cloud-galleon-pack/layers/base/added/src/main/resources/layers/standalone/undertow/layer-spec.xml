@@ -2,6 +2,8 @@
 <!-- Once we get rid-off of WildFly s2i v1, this feature-group can be moved to wildfly-cekit-modules for sharing -->
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="undertow">
     <props>
+        <prop name="org.wildfly.category" value="Cloud"/>
+        <prop name="org.wildfly.description" value="WildFly undertow subsystem, adjusted for the cloud"/>
         <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/access-log-valve/module.yaml,https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/filters/module.yaml"/>
     </props>
     <feature-group name="os-undertow"/>

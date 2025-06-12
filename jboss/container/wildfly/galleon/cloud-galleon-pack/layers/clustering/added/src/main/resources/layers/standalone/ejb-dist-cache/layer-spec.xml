@@ -1,6 +1,8 @@
 <?xml version="1.0" ?>
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="ejb-dist-cache">
     <props>
+        <prop name="org.wildfly.category" value="Cloud"/>
+        <prop name="org.wildfly.description" value="Infinispan-based distributed cache for stateful session beans, adjusted for the cloud"/>
         <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/jgroups/module.yaml"/>
     </props>
     <exclude spec="subsystem.jgroups.channel"/>

@@ -1,5 +1,9 @@
 <?xml version="1.0" ?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="transactions">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="transactions">
+  <props>
+    <prop name="org.wildfly.category" value="Cloud"/>
+    <prop name="org.wildfly.description" value="WildFly transactions subsystem, adjusted for the cloud"/>
+  </props>
   <feature-group name="os-tx-recovery"/>
 </layer-spec>
 

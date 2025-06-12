@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="jpa">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="jpa">
+  <props>
+     <prop name="org.wildfly.category" value="Cloud"/>
+     <prop name="org.wildfly.description" value="Support for JPA (using the latest WildFly supported Hibernate release), adjusted for the cloud"/>
+  </props>
   <feature-group name="os-infinispan-hibernate"/>
 </layer-spec>

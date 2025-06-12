@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="webservices">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="webservices">
+  <props>
+    <prop name="org.wildfly.category" value="Cloud"/>
+    <prop name="org.wildfly.description" value="Support for Jakarta XML Web Services, adjusted for the cloud"/>
+  </props>
   <feature-group name="os-webservices"/>
 </layer-spec>

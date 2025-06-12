@@ -1,6 +1,8 @@
 <?xml version="1.0" ?>
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="logging">
     <props>
+        <prop name="org.wildfly.category" value="Cloud"/>
+        <prop name="org.wildfly.description" value="WildFly Logging subsystem, adjusted for the cloud"/>
         <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/json-logging/module.yaml,https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/logger-category/module.yaml"/>
     </props>
     

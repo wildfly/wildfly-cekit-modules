@@ -1,4 +1,8 @@
 <?xml version="1.0" ?>
-<layer-spec xmlns="urn:jboss:galleon:layer-spec:1.0" name="messaging-activemq">
+<layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="messaging-activemq">
+  <props>
+    <prop name="org.wildfly.category" value="Cloud"/>
+    <prop name="org.wildfly.description" value="Support for connections to a remote Jakarta Messaging broker, adjusted for the cloud"/>
+  </props>
    <feature-group name="os-messaging"/>
 </layer-spec>

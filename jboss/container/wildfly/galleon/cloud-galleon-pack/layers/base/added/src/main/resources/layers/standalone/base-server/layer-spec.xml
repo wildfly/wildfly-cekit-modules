@@ -1,6 +1,8 @@
 <?xml version="1.0" ?>
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="base-server">
     <props>
+        <prop name="org.wildfly.category" value="Cloud"/>
+        <prop name="org.wildfly.description" value="WildFly base server, adjusted for the cloud"/>
         <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/port-offset/module.yaml"/>
     </props>
     <feature-group name="os-socket"/>
