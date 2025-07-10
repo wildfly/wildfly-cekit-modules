@@ -6,10 +6,10 @@
     </props> 
     <packages>
         <package name="wildfly.s2i.common"/>
+        <package name="org.wildfly.cloud.launch.scripts" optional="true"/>
+        <package name="org.wildfly.cloud.bootable.runtime" optional="true"/>
     </packages>
     <layers>
-        <!-- required for termination and script execution -->
-        <include name="core-tools"/>
         <include name="health"/>
     </layers>
 </config>

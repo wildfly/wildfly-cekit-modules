@@ -4,7 +4,7 @@ SCRIPT_DIR=$(pwd -P)/$(dirname $0)
 # Install launch scripts.
 resources_dir="$1"
 packages_dir="$resources_dir/packages"
-common_package_dir="$packages_dir/wildfly.s2i.common/content"
+common_package_dir="$packages_dir/org.wildfly.cloud.launch.scripts/content"
 mkdir -p $common_package_dir
 export JBOSS_HOME="$common_package_dir"
 fp_content_list_file="$2"
@@ -12,6 +12,7 @@ launch_list_file="$3"
 launch_config_list_file="$4"
 
 mkdir -p "$JBOSS_HOME/bin/launch"
+  if [ -s "$launch_list_file" ]; then
   pushd "$SCRIPT_DIR"/../jboss/container/wildfly/launch > /dev/null
     while read dir; do
       if [ -d "$dir" ]; then
@@ -30,6 +31,8 @@ mkdir -p "$JBOSS_HOME/bin/launch"
       fi
     done < $launch_list_file
   popd > /dev/null
+  fi
+  if [ -s "$launch_config_list_file" ]; then
   pushd "$SCRIPT_DIR"/../jboss/container/wildfly/launch-config > /dev/null
     while read dir; do
       if [ -d "$dir" ]; then
@@ -48,6 +51,8 @@ mkdir -p "$JBOSS_HOME/bin/launch"
       fi
     done < $launch_config_list_file
   popd > /dev/null
+  fi
+  if [ -s "$fp_content_list_file" ]; then
   pushd "$SCRIPT_DIR"/../jboss/container/wildfly/galleon/cloud-galleon-pack > /dev/null
    while read dir; do
      echo Adding feature-content from $dir
@@ -56,4 +61,5 @@ mkdir -p "$JBOSS_HOME/bin/launch"
      popd > /dev/null
    done < $fp_content_list_file
   popd > /dev/null
+  fi
 unset JBOSS_HOME
