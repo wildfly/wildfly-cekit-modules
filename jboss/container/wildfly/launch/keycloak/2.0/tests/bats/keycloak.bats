@@ -71,7 +71,7 @@ if (outcome != success) of /extension=org.keycloak.keycloak-saml-adapter-subsyst
 /extension=org.keycloak.keycloak-saml-adapter-subsystem:add()
 end-if
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:read-resource
-/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML Realm already installed >> \${warning_file}
 end-if
@@ -87,7 +87,7 @@ else
 echo Keycloak SAML Realm Mapper already installed >> \${warning_file}
 end-if
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:read-resource
-/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML HTTP Mechanism Factory already installed >> \${warning_file}
 end-if
@@ -161,7 +161,7 @@ if (outcome != success) of /extension=org.keycloak.keycloak-saml-adapter-subsyst
 /extension=org.keycloak.keycloak-saml-adapter-subsystem:add()
 end-if
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:read-resource
-/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML Realm already installed >> \${warning_file}
 end-if
@@ -177,7 +177,7 @@ else
 echo Keycloak SAML Realm Mapper already installed >> \${warning_file}
 end-if
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:read-resource
-/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML HTTP Mechanism Factory already installed >> \${warning_file}
 end-if
@@ -243,7 +243,7 @@ if (outcome != success) of /extension=org.keycloak.keycloak-saml-adapter-subsyst
 /extension=org.keycloak.keycloak-saml-adapter-subsystem:add()
 end-if
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:read-resource
-/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/custom-realm=KeycloakSAMLRealm-test:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML Realm already installed >> \${warning_file}
 end-if
@@ -259,7 +259,7 @@ else
 echo Keycloak SAML Realm Mapper already installed >> \${warning_file}
 end-if
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:read-resource
-/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+/subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-test:add(module=org.keycloak.keycloak-saml-wildfly-elytron-jakarta-adapter)
 else
 echo Keycloak SAML HTTP Mechanism Factory already installed >> \${warning_file}
 end-if
