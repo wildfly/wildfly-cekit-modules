@@ -236,9 +236,15 @@ echo "$cli"
 
 function configure_SAML_elytron() {
   id=$1
+  keycloak26ModuleName="keycloak-saml-wildfly-elytron-adapter"
+  moduleName="keycloak-saml-wildfly-elytron-jakarta-adapter"
+  if [ -d "${JBOSS_HOME}/modules/system/add-ons/keycloak/org/keycloak/$keycloak26ModuleName" ]; then
+    moduleName=$keycloak26ModuleName 
+  fi
+  fullModuleName="org.keycloak.$moduleName"
   cli="
 if (outcome != success) of /subsystem=elytron/custom-realm=KeycloakSAMLRealm-$id:read-resource
-    /subsystem=elytron/custom-realm=KeycloakSAMLRealm-$id:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+    /subsystem=elytron/custom-realm=KeycloakSAMLRealm-$id:add(class-name=org.keycloak.adapters.saml.elytron.KeycloakSecurityRealm, module=$fullModuleName)
 else
     echo Keycloak SAML Realm already installed >> \${warning_file}
 end-if
@@ -257,7 +263,7 @@ else
 end-if
 
 if (outcome != success) of /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-$id:read-resource
-    /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-$id:add(module=org.keycloak.keycloak-saml-wildfly-elytron-adapter)
+    /subsystem=elytron/service-loader-http-server-mechanism-factory=keycloak-saml-http-server-mechanism-factory-$id:add(module=$fullModuleName)
 else
     echo Keycloak SAML HTTP Mechanism Factory already installed >> \${warning_file}
 end-if
