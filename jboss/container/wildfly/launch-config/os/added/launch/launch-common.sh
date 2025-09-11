@@ -91,8 +91,14 @@ function testXpathExpression() {
 
   local output
   output=$(eval xmllint --xpath "${xpath}" "${CONFIG_FILE}" 2>/dev/null)
-
-  printf -v "$2" '%s' "$?"
+  xmllintRet=$?
+  # xmllint can in newer versions (e.g.: 21205 in ubi10 image) returns 0 although no match, if no match consider a failure and returns 1
+  if [ ${xmllintRet} == 0 ]; then
+    if [ -z "${output}" ]; then
+      xmllintRet=1
+    fi
+  fi
+  printf -v "$2" '%s' "$xmllintRet"
 
   if [ -n "$3" ]; then
     unset -v "$3" && printf -v "$3" '%s' "${output}"
