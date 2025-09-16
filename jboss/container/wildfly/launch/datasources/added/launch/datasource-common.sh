@@ -1,5 +1,5 @@
 #!/bin/sh
-
+TEST TO REMOVE
 if [ -n "${TEST_LAUNCH_INCLUDE}" ]; then
     source "${TEST_LAUNCH_INCLUDE}"
 else
