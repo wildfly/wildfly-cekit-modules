@@ -48,6 +48,9 @@ function clearDatasourceEnv() {
   unset ${prefix}_URL
   unset ${prefix}_BACKGROUND_VALIDATION
   unset ${prefix}_BACKGROUND_VALIDATION_MILLIS
+  unset ${prefix}_DRIVER_CLASS
+  unset ${prefix}_DATASOURCE_CLASS
+  unset ${prefix}_XA_DATASOURCE_CLASS
 
   for xa_prop in $(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_"); do
     unset ${xa_prop}
@@ -379,6 +382,15 @@ function generate_external_datasource_xml() {
     ds="<datasource jta=\"${jta}\" jndi-name=\"${jndi_name}\" pool-name=\"${pool_name}\" enabled=\"true\" use-java-context=\"true\" statistics-enabled=\"\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}\">
           <connection-url>${url}</connection-url>
           <driver>$driver</driver>"
+
+    if [ -n "$driver_class" ]; then
+      ds="$ds
+             <driver-class>$driver_class</driver-class>"
+    fi
+    if [ -n "$datasource_class" ]; then
+      ds="$ds
+             <datasource-class>$datasource_class</datasource-class>"
+    fi
   else
     ds=" <xa-datasource jndi-name=\"${jndi_name}\" pool-name=\"${pool_name}\" enabled=\"true\" use-java-context=\"true\" statistics-enabled=\"\${wildfly.datasources.statistics-enabled:\${wildfly.statistics-enabled:false}}\">"
     local xa_props=$(compgen -v | grep -s "${prefix}_XA_CONNECTION_PROPERTY_")
@@ -397,6 +409,11 @@ function generate_external_datasource_xml() {
 
       ds="$ds
              <driver>${driver}</driver>"
+    fi
+
+    if [ -n "$xa_datasource_class" ]; then
+      ds="$ds
+             <xa-datasource-class>$xa_datasource_class</xa-datasource-class>"
     fi
   fi
 
@@ -496,6 +513,12 @@ function generate_external_datasource_cli() {
     ds_tmp_key_values["jta"]="${jta}"
     ds_tmp_key_values['connection-url']="${url}"
 
+    if [ -n "${driver_class}" ]; then
+      ds_tmp_key_values["driver-class"]="${driver_class}"
+    fi
+    if [ -n "${datasource_class}" ]; then
+      ds_tmp_key_values["datasource-class"]="${datasource_class}"
+    fi
   else
     ds_resource="${subsystem_addr}/xa-data-source=${pool_name}"
     other_ds_resource="${subsystem_addr}/data-source=${pool_name}"
@@ -513,6 +536,10 @@ function generate_external_datasource_cli() {
           ds_tmp_xa_connection_properties["$prop_name"]="$prop_val"
         fi
       done
+    fi
+
+    if [ -n "${xa_datasource_class}" ]; then
+      ds_tmp_key_values["xa-datasource-class"]="${xa_datasource_class}"
     fi
   fi
 
@@ -851,6 +878,9 @@ function inject_datasource() {
   local sorter
   local url
   local service_name
+  local driver_class
+  local datasource_class
+  local xa_datasource_class
 
   host=$(find_env "${service}_SERVICE_HOST")
 
@@ -896,6 +926,15 @@ function inject_datasource() {
 
   # $NON_XA_DATASOURCE: [NAME]_[DATABASE_TYPE]_NONXA (DB_NONXA)
   NON_XA_DATASOURCE=$(find_env "${prefix}_NONXA" false)
+
+  # driver class environment variable name format: [NAME]_[DATABASE_TYPE]_DRIVER_CLASS
+  driver_class=$(find_env "${prefix}_DRIVER_CLASS")
+
+  # datasource class environment variable name format: [NAME]_[DATABASE_TYPE]_DATASOURCE_CLASS
+  datasource_class=$(find_env "${prefix}_DATASOURCE_CLASS")
+
+  # xa datasource class environment variable name format: [NAME]_[DATABASE_TYPE]_XA_DATASOURCE_CLASS
+  xa_datasource_class=$(find_env "${prefix}_XA_DATASOURCE_CLASS")
 
   url=$(find_env "${prefix}_URL")
   driver=$(find_env "${prefix}_DRIVER" )
