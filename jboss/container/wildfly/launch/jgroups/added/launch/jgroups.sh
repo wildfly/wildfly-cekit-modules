@@ -129,7 +129,7 @@ create_jgroups_encrypt_asym_cli() {
         local protocolProperties="sym_keylength=\"${sym_keylength:-128}\", sym_algorithm=\"${sym_algorithm:-AES/ECB/PKCS5Padding}\","
         protocolProperties="$protocolProperties asym_keylength=\"${asym_keylength:-512}\", asym_algorithm=\"${asym_algorithm:-RSA}\", change_key_on_leave=\"${change_key_on_leave:-true}\""
         op=("/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT:add(add-index=${index})"
-                "/subsystem=jgroups/stack=$stack/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
+                "/subsystem=jgroups/stack=$stack/protocol=org.jgroups.protocols.ASYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
         )
         config="${config} $(configure_protocol_cli_helper "${stack}" "ASYM_ENCRYPT" "${op[@]}")"
         add_protocol_at_prosition "${stack}" "ASYM_ENCRYPT" ${index}
@@ -189,7 +189,7 @@ create_jgroups_elytron_legacy_cli() {
       local protocolProperties="provider=SunJCE, sym_algorithm=AES, encrypt_entire_message=true,"
       protocolProperties="$protocolProperties keystore_name=\"${jg_encrypt_keystore_dir}/${jg_encrypt_keystore}\", store_password=\"${jg_encrypt_password}\", alias=\"${jg_encrypt_name}\""
       op=("/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:add(add-index=${index})"
-              "/subsystem=jgroups/stack=$stack/protocol=SYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
+              "/subsystem=jgroups/stack=$stack/protocol=org.jgroups.protocols.SYM_ENCRYPT:write-attribute(name=properties, value={${protocolProperties}})"
         )
       config="${config} $(configure_protocol_cli_helper "${stack}" "SYM_ENCRYPT" "${op[@]}")"
       add_protocol_at_prosition "${stack}" "SYM_ENCRYPT" ${index}

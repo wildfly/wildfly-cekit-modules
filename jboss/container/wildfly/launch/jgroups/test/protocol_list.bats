@@ -210,7 +210,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=12)
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
+               /subsystem=jgroups/stack=udp/protocol=org.jgroups.protocols.ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
        if (outcome == success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
@@ -221,7 +221,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
            batch
                /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=11)
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
+               /subsystem=jgroups/stack=tcp/protocol=org.jgroups.protocols.ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
 EOF
