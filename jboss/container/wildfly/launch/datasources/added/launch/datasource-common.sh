@@ -1055,3 +1055,97 @@ function inject_job_repository() {
   fi
 
 }
+
+function clearDriverEnv() {
+  local prefix=$1
+
+  unset ${prefix}_DRIVER_MODULE
+  unset ${prefix}_DRIVER_NAME
+  unset ${prefix}_DRIVER_CLASS
+  unset ${prefix}_XA_DATASOURCE_CLASS
+}
+
+function clearDriversEnv() {
+  if [ -n "$DRIVERS" ]; then
+    for driver_prefix in $(echo $DRIVERS | sed "s/,/ /g"); do
+      clearDriverEnv $driver_prefix
+    done
+    unset DRIVERS
+  fi
+}
+
+function inject_drivers() {
+  # Add extensions from envs
+  if [ -n "$DRIVERS" ]; then
+    for driver_prefix in $(echo $DRIVERS | sed "s/,/ /g"); do
+      inject_driver $driver_prefix
+    done
+  fi
+}
+
+function inject_driver() {
+  local prefix=$1
+
+  local driver_module
+  local driver_name
+  local driver_class
+  local datasource_class
+
+  driver_module=$(find_env "${prefix}_DRIVER_MODULE")
+  if [ -z "$driver_module" ]; then
+    log_warning "Warning - ${prefix}_DRIVER_MODULE is missing from driver configuration. Driver will not be configured"
+    return
+  fi
+
+  driver_name=$(find_env "${prefix}_DRIVER_NAME")
+  if [ -z "$driver_name" ]; then
+    log_warning "Warning - ${prefix}_DRIVER_NAME is missing from driver configuration. Driver will not be configured"
+    return
+  fi
+
+  driver_class=$(find_env "${prefix}_DRIVER_CLASS")
+  datasource_class=$(find_env "${prefix}_XA_DATASOURCE_CLASS")
+  if [ -z "$driver_class" ] && [ -z "$datasource_class" ]; then
+    log_warning "Warning - ${prefix}_DRIVER_NAME and ${prefix}_XA_DATASOURCE_CLASS is missing from driver configuration. At least one is required. Driver will not be configured"
+    return
+  fi
+
+  local configMode
+  getConfigurationMode "<!-- ##DRIVERS## -->" "configMode"
+
+  if [ "${configMode}" = "xml" ]; then
+    driver="<driver name=\"$driver_name\" module=\"$driver_module\">"
+    if [ -n "$datasource_class" ]; then
+      driver="${driver}
+        <xa-datasource-class>${datasource_class}</xa-datasource-class>"
+    fi
+    if [ -n "$driver_class" ]; then
+      driver="${driver}
+        <driver-class>${driver_class}</driver-class>"
+    fi
+    driver="${driver}</driver>"
+  elif [ "${configMode}" = "cli" ]; then
+    driver="
+      if (outcome == success) of /subsystem=datasources/jdbc-driver=${driver_name}:read-resource
+         echo Cannot add the driver with name '${driver_name}'. There is a driver with the same name already configured. >> \${error_file}
+         exit
+      else
+         /subsystem=datasources/jdbc-driver=${driver_name}:add(driver-name=\"${driver_name}\", driver-module-name=\"${driver_module}\""
+    if [ -n "$datasource_class" ]; then
+      driver="${driver}, driver-xa-datasource-class-name=\"${datasource_class}\""
+    fi
+    if [ -n "$driver_class" ]; then
+      driver="${driver}, driver-class-name=\"${driver_class}\""
+    fi
+    driver="${driver})
+       end-if"
+  fi
+
+  if [ -n "$driver" ]; then
+    if [ "${configMode}" = "xml" ]; then
+      sed -i "s|<!-- ##DRIVERS## -->|${driver}\n<!-- ##DRIVERS## -->|" $CONFIG_FILE
+    elif [ "${configMode}" = "cli" ]; then
+      echo "${driver}" >> ${CLI_SCRIPT_FILE}
+    fi
+  fi
+}
