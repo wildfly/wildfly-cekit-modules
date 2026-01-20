@@ -3,6 +3,10 @@
     <xa-datasource jndi-name="java:/jboss/datasources/testds" pool-name="test_oracle-TEST" enabled="true" use-java-context="true" statistics-enabled="${wildfly.datasources.statistics-enabled:${wildfly.statistics-enabled:false}}">
         <xa-datasource-property name="URL">jdbc:oracle:thin:@oracleHostName:1521:orcl</xa-datasource-property>
         <driver>oracle</driver>
+        <xa-pool>
+            <is-same-rm-override>false</is-same-rm-override>
+            <no-tx-separate-pools/>
+        </xa-pool>
         <security>
             <user-name>kermit</user-name>
             <password>thefrog</password>
