@@ -22,6 +22,8 @@
                 </feature>
                 <feature spec="subsystem.infinispan.cache-container.replicated-cache.store.file">
                     <unset param="relative-to"/>
+                    <param name="purge" value="true"/>
+                    <param name="passivation" value="true"/>
                 </feature>
             </feature>
         </include>
