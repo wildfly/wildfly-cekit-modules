@@ -109,7 +109,7 @@ get_protocol_position() {
   local _index=0
   local found="false"
   while read -r line; do
-    if [ "${protocol}" = "${line}" ]; then
+    if [[ "${line}" == ${protocol} ]]; then
       found="true"
       break
     fi

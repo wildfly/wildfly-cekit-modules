@@ -10,11 +10,11 @@
                 <stack name="udp">
                     <transport type="UDP" socket-binding="jgroups-udp"/>
                     <protocol type="RED"/>
+                    <protocol type="PING"/>
                     <protocol type="MERGE3"/>
                     <socket-protocol type="FD_SOCK2" socket-binding="jgroups-udp-fd"/>
                     <protocol type="FD_ALL3"/>
                     <protocol type="VERIFY_SUSPECT2"/>
-                    <protocol type="NAKACK4"/>
                     <protocol type="UNICAST4"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="FRAG4"/>
@@ -22,10 +22,10 @@
                 <stack name="tcp">
                     <transport type="TCP" socket-binding="jgroups-tcp"/>
                     <protocol type="RED"/>
+                    <socket-protocol type="MPING" socket-binding="jgroups-mping"/>
                     <protocol type="MERGE3"/>
                     <protocol type="FD_ALL3"/>
                     <protocol type="VERIFY_SUSPECT2"/>
-                    <protocol type="NAKACK4"/>
                     <protocol type="UNICAST4"/>
                     <protocol type="pbcast.GMS"/>
                     <protocol type="FRAG4"/>

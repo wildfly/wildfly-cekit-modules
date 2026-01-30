@@ -51,7 +51,7 @@ create_jgroups_elytron_encrypt_cli() {
   local index
   local protocolType
   local config
-  local missingNAKACK2="false"
+  local missingNAKACK="false"
 
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
     local stackNames
@@ -63,10 +63,10 @@ create_jgroups_elytron_encrypt_cli() {
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
-        index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+        index=$(get_protocol_position "${stack}" "*NAKACK*")
         if [ ${index} -eq -1 ]; then
-          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ${jg_encrypt_protocol} protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-          missingNAKACK2="true"
+          echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ${jg_encrypt_protocol} protocol but no NAKACK protocol was found for ${stack^^} stack. Fix your configuration to contain a NAKACK protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+          missingNAKACK="true"
           continue
         fi
         op=("/subsystem=jgroups/stack=$stack/protocol=${jg_encrypt_protocol}:add(add-index=${index}, key-store=\"${jg_encrypt_keystore}\", key-alias=\"${jg_encrypt_key_alias}\", key-credential-reference={clear-text=\"${jg_encrypt_password}\"})")
@@ -75,7 +75,7 @@ create_jgroups_elytron_encrypt_cli() {
       done <<< "${stackNames}"
     fi
 
-  if [ "${missingNAKACK2}" = "false" ]; then
+  if [ "${missingNAKACK}" = "false" ]; then
     echo "${config}"
   fi
 }
@@ -108,7 +108,7 @@ create_jgroups_encrypt_asym_cli() {
     local index
     local protocolType
     local config
-    local missingNAKACK2="false"
+    local missingNAKACK="false"
 
     xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
     local stackNames
@@ -120,10 +120,10 @@ create_jgroups_encrypt_asym_cli() {
     else
       stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
       while read -r stack; do
-        index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+        index=$(get_protocol_position "${stack}" "*NAKACK*")
         if [ ${index} -eq -1 ]; then
-            echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-            missingNAKACK2="true"
+            echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but no NAKACK protocol was found for ${stack^^} stack. Fix your configuration to contain a NAKACK protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+            missingNAKACK="true"
             continue
         fi
         local protocolProperties="sym_keylength=\"${sym_keylength:-128}\", sym_algorithm=\"${sym_algorithm:-AES/ECB/PKCS5Padding}\","
@@ -136,7 +136,7 @@ create_jgroups_encrypt_asym_cli() {
       done  <<< "${stackNames}"
     fi
 
-    if [ "${missingNAKACK2}" = "false" ]; then
+    if [ "${missingNAKACK}" = "false" ]; then
       echo "${config}"
     fi
 }
@@ -168,7 +168,7 @@ create_jgroups_elytron_legacy_cli() {
   local index
   local protocolType
   local config
-  local missingNAKACK2="false"
+  local missingNAKACK="false"
 
   xpath="\"//*[local-name()='subsystem' and starts-with(namespace-uri(), 'urn:jboss:domain:jgroups:')]//*[local-name()='stack']/@name\""
   local stackNames
@@ -180,10 +180,10 @@ create_jgroups_elytron_legacy_cli() {
   else
     stackNames=$(splitAttributesStringIntoLines "${stackNames}" "name")
     while read -r stack; do
-      index=$(get_protocol_position "${stack}" "pbcast.NAKACK2")
+      index=$(get_protocol_position "${stack}" "*NAKACK*")
       if [ ${index} -eq -1 ]; then
-        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for ${stack^^} stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
-        missingNAKACK2="true"
+        echo "You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure SYM_ENCRYPT protocol but no NAKACK protocol was found for ${stack^^} stack. Fix your configuration to contain a NAKACK protocol in the JGroups subsystem for this to happen." >> "${CONFIG_ERROR_FILE}"
+        missingNAKACK="true"
         continue
       fi
       local protocolProperties="provider=SunJCE, sym_algorithm=AES, encrypt_entire_message=true,"
@@ -196,7 +196,7 @@ create_jgroups_elytron_legacy_cli() {
     done <<< "${stackNames}"
   fi
 
-  if [ "${missingNAKACK2}" = "false" ]; then
+  if [ "${missingNAKACK}" = "false" ]; then
     echo "${config}"
   fi
 }

@@ -89,33 +89,29 @@ add_protocol_after() {
   cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
   init_protocol_list_store
 
-  expected="MERGE3
-   FD_SOCK
-   FD_ALL
-   VERIFY_SUSPECT
-   UNICAST3
-   pbcast.STABLE
+  expected="RED
+   MERGE3
+   FD_SOCK2
+   FD_ALL3
+   VERIFY_SUSPECT2
+   NAKACK4
+   UNICAST4
    pbcast.GMS
-   UFC
-   MFC
-   FRAG2
-   pbcast.NAKACK2"
+   FRAG4"
 
   run get_protocols "udp"
   normalize_spaces_new_lines
 
   [ "${output}" = "${expected}" ]
 
-  expected="pbcast.GMS
+  expected="RED
    MERGE3
-   FD_SOCK
-   FD_ALL
-   VERIFY_SUSPECT
-   UNICAST3
-   pbcast.STABLE
-   MFC
-   FRAG2
-   pbcast.NAKACK2"
+   FD_ALL3
+   VERIFY_SUSPECT2
+   NAKACK4
+   UNICAST4
+   pbcast.GMS
+   FRAG4"
 
   run get_protocols "tcp"
   normalize_spaces_new_lines
@@ -135,11 +131,11 @@ add_protocol_after() {
   [ "${output}" = "${expected}" ]
 
   # add at the end
-  run add_protocol_after "TEST_TWO" "tcp" "pbcast.NAKACK2"
+  run add_protocol_after "TEST_TWO" "tcp" "NAKACK4"
   [ "${output}" = "${expected}" ]
 
   # add in the middle
-  run add_protocol_after "TEST_THREE" "tcp" "VERIFY_SUSPECT"
+  run add_protocol_after "TEST_THREE" "tcp" "VERIFY_SUSPECT2"
 
   [ "${output}" = "${expected}" ]
 }
@@ -162,7 +158,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
 
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="AUTH":read-resource
            batch
-               /subsystem=jgroups/stack=udp/protocol=AUTH:add(add-index=6)
+               /subsystem=jgroups/stack=udp/protocol=AUTH:add(add-index=7)
                /subsystem=jgroups/stack=udp/protocol=AUTH/token=digest:add(algorithm=SHA-512, shared-secret-reference={clear-text=p@ssw0rd})
           run-batch
        end-if
@@ -173,7 +169,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
 
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="AUTH":read-resource
            batch
-               /subsystem=jgroups/stack=tcp/protocol=AUTH:add(add-index=0)
+               /subsystem=jgroups/stack=tcp/protocol=AUTH:add(add-index=6)
                /subsystem=jgroups/stack=tcp/protocol=AUTH/token=digest:add(algorithm=SHA-512, shared-secret-reference={clear-text=p@ssw0rd})
           run-batch
        end-if
@@ -209,7 +205,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
 
        if (outcome != success) of /subsystem=jgroups/stack="udp"/protocol="ASYM_ENCRYPT":read-resource
            batch
-               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=12)
+               /subsystem=jgroups/stack=udp/protocol=ASYM_ENCRYPT:add(add-index=6)
                /subsystem=jgroups/stack=udp/protocol=org.jgroups.protocols.ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
@@ -220,7 +216,7 @@ if (outcome != success) of /subsystem=jgroups:read-resource
 
        if (outcome != success) of /subsystem=jgroups/stack="tcp"/protocol="ASYM_ENCRYPT":read-resource
            batch
-               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=11)
+               /subsystem=jgroups/stack=tcp/protocol=ASYM_ENCRYPT:add(add-index=5)
                /subsystem=jgroups/stack=tcp/protocol=org.jgroups.protocols.ASYM_ENCRYPT:write-attribute(name=properties, value={sym_keylength="128", sym_algorithm="AES/ECB/PKCS5Padding", asym_keylength="512", asym_algorithm="RSA", change_key_on_leave="true"})
           run-batch
        end-if
@@ -243,7 +239,34 @@ EOF
   output=$(cat "${CLI_SCRIPT_FILE}")
   normalize_spaces_new_lines
 
-  # expected that AUTH is added after GSM, DNS ping at 0 on each stack, ASYM_ENCRYPT after pbcast.NAKACK2
+  # expected that AUTH is added after GSM, DNS ping at 0 on each stack, ASYM_ENCRYPT after NAKACK protocol
   [ "${output}" = "${expected}" ]
 
+}
+
+@test "Test get_protocol_position with pattern -- finds NAKACK2" {
+  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  init_protocol_list_store
+
+  # Test that get_protocol_position with pattern finds pbcast.NAKACK2
+  run get_protocol_position "udp" "*NAKACK*"
+  [ "${output}" != "-1" ]
+
+  run get_protocol_position "tcp" "*NAKACK*"
+  [ "${output}" != "-1" ]
+}
+
+@test "Test get_protocol_position with pattern -- finds NAKACK4" {
+  # Create a config file with NAKACK4 instead of NAKACK2
+  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-jgroups-protocol-store.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  # Replace NAKACK2 with NAKACK4 in the config
+  sed -i.bak 's/pbcast.NAKACK2/NAKACK4/g' $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  init_protocol_list_store
+
+  # Test that get_protocol_position with pattern finds NAKACK4
+  run get_protocol_position "udp" "*NAKACK*"
+  [ "${output}" != "-1" ]
+
+  run get_protocol_position "tcp" "*NAKACK*"
+  [ "${output}" != "-1" ]
 }
