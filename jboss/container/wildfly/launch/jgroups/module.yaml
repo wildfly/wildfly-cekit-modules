@@ -31,5 +31,5 @@ envs:
     example: "SYM_ENCRYPT"
     description: JGroups protocol to use for encryption of cluster traffic. Can be either SYM_ENCRYPT or ASYM_ENCRYPT. Defaults to SYM_ENCRYPT.
   - name: "JGROUPS_PING_PROTOCOL"
-    example: "openshift.DNS_PING"
-    description: JGroups protocol to use for node discovery. Can be either openshift.DNS_PING or kubernetes.KUBE_PING.
+    example: "dns.DNS_PING"
+    description: JGroups protocol to use for node discovery. Can be either dns.DNS_PING or kubernetes.KUBE_PING.
