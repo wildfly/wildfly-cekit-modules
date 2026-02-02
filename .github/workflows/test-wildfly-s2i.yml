@@ -132,6 +132,7 @@ jobs:
             echo "No failure in behave tests"
           fi
           popd
+        working-directory: wildfly-s2i
       - name: List containers
         if: failure()
         run: |
