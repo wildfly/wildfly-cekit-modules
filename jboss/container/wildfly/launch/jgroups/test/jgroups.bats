@@ -286,10 +286,12 @@ EOF
     [ "${output}" = "true" ]
 }
 
-@test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT - Without pbcast.NAKACK2 protocol" {
-  expected="You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but pbcast.NAKACK2 protocol was not found for UDP stack. Fix your configuration to contain the pbcast.NAKACK2 in the JGroups subsystem for this to happen."
+@test "Configure CLI JGROUPS_PROTOCOL=ASYM_ENCRYPT - Without NAKACK protocol" {
+  # Error is reported for each stack missing NAKACK protocol
+  expected="You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but no NAKACK protocol was found for UDP stack. Fix your configuration to contain a NAKACK protocol in the JGroups subsystem for this to happen.
+You have set JGROUPS_CLUSTER_PASSWORD environment variable to configure ASYM_ENCRYPT protocol but no NAKACK protocol was found for TCP stack. Fix your configuration to contain a NAKACK protocol in the JGroups subsystem for this to happen."
 
-  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-pbcast.NAKACK2.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
+  cp $BATS_TEST_DIRNAME/server-configs/standalone-openshift-missing-nakack.xml $JBOSS_HOME/standalone/configuration/standalone-openshift.xml
 
   CONFIG_ADJUSTMENT_MODE="cli"
 
