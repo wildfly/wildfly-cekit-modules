@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="elytron">
     <props>
-        <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/elytron/module.yaml"/>
+        <prop name="org.wildfly.rule.configuration.server" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/elytron/module.yaml"/>
     </props>
 </layer-spec>
 
