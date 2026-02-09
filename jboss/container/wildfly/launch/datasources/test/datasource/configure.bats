@@ -308,6 +308,61 @@ load common
     assert_datasources "prefix_ibmdb2_xa.xml"
 }
 
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - DRIVER_CLASS" {
+    DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_DRIVER="postgresql"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
+    TEST_NONXA="true"
+    TEST_JTA="false"
+
+    TEST_DRIVER_CLASS="org.postgresql.Driver"
+
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_datasources "prefix_postgresql_nonxa_driver_class.xml"
+}
+
+
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - DATASOURCE_CLASS" {
+    DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_DRIVER="postgresql"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_URL="jdbc:postgresql://localhost:5432/postgresdb"
+    TEST_NONXA="true"
+    TEST_JTA="false"
+
+    TEST_DATASOURCE_CLASS="org.postgres.jdbc3.Jdbc3SimpleDataSource"
+
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_datasources "prefix_postgresql_nonxa_datasource_class.xml"
+}
+
+@test "inject_datasources: DB_SERVICE_PREFIX_MAPPING - XA_DATASOURCE_CLASS" {
+    DB_SERVICE_PREFIX_MAPPING="test-postgresql=TEST"
+    TEST_JNDI="java:/jboss/datasources/testds"
+    TEST_USERNAME="kermit"
+    TEST_PASSWORD="thefrog"
+    TEST_NONXA="false"
+    TEST_XA_CONNECTION_PROPERTY_ServerName="localhost"
+    TEST_XA_CONNECTION_PROPERTY_PortNumber="5432"
+    TEST_XA_CONNECTION_PROPERTY_DatabaseName="postgresdb"
+
+    TEST_XA_DATASOURCE_CLASS="org.postgresql.xa.PGXADataSource"
+
+    run inject_datasources
+
+    [ "$status" -eq 0 ]
+    assert_datasources "prefix_postgresql_xa_xa_datasource_class.xml"
+}
+
 @test "inject_datasources: DATASOURCES - Missing required values" {
     DATASOURCES="TEST"
     TEST_JNDI="java:/jboss/datasources/testds"
