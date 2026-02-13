@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+
+<package-spec xmlns="urn:jboss:galleon:package:2.0" name="org.wildfly.cloud.launch.scripts">
+  <dependencies>
+    <!-- required for CLI and users management -->
+    <package name="org.jboss.as.cli"/>
+    <package name="org.jboss.as.domain-add-user"/>
+    <package name="org.wildfly.security.elytron-tool"/>
+    <package name="core-tools"/>
+  </dependencies>      
+</package-spec>

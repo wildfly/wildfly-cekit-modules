@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <layer-spec xmlns="urn:jboss:galleon:layer-spec:2.0" name="keycloak-saml">
     <props>
-        <prop name="org.wildfly.rule.configuration" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/keycloak/2.0/module.yaml"/>
+        <prop name="org.wildfly.rule.configuration.server" value="https://raw.githubusercontent.com/wildfly/wildfly-cekit-modules/main/jboss/container/wildfly/launch/keycloak/2.0/module.yaml"/>
         <prop name="org.wildfly.rule.no-configuration-if-org.wildfly.rule.expected-file-keycloak" value="/WEB-INF/keycloak.json"/>
     </props>
 </layer-spec>

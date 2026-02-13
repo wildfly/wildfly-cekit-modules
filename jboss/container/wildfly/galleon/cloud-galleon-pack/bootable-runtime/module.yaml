@@ -1,0 +1,8 @@
+schema_version: 1
+name: jboss.container.wildfly.galleon.cloud-galleon-pack.bootable-runtime
+version: '1.0'
+description: Bootable cloud runtime JBoss Modules module and package that installs the cloud extension.
+
+execute:
+- script: configure.sh
+  user: 185
