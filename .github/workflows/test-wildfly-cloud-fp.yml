@@ -118,7 +118,8 @@ jobs:
         run: |
           . ~/cekit/bin/activate
           pushd wildfly-builder-image
-          cekit build --overrides=jdk21-overrides.yaml docker
+          # Due to https://github.com/cekit/cekit/issues/955, we can't squash
+          cekit build --overrides=jdk21-overrides.yaml docker --no-squash
           popd
           docker image ls
         working-directory: wildfly-s2i
