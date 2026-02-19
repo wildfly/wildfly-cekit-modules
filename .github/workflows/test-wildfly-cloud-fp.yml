@@ -70,8 +70,10 @@ jobs:
           mkdir -p custom-cloud-image
           mkdir -p custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-cloud-galleon-pack/$cloudVersion
           mkdir -p custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-preview-cloud-galleon-pack/$cloudVersion
+          mkdir -p custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-bootable-cloud-configurator/$cloudVersion
           cp wildfly-cloud-galleon-pack/target/wildfly-cloud-galleon-pack-$cloudVersion.zip custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-cloud-galleon-pack/$cloudVersion
           cp wildfly-preview-cloud-galleon-pack/target/wildfly-preview-cloud-galleon-pack-$cloudVersion.zip custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-preview-cloud-galleon-pack/$cloudVersion
+          cp wildfly-bootable-cloud-configurator/target/wildfly-bootable-cloud-configurator-$cloudVersion.jar custom-cloud-image/docker/repository/org/wildfly/cloud/wildfly-bootable-cloud-configurator/$cloudVersion
           docker_file=custom-cloud-image/docker/Dockerfile
             cat <<EOF > $docker_file
              FROM wildfly/wildfly-s2i:latest
@@ -118,7 +120,8 @@ jobs:
         run: |
           . ~/cekit/bin/activate
           pushd wildfly-builder-image
-          cekit build --overrides=jdk21-overrides.yaml docker
+          # Due to https://github.com/cekit/cekit/issues/955, we can't squash
+          cekit build --overrides=jdk21-overrides.yaml docker --no-squash
           popd
           docker image ls
         working-directory: wildfly-s2i

@@ -85,10 +85,12 @@ jobs:
           . ~/cekit/bin/activate
           overrides="{\"modules\": {\"repositories\": [{\"name\":\"wildfly-cekit-modules\",\"path\":\"../../wildfly-cekit-modules\"}]}}"
           pushd wildfly-builder-image
-          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides" docker
+          # Due to https://github.com/cekit/cekit/issues/955, we can't squash
+          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides" docker --no-squash
           popd
           pushd wildfly-runtime-image
-          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides"  docker
+          # Due to https://github.com/cekit/cekit/issues/955, we can't squash
+          cekit build --overrides=jdk21-overrides.yaml --overrides "$overrides"  docker --no-squash
           popd
           docker image ls
         working-directory: wildfly-s2i
