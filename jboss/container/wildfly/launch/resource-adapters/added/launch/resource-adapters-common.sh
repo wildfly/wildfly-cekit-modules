@@ -18,9 +18,21 @@ function clearResourceAdapterEnv() {
   unset ${prefix}_RECOVERY_PASSWORD
   unset ${prefix}_ADMIN_OBJECTS
   unset ${prefix}_TRACKING
+  unset ${prefix}_POOL_INITIAL_SIZE
+  unset ${prefix}_POOL_FAIR
+  unset ${prefix}_POOL_USE_STRICT_MIN
+  unset ${prefix}_POOL_CAPACITY_INCREMENTER_CLASS
+  unset ${prefix}_POOL_CAPACITY_DECREMENTER_CLASS
 
   for xa_prop in $(compgen -v | grep -s "${prefix}_PROPERTY_"); do
     unset ${xa_prop}
+  done
+
+  for inc_prop in $(compgen -v | grep -s "${prefix}_POOL_CAPACITY_INCREMENTER_PROPERTY_"); do
+    unset ${inc_prop}
+  done
+  for dec_prop in $(compgen -v | grep -s "${prefix}_POOL_CAPACITY_DECREMENTER_PROPERTY_"); do
+    unset ${dec_prop}
   done
 
   for admin_object in $(compgen -v | grep -s "${prefix}_ADMIN_OBJECT_"); do
@@ -183,7 +195,6 @@ function add_connection_definitions() {
     local ra_addr="${3}"
 
     tracking=$(find_env "${ra_prefix}_TRACKING")
-    ra_props=$(compgen -v | grep -s "${ra_prefix}_PROPERTY_")
     ra_pool_min_size=$(find_env "${ra_prefix}_POOL_MIN_SIZE")
     ra_pool_max_size=$(find_env "${ra_prefix}_POOL_MAX_SIZE")
     ra_pool_prefill=$(find_env "${ra_prefix}_POOL_PREFILL")
@@ -192,6 +203,11 @@ function add_connection_definitions() {
     recovery_username=$(find_env "${ra_prefix}_RECOVERY_USERNAME")
     recovery_password=$(find_env "${ra_prefix}_RECOVERY_PASSWORD")
     ra_pool_xa=$(find_env "${ra_prefix}_POOL_XA")
+    ra_pool_initial_size=$(find_env "${ra_prefix}_POOL_INITIAL_SIZE")
+    ra_pool_fair=$(find_env "${ra_prefix}_POOL_FAIR")
+    ra_pool_use_strict_min=$(find_env "${ra_prefix}_POOL_USE_STRICT_MIN")
+    ra_pool_capacity_incrementer_class=$(find_env "${ra_prefix}_POOL_CAPACITY_INCREMENTER_CLASS")
+    ra_pool_capacity_decrementer_class=$(find_env "${ra_prefix}_POOL_CAPACITY_DECREMENTER_CLASS")
 
     if [ "${mode}" = "xml" ]; then
       resource_adapter="${resource_adapter}<connection-definitions><connection-definition"
@@ -202,16 +218,14 @@ function add_connection_definitions() {
       fi
       resource_adapter="${resource_adapter} class-name=\"${ra_class}\" jndi-name=\"${ra_jndi}\" enabled=\"true\" use-java-context=\"true\">"
 
+      ra_props="$(add_config_properties ${mode} "${ra_prefix}_PROPERTY_" "" "")"
       if [ -n "$ra_props" ]; then
-        for ra_prop in $(echo $ra_props); do
-          prop_name=$(echo "${ra_prop}" | sed -e "s/${ra_prefix}_PROPERTY_//g")
-          prop_val=$(find_env $ra_prop)
-
-          resource_adapter="${resource_adapter}<config-property name=\"${prop_name}\">${prop_val}</config-property>"
-        done
+        resource_adapter="${resource_adapter}${ra_props}"
       fi
 
-      if [ -n "$ra_pool_min_size" ] || [ -n "$ra_pool_max_size" ] || [ -n "$ra_pool_prefill" ] || [ -n "$ra_pool_flush_strategy" ]; then
+      if [ -n "$ra_pool_min_size" ] || [ -n "$ra_pool_max_size" ] || [ -n "$ra_pool_prefill" ] || [ -n "$ra_pool_flush_strategy" ] ||
+          [ -n "$ra_pool_is_same_rm_override" ] || [ -n "$ra_pool_capacity_incrementer_class" ] || [ -n "$ra_pool_capacity_decrementer_class" ] ||
+          [ -n "$ra_pool_initial_size" ] || [ -n "$ra_pool_fair" ] || [ -n "$ra_pool_use_strict_min" ]; then
         if [ -n "$ra_pool_xa" ] && [ "$ra_pool_xa" == "true" ]; then
           resource_adapter="${resource_adapter}<xa-pool>"
         else
@@ -222,6 +236,10 @@ function add_connection_definitions() {
           resource_adapter="${resource_adapter}<min-pool-size>${ra_pool_min_size}</min-pool-size>"
         fi
 
+        if [ -n "$ra_pool_initial_size" ]; then
+          resource_adapter="${resource_adapter}<initial-pool-size>${ra_pool_initial_size}</initial-pool-size>"
+        fi
+
         if [ -n "$ra_pool_max_size" ]; then
           resource_adapter="${resource_adapter}<max-pool-size>${ra_pool_max_size}</max-pool-size>"
         fi
@@ -230,12 +248,41 @@ function add_connection_definitions() {
           resource_adapter="${resource_adapter}<prefill>${ra_pool_prefill}</prefill>"
         fi
 
+        if [ -n "$ra_pool_fair" ]; then
+          resource_adapter="${resource_adapter}<fair>${ra_pool_fair}</fair>"
+        fi
+
+        if [ -n "$ra_pool_use_strict_min" ]; then
+          resource_adapter="${resource_adapter}<use-strict-min>${ra_pool_use_strict_min}</use-strict-min>"
+        fi
+
         if [ -n "$ra_pool_flush_strategy" ]; then
           resource_adapter="${resource_adapter}<flush-strategy>${ra_pool_flush_strategy}</flush-strategy>"
         fi
 
         if [ -n "$ra_pool_is_same_rm_override" ]; then
           resource_adapter="${resource_adapter}<is-same-rm-override>${ra_pool_is_same_rm_override}</is-same-rm-override>"
+        fi
+
+        if [ -n "$ra_pool_capacity_incrementer_class" ] || [ -n "$ra_pool_capacity_decrementer_class" ]; then
+          resource_adapter="${resource_adapter}<capacity>"
+          if [ -n "$ra_pool_capacity_incrementer_class" ]; then
+            resource_adapter="${resource_adapter}<incrementer class-name=\"${ra_pool_capacity_incrementer_class}\">"
+            incrementer_props="$(add_config_properties ${mode} "${ra_prefix}_POOL_CAPACITY_INCREMENTER_PROPERTY_" "" "")"
+            if [ -n "$incrementer_props" ]; then
+              resource_adapter="${resource_adapter}${incrementer_props}"
+            fi
+            resource_adapter="${resource_adapter}</incrementer>"
+          fi
+          if [ -n "$ra_pool_capacity_decrementer_class" ]; then
+            resource_adapter="${resource_adapter}<decrementer class-name=\"${ra_pool_capacity_decrementer_class}\">"
+            decrementer_props="$(add_config_properties ${mode} "${ra_prefix}_POOL_CAPACITY_DECREMENTER_PROPERTY_" "" "")"
+            if [ -n "$decrementer_props" ]; then
+              resource_adapter="${resource_adapter}${decrementer_props}"
+            fi
+            resource_adapter="${resource_adapter}</decrementer>"
+          fi
+          resource_adapter="${resource_adapter}</capacity>"
         fi
 
         if [ -n "$ra_pool_xa" ] && [ "$ra_pool_xa" == "true" ]; then
@@ -283,12 +330,19 @@ function add_connection_definitions() {
         conn_def_add="${conn_def_add}, tracking=\"${tracking}\""
       fi
 
-      if [ -n "$ra_pool_min_size" ] || [ -n "$ra_pool_max_size" ] || [ -n "$ra_pool_prefill" ] || [ -n "$ra_pool_flush_strategy" ]; then
+      pool_capacity_properties=
+      if [ -n "$ra_pool_min_size" ] || [ -n "$ra_pool_max_size" ] || [ -n "$ra_pool_prefill" ] || [ -n "$ra_pool_flush_strategy" ] ||
+          [ -n "$ra_pool_is_same_rm_override" ] || [ -n "$ra_pool_capacity_incrementer_class" ] || [ -n "$ra_pool_capacity_decrementer_class" ] ||
+          [ -n "$ra_pool_initial_size" ] || [ -n "$ra_pool_fair" ] || [ -n "$ra_pool_use_strict_min" ]; then
         # Whether the pool is written out again as an xa-pool depends on if the RA has transaction-support=="XATransaction"
         # from the model point of view $pool_xa which for the xml case chooses between <pool> and <xa-pool> seems to have no effect
 
         if [ -n "$ra_pool_min_size" ]; then
           conn_def_add="${conn_def_add}, min-pool-size=${ra_pool_min_size}"
+        fi
+
+        if [ -n "$ra_pool_initial_size" ]; then
+          conn_def_add="${conn_def_add}, initial-pool-size=${ra_pool_initial_size}"
         fi
 
         if [ -n "$ra_pool_max_size" ]; then
@@ -299,6 +353,14 @@ function add_connection_definitions() {
           conn_def_add="${conn_def_add}, pool-prefill=${ra_pool_prefill}"
         fi
 
+        if [ -n "$ra_pool_fair" ]; then
+          conn_def_add="${conn_def_add}, pool-fair=${ra_pool_fair}"
+        fi
+
+        if [ -n "$ra_pool_use_strict_min" ]; then
+          conn_def_add="${conn_def_add}, pool-use-strict-min=${ra_pool_use_strict_min}"
+        fi
+
         if [ -n "$ra_pool_flush_strategy" ]; then
           conn_def_add="${conn_def_add}, flush-strategy=${ra_pool_flush_strategy}"
         fi
@@ -306,6 +368,24 @@ function add_connection_definitions() {
         if [ -n "$ra_pool_is_same_rm_override" ]; then
           conn_def_add="${conn_def_add}, same-rm-override=${ra_pool_is_same_rm_override}"
         fi
+
+        if [ -n "$ra_pool_capacity_incrementer_class" ] || [ -n "$ra_pool_capacity_decrementer_class" ]; then
+          if [ -n "$ra_pool_capacity_incrementer_class" ]; then
+            conn_def_add="${conn_def_add}, capacity-incrementer-class=${ra_pool_capacity_incrementer_class}"
+            incrementer_props="$(add_config_properties ${mode} "${ra_prefix}_POOL_CAPACITY_INCREMENTER_PROPERTY_" "${conn_def_addr}" "capacity-incrementer-properties")"
+            if [ -n "$incrementer_props" ]; then
+              pool_capacity_properties="${pool_capacity_properties}${incrementer_props}"
+            fi
+          fi
+          if [ -n "$ra_pool_capacity_decrementer_class" ]; then
+            conn_def_add="${conn_def_add}, capacity-decrementer-class=${ra_pool_capacity_decrementer_class}"
+            decrementer_props="$(add_config_properties ${mode} "${ra_prefix}_POOL_CAPACITY_DECREMENTER_PROPERTY_" "${conn_def_addr}" "capacity-decrementer-properties")"
+            if [ -n "$decrementer_props" ]; then
+              pool_capacity_properties="${pool_capacity_properties}${decrementer_props}"
+            fi
+          fi
+        fi
+
       fi
 
       if [ -n "$recovery_username" ] && [ -n "$recovery_password" ]; then
@@ -317,19 +397,53 @@ function add_connection_definitions() {
         ${conn_def_add}
       "
 
+      if [ -n "${pool_capacity_properties}" ]; then
+        resource_adapter="${resource_adapter}
+          ${pool_capacity_properties}
+        "
+      fi
+
+      ra_props="$(add_config_properties ${mode} "${ra_prefix}_PROPERTY_" "${conn_def_addr}" "")"
       if [ -n "$ra_props" ]; then
-        for ra_prop in $(echo $ra_props); do
-          prop_name=$(echo "${ra_prop}" | sed -e "s/${ra_prefix}_PROPERTY_//g")
-          prop_val=$(find_env $ra_prop)
-          resource_adapter="${resource_adapter}
-            ${conn_def_addr}/config-properties=${prop_name}:add(value=\"${prop_val}\")
-          "
-        done
+        resource_adapter="${resource_adapter}
+          ${ra_props}
+        "
       fi
     fi
 
 }
 
+function add_config_properties() {
+  local mode="${1}"
+  local prefix="${2}"
+  local addr="${3}"
+  local attribute_name="${4}"
+
+  local props=$(compgen -v | grep -s "${prefix}")
+
+  local config_properties= 
+  if [ -n "${props}" ]; then
+    for prop in $(echo ${props}); do
+      prop_name=$(echo "${prop}" | sed -e "s/${prefix}//g")
+      prop_val=$(find_env ${prop})
+
+      if [ "${mode}" = "xml" ]; then
+        config_properties="${config_properties}<config-property name=\"${prop_name}\">${prop_val}</config-property>"
+      elif [ "${mode}" = "cli" ]; then
+        if [ -n "${attribute_name}" ]; then
+          config_properties="${config_properties}
+            ${addr}:write-attribute(name=${attribute_name}.${prop_name}, value=\"${prop_val}\")
+          "
+        else
+          config_properties="${config_properties}
+            ${addr}/config-properties=${prop_name}:add(value=\"${prop_val}\")
+          "
+        fi
+      fi
+    done
+  fi
+  echo "$config_properties"
+}
 
 function add_admin_objects() {
   admin_object_list="$1"
@@ -342,14 +456,29 @@ function add_admin_objects() {
     for object in "${objects[@]}"; do
       class_name=$(find_env "${ra_prefix}_ADMIN_OBJECT_${object}_CLASS_NAME")
       physical_name=$(find_env "${ra_prefix}_ADMIN_OBJECT_${object}_PHYSICAL_NAME")
+      ao_props=$(compgen -v | grep -s "${ra_prefix}_ADMIN_OBJECT_${object}_PROPERTY_")
       if [ -n "$class_name" ] && [ -n "$physical_name" ]; then
         if [ "${mode}" = "xml" ]; then
-          admin_objects="${admin_objects}<admin-object class-name=\"$class_name\" jndi-name=\"java:/${physical_name}\" use-java-context=\"true\" pool-name=\"${physical_name}\"><config-property name=\"PhysicalName\">${physical_name}</config-property></admin-object>"
+          admin_objects="${admin_objects}<admin-object class-name=\"$class_name\" jndi-name=\"java:/${physical_name}\" use-java-context=\"true\" pool-name=\"${physical_name}\"><config-property name=\"PhysicalName\">${physical_name}</config-property>"
+
+          ao_props="$(add_config_properties ${mode} "${ra_prefix}_ADMIN_OBJECT_${object}_PROPERTY_" "" "")"
+          if [ -n "$ao_props" ]; then
+            admin_objects="${admin_objects}${ap_props}"
+          fi
+          admin_objects="${admin_objects}</admin-object>"
+
         elif [ "${mode}" = "cli" ]; then
           admin_objects="${admin_objects}
             ${ra_addr}/admin-objects=\"${physical_name}\":add(class-name=\"$class_name\", jndi-name=\"java:/${physical_name}\", use-java-context=true)
             ${ra_addr}/admin-objects=\"${physical_name}\"/config-properties=PhysicalName:add(value=\"${physical_name}\")
           "
+          ao_props="$(add_config_properties ${mode} "${ra_prefix}_ADMIN_OBJECT_${object}_PROPERTY_" "${ra_addr}/admin-objects=\"${physical_name}\"" "")"
+          if [ -n "$ao_props" ]; then
+            admin_objects="${admin_objects}
+              ${ao_props}
+          "
+          fi
+
         fi
       else
         log_warning "Cannot configure admin-object $object for resource adapter $ra_prefix. Missing ${ra_prefix}_ADMIN_OBJECT_${object}_CLASS_NAME and/or ${ra_prefix}_ADMIN_OBJECT_${object}_PHYSICAL_NAME"
@@ -359,3 +488,4 @@ function add_admin_objects() {
 
   echo "$admin_objects"
 }
+
