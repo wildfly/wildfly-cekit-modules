@@ -4,16 +4,8 @@ function preConfigure() {
   preconfigure_extensions
 }
 
-# if a delayedpostconfigure.sh file exists call postconfigure.sh
-# The delayedpostconfigure.sh will be called after CLI execution.
-function postConfigure() {
-   if [ -f "${JBOSS_HOME}/extensions/delayedpostconfigure.sh" ]; then
-     postconfigure_extensions
-   fi
-}
-
 # if a delayedpostconfigure.sh file exists call it, otherwise fallback on postconfigure.sh
-function delayedPostConfigure() {
+function postConfigure() {
   if [ -f "${JBOSS_HOME}/extensions/delayedpostconfigure.sh" ]; then
     ${JBOSS_HOME}/extensions/delayedpostconfigure.sh
   else
