@@ -5,6 +5,13 @@ set -e
 source "${JBOSS_CONTAINER_UTIL_LOGGING_MODULE}/logging.sh"
 source "${JBOSS_CONTAINER_MAVEN_S2I_MODULE}/maven-s2i"
 
+# WFLY-22260
+SPEC_VERSION="${JAVA_VERSION//1.}"
+SPEC_VERSION="${SPEC_VERSION//.*}"
+# Maven 3.9.9 will be bumped to 3.9.12+ when JDK version will be bumped to JDK26+.
+if (( $SPEC_VERSION == 25 )); then
+ export MAVEN_OPTS="${MAVEN_OPTS:-$(${JBOSS_CONTAINER_JAVA_JVM_MODULE}/java-default-options) -XX:MaxRAMPercentage=25.0 --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow}"
+fi
 # This is required in all cases
 # Needed in case some drivers are installed during s2i, the CLI execution must occurs during s2i.
 export CONFIG_ADJUSTMENT_MODE=cli
