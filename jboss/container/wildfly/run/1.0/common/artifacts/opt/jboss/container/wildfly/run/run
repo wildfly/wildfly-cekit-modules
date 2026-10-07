@@ -32,7 +32,9 @@ fi
 source /usr/local/dynamic-resources/dynamic_resources.sh > /dev/null
 GC_METASPACE_SIZE=${GC_METASPACE_SIZE:-96}
 
-JAVA_OPTS="$(adjust_java_options ${JAVA_OPTS})"
+if [ "x${DISABLE_DEFAULT_JAVA_OPTS}" != "xtrue" ]; then
+  JAVA_OPTS="$(adjust_java_options ${JAVA_OPTS})"
+fi
 
 # Has been removed for UBI10 openjdk support
 if [ -n "$(type -t jvm_specific_diagnostics)" ]; then

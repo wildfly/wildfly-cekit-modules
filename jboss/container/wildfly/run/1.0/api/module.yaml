@@ -10,6 +10,8 @@ envs:
   description: Set this variable to true to disable server shutdown. You are then in charge to explicitly kill the server by your own mean.
 - name: CLI_LAUNCH_SCRIPT
   description: A path to a CLI script to execute at server launch time. The path can be absolute or relative to $JBOSS_HOME directory. If an error occurs during script execution, the server startup aborts and CLI errors are displayed in the console. Management operations that imply a restart of the server are not supported in such CLI script.
+- name: DISABLE_DEFAULT_JAVA_OPTS
+  description: Set to true to disable the generation of default JVM options that are automatically added to JAVA_OPTS. 
 - name: JAVA_OPTS_APPEND
   description: To append options to JAVA_OPTS env variable.
 - name: JBOSS_NODE_NAME
