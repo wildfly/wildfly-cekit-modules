@@ -7,7 +7,11 @@ envs:
 - name: CLI_EXECUTION_OUTPUT
   description: By default executed CLI script output is redirected to '/tmp/server-cli-execution-output-file.txt' file (or '/tmp/cli-script-output-<system-time>.cli' when cloud feature-pack is used). Set this env variable to 'CONSOLE' for output to be displayed in the console. Set this env variable to a file path for output to be redirected in the provided file.
 - name: CLI_GRACEFUL_SHUTDOWN
+  description: Deprecated, use 'DISABLE_GRACEFUL_SHUTDOWN'. Set this variable to true to disable server shutdown. You are then in charge to explicitly kill the server by your own mean.
+- name: DISABLE_GRACEFUL_SHUTDOWN
   description: Set this variable to true to disable server shutdown. You are then in charge to explicitly kill the server by your own mean.
+- name: GRACEFUL_SHUTDOWN_TIMEOUT
+  description: The timeout in seconds to wait for the server to shutdown. Default value is 60 seconds.
 - name: CLI_LAUNCH_SCRIPT
   description: A path to a CLI script to execute at server launch time. The path can be absolute or relative to $JBOSS_HOME directory. If an error occurs during script execution, the server startup aborts and CLI errors are displayed in the console. Management operations that imply a restart of the server are not supported in such CLI script.
 - name: JAVA_OPTS_APPEND

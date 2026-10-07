@@ -32,17 +32,23 @@ function run_add_jpms_options() {
   fi
 }
 
-# Logic to allow for CLI shutdown with a 60secs delay that helps transaction to terminate 
+# Logic to allow for CLI shutdown with a configurable delay that helps transaction to terminate 
 function run_clean_shutdown() {
   local management_port=""
   if [ -n "${PORT_OFFSET}" ]; then
     management_port=$((9990 + PORT_OFFSET))
   fi
   log_error "*** WildFly wrapper process ($$) received TERM signal ***"
+  default_timeout=60
+  timeout=${GRACEFUL_SHUTDOWN_TIMEOUT:-${default_timeout}}
+  if [[ ! "$timeout" =~ ^[0-9]+$ ]]; then
+    log_error "*** Invalid timeout value ${GRACEFUL_SHUTDOWN_TIMEOUT} for GRACEFUL_SHUTDOWN_TIMEOUT, using default value ${default_timeout} ***"
+    timeout=${default_timeout}    
+  fi
   if [ -z ${management_port} ]; then
-    $JBOSS_HOME/bin/jboss-cli.sh -c "shutdown --timeout=60"
+    $JBOSS_HOME/bin/jboss-cli.sh -c "shutdown --timeout=${timeout}"
   else
-    $JBOSS_HOME/bin/jboss-cli.sh --commands="connect remote+http://localhost:${management_port},shutdown --timeout=60"
+    $JBOSS_HOME/bin/jboss-cli.sh --commands="connect remote+http://localhost:${management_port},shutdown --timeout=${timeout}"
   fi
   wait $!
 }
@@ -50,8 +56,8 @@ function run_clean_shutdown() {
 function run_setup_shutdown_hook() {
   trap "run_clean_shutdown" TERM
   trap "run_clean_shutdown" INT
-
-  if [ -n "$CLI_GRACEFUL_SHUTDOWN" ] ; then
+  
+  if [ -n "$CLI_GRACEFUL_SHUTDOWN" ] || [ "$DISABLE_GRACEFUL_SHUTDOWN" == "true" ] ; then
     trap "" TERM
     log_info "Graceful shutdown via a TERM signal has been disabled. Graceful shutdown will need to be initiated via a CLI command."
   fi
