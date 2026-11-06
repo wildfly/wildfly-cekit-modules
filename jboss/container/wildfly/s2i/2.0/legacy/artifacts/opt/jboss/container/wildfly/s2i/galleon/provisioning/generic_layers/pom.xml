@@ -54,6 +54,7 @@
 
                             <record-provisioning-state>true</record-provisioning-state>
                             <galleon-options>
+                                <!-- ##GALLEON_OPTIONS## -->
                                 <!-- required when running on JDK 11 -->
                                 <jboss-fork-embedded>true</jboss-fork-embedded>
                             </galleon-options>

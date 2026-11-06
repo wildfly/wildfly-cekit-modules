@@ -35,6 +35,10 @@ function galleon_patch_generic_config() {
    if [ -n "$channels" ]; then
      sed -i "s|<!-- ##GALLEON_WF_CHANNELS## -->|${channels}|" "${target_pom_file}"
    fi
+   options=$(galleon_parse_options)
+   if [ -n "$options" ]; then
+     sed -i "s|<!-- ##GALLEON_OPTIONS## -->|${options}|" "${target_pom_file}"
+   fi
 }
 
 function galleon_parse_channels() {
@@ -74,6 +78,32 @@ function galleon_parse_channels() {
     if [ -n "${channelsXml}" ]; then
         local channelsListXml="<channels>${channelsXml}</channels>"
         echo "${channelsListXml}"
+    fi
+}
+
+function galleon_parse_options() {
+    local options="${GALLEON_PROVISION_OPTIONS}"
+    if [ ! -z "${options}" ]; then
+        local optionsXml=
+        for option in $(echo "${options}" | sed "s/,/ /g"); do
+              local name=
+              local value=
+              for part in $(echo "${option}" | sed "s/=/ /g"); do
+                if [ -z "${name}" ]; then
+                  name=${part}
+                  optionsXml="$optionsXml<${name}>"
+                  continue
+                fi
+                if [ -z "${value}" ]; then
+                  value=${part}
+                  optionsXml="$optionsXml${value}</${name}>"
+                  continue
+                fi
+              done
+        done
+    fi
+    if [ -n "${optionsXml}" ]; then
+        echo "${optionsXml}"
     fi
 }
 
