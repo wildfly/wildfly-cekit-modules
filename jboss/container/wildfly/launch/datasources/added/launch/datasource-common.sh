@@ -717,7 +717,7 @@ function inject_timer_service() {
   if [ "$confMode" = "xml" ]; then
     local timerservice="            <timer-service thread-pool-name=\"default\" default-data-store=\"${datastore_name}\">\
                   <data-stores>\
-                    <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" refresh-interval=\"${refresh_interval}\"/>
+                    <database-data-store name=\"${datastore_name}\" datasource-jndi-name=\"${jndi_name}\" database=\"${databasename}\" partition=\"${pool_name}_part\" refresh-interval=\"${refresh_interval}\"/>\
                   </data-stores>\
               </timer-service>"
     sed -i "s|<!-- ##TIMER_SERVICE## -->|${timerservice}|" $CONFIG_FILE
